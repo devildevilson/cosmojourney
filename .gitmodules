@@ -1,0 +1,9 @@
+[submodule "include/spdlog"]
+	path = include/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "include/stb"]
+	path = include/stb
+	url = https://github.com/nothings/stb.git
+[submodule "include/dr_libs"]
+	path = include/dr_libs
+	url = https://github.com/mackron/dr_libs.git
