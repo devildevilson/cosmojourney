@@ -247,7 +247,7 @@ namespace devils_engine {
       // нет наверное хотелось бы вычислять размеры некоторых окон по размеру контента
       // что такое контент? это боксы заданных размеров: например текст определенного размера шрифта
       // имеет такой то размер по x,y, то есть зная размер шрифта легко вычислять размер бокса вокруг текста
-      constexpr rect() noexcept : offset(0,0), extent(0,0) {}
+      constexpr rect() noexcept = default;
       //rect(const vec2 &of);
       //rect(const vec2 &ex);
       constexpr rect(const vec2 &of, const vec2 &ex) noexcept : offset(of), extent(ex) {}
@@ -264,15 +264,25 @@ namespace devils_engine {
       }
 
       constexpr bool intersect(const rect &r) const noexcept {
-
+        const auto center_point_to_space = abs((offset + extent / 2) - (r.offset + r.extent / 2)) * 2;
+        const auto ext = extent + r.extent;
+        return center_point_to_space.x <= ext.x &&
+               center_point_to_space.y <= ext.y;
       }
-      constexpr bool contain(const rect &r) const noexcept {}
 
-      constexpr void extent_to_contain(const rect &r) noexcept {
-        offset = min(offset, r.offset);
-        extent = max(offset+extent, r.offset+r.extent) - offset;
+      constexpr bool contain(const rect &r) const noexcept {
+        return contain(r.offset) && contain(r.offset+r.extent);
+      }
+
+      constexpr rect extent_to_contain(const rect &r) const noexcept {
+        const auto min_p = min(offset, r.offset);
+        return rect(min_p, max(offset+extent, r.offset+r.extent) - min_p);
       }
     };
+
+    static_assert(rect(vec2(-1,-1), vec2(6,6)).intersect(rect(vec2(5,5), vec2(2,2))));
+    static_assert(rect(vec2(-1,-1), vec2(6,6)).contain(rect(vec2(-1,-1), vec2(6,6))));
+    static_assert(rect(vec2(-1,-1), vec2(6,6)).extent_to_contain(rect(vec2(-2,-2), vec2(6,6))).contain(rect(vec2(-2,-2), vec2(7,7))));
 
     // нам 250% потребуется взять часть изображения, в наклире использовались 2байта переменные
     // в микроюи вообще не использовались картинки, структура уже занимает 48 байт

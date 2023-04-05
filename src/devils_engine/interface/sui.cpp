@@ -269,7 +269,7 @@ namespace devils_engine {
         default: utils::error("Enum is not supported");
       }
 
-      l.bounds.extent_to_contain(final_rect); // ???
+      l.bounds = l.bounds.extent_to_contain(final_rect); // ???
 
       return final_rect;
     }
