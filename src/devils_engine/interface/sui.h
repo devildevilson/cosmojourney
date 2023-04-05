@@ -104,7 +104,7 @@ namespace devils_engine {
     struct vec2 {
       float x, y;
 
-      constexpr vec2() noexcept = default;
+      constexpr vec2() noexcept : x(0.0f), y(0.0f) {}
       constexpr vec2(const float x, const float y) noexcept : x(x), y(y) {}
       constexpr ~vec2() noexcept = default;
 
@@ -163,7 +163,7 @@ namespace devils_engine {
       float value;
       enum type type;
 
-      constexpr unit() noexcept : value(0.0f), type(type::absolute) {}
+      constexpr unit() noexcept : value(0.0f), type(type::not_specified) {}
       constexpr unit(const float value) noexcept : value(value), type(type::absolute) {}
       constexpr unit(const float value, const enum type type) noexcept : value(value), type(type) {}
       // наверное нужно передать контекст, в нем должны храниться рассчитанные константы размеров экрана,
@@ -507,6 +507,11 @@ namespace devils_engine {
       layout_t(const rect &bounds, const rect &inner_bounds, layout_func_t func) noexcept;
     };
 
+    rect default_layout(layout_t &l, const rect &next);
+    rect row_layout(layout_t &l, const rect &next);
+    rect column_layout(layout_t &l, const rect &next);
+    rect nine_slice_layout(layout_t &l, const rect &next);
+
     class layout_i {
     public:
       rect bounds;
@@ -519,12 +524,86 @@ namespace devils_engine {
       virtual rect compute_next(const rect &next) = 0;
     };
 
-    rect default_layout(layout_t &l, const rect &next);
-    rect row_layout(layout_t &l, const rect &next);
-    rect column_layout(layout_t &l, const rect &next);
-    rect nine_slice_layout(layout_t &l, const rect &next);
+    class layout_default : public layout_i {
+    public:
+      relative_to content;
 
-    // тип + размер?
+      layout_default(const rect &bounds, const relative_to content) noexcept;
+      rect compute_next(const rect &next) override;
+    };
+
+    // как удалить память? наверное нужно сделать деинит функцию
+    // какой еще вариант? предугадать максимум?
+    // вообще можно сделать 16 или 32 и пусть по иерархии вызывают функции то есть
+    // { const auto a = row_layout(ctx, b, { 1, 2, ...}); { const auto b = row_layout(ctx, b, { 1, 2, ...}); } }
+    class layout_row : public layout_i {
+    public:
+      constexpr static const size_t maximum_weights = 32;
+
+      float weights_summ;
+      size_t count;
+      std::array<float, maximum_weights> weights; // спан не сработает, нужна отдельная память 
+
+      layout_row(const rect &bounds, const std::span<float> &weights) noexcept;
+      rect compute_next(const rect &next) override;
+    };
+
+    class layout_column : public layout_i {
+    public:
+      constexpr static const size_t maximum_weights = 32;
+
+      float weights_summ;
+      size_t count;
+      std::array<float, maximum_weights> weights; // спан не сработает, нужна отдельная память 
+
+      layout_column(const rect &bounds, const std::span<float> &weights) noexcept;
+      rect compute_next(const rect &next) override;
+    };
+
+    class layout_row_dyn : public layout_i {
+    public:
+      float weights_summ;
+      std::vector<float> weights;
+
+      layout_row(const rect &bounds, const std::span<float> &weights) noexcept;
+      rect compute_next(const rect &next) override;
+    };
+
+    class layout_column_dyn : public layout_i {
+    public:
+      float weights_summ;
+      std::vector<float> weights;
+
+      layout_column(const rect &bounds, const std::span<float> &weights) noexcept;
+      rect compute_next(const rect &next) override;
+    };
+
+    class layout_nine_slice : public layout_i {
+    public:
+      rect inner_bounds;
+
+      layout_column(const rect &bounds, const rect &inner_bounds) noexcept;
+      rect compute_next(const rect &next) override;
+    };
+
+    // тут как минимум нужно выделять память для текста + картинка занимает довольно много места
+    // но в остальном нас интересует скорее способ отображения этого контента
+    // мы должны получить из контента команду к отрисовке
+    // скорее всего нужно сделать так же как и в случае с layout то есть интерфес
+    // и фабрики-наследники от этого интерфейса
+    // либо это уже сразу команда? скорее нет чем да, с другой стороны почему нет?
+    class content_i {
+    public:
+      //???
+      struct color color;
+
+      virtual ~content_i() noexcept = default;
+      // конфиг? да наверное лучше сделать так чтобы контент выдавал команду
+      // а хотя зачем тут вообще хранить контент? у нас функция например fill должна сразу задавать команду
+      // сразу команды? наверное
+      virtual std::tuple<size_t, size_t> convert(std::span<float> &vertex_buffer, std::span<uint16_t> &index_buffer) noexcept = 0;
+    };
+
     struct content_data_t {
       color c;
       struct image image;
@@ -532,8 +611,9 @@ namespace devils_engine {
     };
 
     struct widget_data_t {
-      layout_t layout;
-      rect content_bounds; // надо в лайаут отправить
+      //layout_t layout;
+      layout_i* layout;
+      //rect content_bounds; // надо в лайаут отправить
       vec2 content_pos;
 
       // наведение? по идее посчитаем по content_bounds

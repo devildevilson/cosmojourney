@@ -121,6 +121,22 @@ namespace devils_engine {
       // запомним еще какие нибудь вещи
     }
 
+    void fill(context* ctx, const color &c) {
+      const auto r = ctx->current->last->layout->bounds;
+      // по идее заливка идет по размерам в лэйауте
+      // значит нужно создать простую команду
+      // тип:
+      struct color_rect_command {
+        struct color color;
+        struct rect rect;
+      };
+
+      // правильно команды мы задаем в окне, чтобы потом можно было нарисовать одно окно поверх другого
+      // для хранения окон поди нужно использовать динамический массив, memmove не особо долгий в этом случае
+      // зато отсортировать легко... не, можно листом сделать, достаточно в каждую функцию которая манипулирует
+      // активностью окна добавить перемещение окна вперед
+    }
+
     layout_t::layout_t(const rect &bounds, const relative_to content, layout_func_t func) noexcept :
       bounds(bounds), counter(0), maximum_child_size(0,0), content(content), weights_summ(0.0f), inc_counter_and_get(std::move(func))
     {}
