@@ -80,27 +80,39 @@ namespace devils_engine {
       auto prev_widget = cur_window->last;
       utils_assertc(prev_widget != nullptr, "current widget not found");
 
-      float w = bounds.x.get(ctx);
-      float h = bounds.y.get(ctx);
-      if (bounds.x.type == unit::type::relative) {
-        w = w * prev_widget->layout.bounds.extent.x;
-      } else if (bounds.x.type == unit::type::not_specified) {
-        w = prev_widget->layout.bounds.extent.x;
+      // надо вынести в отдельную функцию где мы вернем посчитанный контент баундс
+      float w = bounds.w.get(ctx);
+      float h = bounds.h.get(ctx);
+      if (bounds.w.type == unit::type::relative) {
+        w = w * prev_widget->layout->bounds.extent.x;
+      } else if (bounds.w.type == unit::type::not_specified) {
+        w = prev_widget->layout->bounds.extent.x;
       }
 
-      if (bounds.y.type == unit::type::relative) {
-        h = h * prev_widget->layout.bounds.extent.y;
-      } else if (bounds.y.type == unit::type::not_specified) {
-        h = prev_widget->layout.bounds.extent.y;
+      if (bounds.h.type == unit::type::relative) {
+        h = h * prev_widget->layout->bounds.extent.y;
+      } else if (bounds.h.type == unit::type::not_specified) {
+        h = prev_widget->layout->bounds.extent.y;
       }
 
       // ну да еще нужно посчитать контент баундс для предыдущего виджета
       // и как то учесть незаданные заранее размеры бокса (хотя это по идее полный размер + ресайз в энде)
       const auto r = rect(vec2(0, 0), vec2(w, h)); // размеры
-      const auto pos = prev_widget->layout.inc_counter_and_get(prev_widget->layout, r); // абсолютный размер и позиция
+      // вызываем compute_next в end'е
+      // когда мы хотим чтобы виджет менял свои размеры относительно детей?
+      const auto pos = prev_widget->layout->compute_next(r); // абсолютный размер и позиция
+      // bounds здесь - это content_bounds виджета, а pos это непосредственно размер и позиция следующего виджета
+      // также может пригодится передавать относительные значения в лэйаут, как это правильно сделать
+      // вообще наверное удачнее предрассчитать абсолютные значения в лэйауте
+      // что делать с отступом, у расположения может быть отступ который например вообще имеет смысл в боксах
+      // но в лэйаут ров например уже непонятен, по идее можно оставить, единственное что нам нужно - это
+      // посчитать правильно ножницы (внутренее объединение двух прямоугольников)
+
 
       // было бы неплохо контроллировать общий аллокатор для всей гуишки
-      auto cur = cur_window->create_new_widget(pos, content, default_layout);
+      //auto cur = cur_window->create_new_widget(pos, content, default_layout);
+      auto l = ctx->window_data.create<layout_default>(r, content);
+      const auto scissor = pos.shrink_to_intersection(r);
 
       // что тут? вот мы создали бокс и теперь следующие виджеты или контент
       // займут эту область
@@ -119,6 +131,22 @@ namespace devils_engine {
 
       // тут мы расчитаем размер контента, запомним его если есть хеш, запомним прокрутку
       // запомним еще какие нибудь вещи
+
+      auto cur_window = ctx->current;
+      utils_assertc(cur_window != nullptr, "probably forgot to create a window");
+      auto cur_widget = cur_window->last;
+      utils_assertc(cur_widget != nullptr, "current widget not found");
+
+      const auto widget_size = cur_widget->layout->bounds;
+      // нужно как то посчитать абсолютную позицию, к сожалению нам обязательно нужно запомнить индекс виджета
+      // если мы хотим правильно посчитать позицию тут
+      const auto absolute_size = cur_widget->prev->layout->compute_next(widget_size);
+
+      // тут мы узнаем что у виджета есть контент
+      const bool has_content = true;
+      if (has_content) {
+
+      }
     }
 
     void fill(context* ctx, const color &c) {
@@ -354,6 +382,140 @@ namespace devils_engine {
         case relative_to::bottom_left  : final_rect = compute_top_left(ns_bottom_left  (l.bounds, l.inner_bounds), next); break;
         case relative_to::bottom_center: final_rect = compute_top_left(ns_bottom_center(l.bounds, l.inner_bounds), next); break;
         case relative_to::bottom_right : final_rect = compute_top_left(ns_bottom_right (l.bounds, l.inner_bounds), next); break;
+        default: utils::error("Enum is not supported");
+      }
+
+      // найнслайс наверное должен быть сделан так чтобы не допускать выходов за пределы внешнего бокса
+      // то есть иннер бокс должен быть строго внутри основного бокса
+      return final_rect;
+    }
+
+    layout_default::layout_default(const rect &bounds, const relative_to content) noexcept :
+      layout_i(bounds), content(content)
+    {}
+
+    rect layout_default::compute_next(const rect &next) {
+      counter += 1;
+
+      rect final_rect;
+      switch (content) {
+        case relative_to::top_left     : final_rect = compute_top_left     (bounds, next); break;
+        case relative_to::top_center   : final_rect = compute_top_center   (bounds, next); break;
+        case relative_to::top_right    : final_rect = compute_top_right    (bounds, next); break;
+        case relative_to::middle_left  : final_rect = compute_middle_left  (bounds, next); break;
+        case relative_to::middle_center: final_rect = compute_middle_center(bounds, next); break;
+        case relative_to::middle_right : final_rect = compute_middle_right (bounds, next); break;
+        case relative_to::bottom_left  : final_rect = compute_bottom_left  (bounds, next); break;
+        case relative_to::bottom_center: final_rect = compute_bottom_center(bounds, next); break;
+        case relative_to::bottom_right : final_rect = compute_bottom_right (bounds, next); break;
+        default: utils::error("Enum is not supported {}", static_cast<size_t>(content));
+      }
+
+      content_bounds = content_bounds.extent_to_contain(final_rect);
+
+      return final_rect;
+    }
+
+    layout_row::layout_row(const rect &bounds, const std::span<float> &weights) noexcept :
+      layout_i(bounds), weights_summ(0.0f), count(weights.size()), elem_bounds(bounds)
+    {
+      memcpy(this->weights.data(), weights.data(), weights.size()*sizeof(float));
+      for (size_t i = 0; i < count; ++i) {
+        this->weights_summ += this->weights[i];
+      }
+    }
+
+    // короче тут есть несколько проблем: нам нужно сохранить изначальные размеры виджета
+    // + запомнить его новый размер + скорее всего нужно передавать сюда относительный размер
+    // ко всему прочему нужно сделать последовательное размещение виджетов друг за другом
+    // новый размер мы используем чтобы разместить после него другой виджет,
+    // при этом мы должны обновить данные у виджета выше по иерархии (тип размер контент изменился)
+    rect layout_row::compute_next(const rect &next) {
+      const size_t cur = counter;
+      counter += 1;
+
+      const size_t row_num   = cur / count;
+      const size_t row_index = cur % count;
+
+      const float width_len_rel = weights_summ / weights[row_index];
+      float accumulated_width = 0.0f;
+      for (size_t i = 0; i < row_index; ++i) {
+        const float width_rel = weights_summ / weights[i];
+        accumulated_width += elem_bounds.extent.x * width_rel;
+      }
+
+      // как высоту посчитать? чет я еще не придумал, но по идее это максимальная высота детей в строке
+      // наверное доступна в лайауте? высота должна браться по размерам виджета
+      const float box_offset_y = elem_bounds.extent.y * row_num;
+      offset.y = box_offset_y;
+
+      const auto comp_b = rect(
+        vec2(elem_bounds.offset.x+accumulated_width, elem_bounds.offset.y+box_offset_y),
+        vec2(elem_bounds.extent.x*width_len_rel,     elem_bounds.extent.y) // l.bounds.extent.y
+      );
+
+      bounds = bounds.extent_to_contain(comp_b);
+      const auto computed = compute_top_left(comp_b, next);
+      content_bounds = content_bounds.extent_to_contain(computed);
+      return computed;
+    }
+
+    layout_column::layout_column(const rect &bounds, const std::span<float> &weights) noexcept :
+      layout_i(bounds), weights_summ(0.0f), count(weights.size())
+    {
+      memcpy(this->weights.data(), weights.data(), weights.size()*sizeof(float));
+      for (size_t i = 0; i < count; ++i) {
+        this->weights_summ += this->weights[i];
+      }
+    }
+
+    rect layout_column::compute_next(const rect &next) {
+      const size_t cur = counter;
+      counter += 1;
+
+      const size_t column_num   = cur / count;
+      const size_t column_index = cur % count;
+
+      // как высоту посчитать? чет я еще не придумал, но по идее это максимальная высота детей в строке
+      // наверное доступна в лайауте? высота должна браться по размерам виджета
+      const float box_offset_x = offset.x;
+      offset.x += next.offset.x;
+
+      const float height_len_rel = weights_summ / weights[column_index];
+      float accumulated_height = 0.0f;
+      for (size_t i = 0; i < column_index; ++i) {
+        const float width_rel = weights_summ / weights[i];
+        accumulated_height += bounds.extent.y * width_rel;
+      }
+
+      const auto comp_b = rect(
+        vec2(bounds.offset.x+box_offset_x,   bounds.offset.y+accumulated_height),
+        vec2(bounds.extent.x*height_len_rel, bounds.extent.y) // l.bounds.extent.y
+      );
+      return compute_top_left(comp_b, next);
+    }
+
+    layout_nine_slice::layout_nine_slice(const rect &bounds, const rect &inner_bounds) noexcept :
+      layout_i(bounds), inner_bounds(inner_bounds)
+    {}
+
+    rect layout_nine_slice::compute_next(const rect &next) {
+      // тут нужно предусмотреть ТОЛЬКО 9 детей
+      // хотя возможно нужно сделать это ограничение легким
+      const size_t cur = counter; // % static_cast<size_t>(relative_to::count)
+      counter += 1;
+
+      rect final_rect;
+      switch(static_cast<relative_to>(cur)) {
+        case relative_to::top_left     : final_rect = compute_top_left(ns_top_left     (bounds, inner_bounds), next); break;
+        case relative_to::top_center   : final_rect = compute_top_left(ns_top_center   (bounds, inner_bounds), next); break;
+        case relative_to::top_right    : final_rect = compute_top_left(ns_top_right    (bounds, inner_bounds), next); break;
+        case relative_to::middle_left  : final_rect = compute_top_left(ns_middle_left  (bounds, inner_bounds), next); break;
+        case relative_to::middle_center: final_rect = compute_top_left(ns_middle_center(bounds, inner_bounds), next); break;
+        case relative_to::middle_right : final_rect = compute_top_left(ns_middle_right (bounds, inner_bounds), next); break;
+        case relative_to::bottom_left  : final_rect = compute_top_left(ns_bottom_left  (bounds, inner_bounds), next); break;
+        case relative_to::bottom_center: final_rect = compute_top_left(ns_bottom_center(bounds, inner_bounds), next); break;
+        case relative_to::bottom_right : final_rect = compute_top_left(ns_bottom_right (bounds, inner_bounds), next); break;
         default: utils::error("Enum is not supported");
       }
 

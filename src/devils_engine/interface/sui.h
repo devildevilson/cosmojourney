@@ -15,6 +15,10 @@
 #include "utils/block_allocator.h"
 #include "utils/arena_allocator.h"
 
+#include "units.h"
+
+#define SUI_INLINE inline
+
 namespace devils_engine {
   // нужно сменить название, чет dgui в куче мест используется
   // чат джпт посоветовал использовать CarbonUI, что неплохо
@@ -32,7 +36,7 @@ namespace devils_engine {
       bool value;
 
       constexpr raii_elem(context* ctx, const bool value = true) noexcept : ctx(ctx), value(value) {}
-      inline ~raii_elem() noexcept { if (ctx != nullptr) end(ctx); }
+      SUI_INLINE ~raii_elem() noexcept { if (ctx != nullptr) end(ctx); }
 
       constexpr operator bool () const noexcept { return value; }
 
@@ -49,10 +53,11 @@ namespace devils_engine {
       constexpr raii_elem & operator=(const raii_elem &copy) noexcept = delete;
     };
 
+    // все эти энумы мы можем смоделировать задав особый extent
     enum class relative_to {
-      top_left,   // 0,0 выставляется в левом верхнем углу
-      top_center, // по центру сверху и так далее
-      top_right,
+      top_left,   // extent(x,y)
+      top_center, // offset(0.5_frac, 0), extent(x,y)
+      top_right,  // extent(-x,y)
       middle_left,
       middle_center,
       middle_right,
@@ -104,93 +109,50 @@ namespace devils_engine {
     struct vec2 {
       float x, y;
 
-      constexpr vec2() noexcept : x(0.0f), y(0.0f) {}
-      constexpr vec2(const float x, const float y) noexcept : x(x), y(y) {}
-      constexpr ~vec2() noexcept = default;
+      SUI_INLINE constexpr vec2() noexcept : x(0.0f), y(0.0f) {}
+      SUI_INLINE constexpr vec2(const float x, const float y) noexcept : x(x), y(y) {}
+      SUI_INLINE constexpr ~vec2() noexcept = default;
 
-      constexpr vec2(const vec2 &v) noexcept = default;
-      constexpr vec2(vec2 &&v) noexcept = default;
-      constexpr vec2 & operator=(const vec2 &v) noexcept = default;
-      constexpr vec2 & operator=(vec2 &&v) noexcept = default;
+      SUI_INLINE constexpr vec2(const vec2 &v) noexcept = default;
+      SUI_INLINE constexpr vec2(vec2 &&v) noexcept = default;
+      SUI_INLINE constexpr vec2 & operator=(const vec2 &v) noexcept = default;
+      SUI_INLINE constexpr vec2 & operator=(vec2 &&v) noexcept = default;
 
-      const float & operator[] (const size_t i) const noexcept { return i == 0 ? x : y; }
-      float & operator[] (const size_t i) noexcept { return i == 0 ? x : y; }
+      SUI_INLINE const float & operator[] (const size_t i) const noexcept { return i == 0 ? x : y; }
+      SUI_INLINE float & operator[] (const size_t i) noexcept { return i == 0 ? x : y; }
 
-      constexpr size_t length() const noexcept { return 2; }
+      SUI_INLINE constexpr size_t length() const noexcept { return 2; }
 
-      constexpr void operator+=(const vec2 &v) noexcept { x += v.x; y += v.y; }
-      constexpr void operator-=(const vec2 &v) noexcept { x -= v.x; y -= v.y; }
-      constexpr void operator*=(const vec2 &v) noexcept { x *= v.x; y *= v.y; }
-      constexpr void operator/=(const vec2 &v) noexcept { x /= v.x; y /= v.y; }
+      SUI_INLINE constexpr vec2 & operator+=(const vec2 &v) noexcept { x += v.x; y += v.y; return *this; }
+      SUI_INLINE constexpr vec2 & operator-=(const vec2 &v) noexcept { x -= v.x; y -= v.y; return *this; }
+      SUI_INLINE constexpr vec2 & operator*=(const vec2 &v) noexcept { x *= v.x; y *= v.y; return *this; }
+      SUI_INLINE constexpr vec2 & operator/=(const vec2 &v) noexcept { x /= v.x; y /= v.y; return *this; }
 
-      constexpr void operator+=(const float v) noexcept { x += v; y += v; }
-      constexpr void operator-=(const float v) noexcept { x -= v; y -= v; }
-      constexpr void operator*=(const float v) noexcept { x *= v; y *= v; }
-      constexpr void operator/=(const float v) noexcept { x /= v; y /= v; }
+      SUI_INLINE constexpr vec2 & operator+=(const float v) noexcept { x += v; y += v; return *this; }
+      SUI_INLINE constexpr vec2 & operator-=(const float v) noexcept { x -= v; y -= v; return *this; }
+      SUI_INLINE constexpr vec2 & operator*=(const float v) noexcept { x *= v; y *= v; return *this; }
+      SUI_INLINE constexpr vec2 & operator/=(const float v) noexcept { x /= v; y /= v; return *this; }
     };
 
-    constexpr vec2 operator+(const vec2 &a, const vec2 &b) noexcept { return vec2(a.x + b.x, a.y + b.y); }
-    constexpr vec2 operator-(const vec2 &a, const vec2 &b) noexcept { return vec2(a.x - b.x, a.y - b.y); }
-    constexpr vec2 operator*(const vec2 &a, const vec2 &b) noexcept { return vec2(a.x * b.x, a.y * b.y); }
-    constexpr vec2 operator/(const vec2 &a, const vec2 &b) noexcept { return vec2(a.x / b.x, a.y / b.y); }
+    SUI_INLINE constexpr vec2 operator+(const vec2 &a, const vec2 &b) noexcept { return vec2(a.x + b.x, a.y + b.y); }
+    SUI_INLINE constexpr vec2 operator-(const vec2 &a, const vec2 &b) noexcept { return vec2(a.x - b.x, a.y - b.y); }
+    SUI_INLINE constexpr vec2 operator*(const vec2 &a, const vec2 &b) noexcept { return vec2(a.x * b.x, a.y * b.y); }
+    SUI_INLINE constexpr vec2 operator/(const vec2 &a, const vec2 &b) noexcept { return vec2(a.x / b.x, a.y / b.y); }
 
-    constexpr vec2 operator+(const vec2 &a, const float b) noexcept { return vec2(a.x + b, a.y + b); }
-    constexpr vec2 operator-(const vec2 &a, const float b) noexcept { return vec2(a.x - b, a.y - b); }
-    constexpr vec2 operator*(const vec2 &a, const float b) noexcept { return vec2(a.x * b, a.y * b); }
-    constexpr vec2 operator/(const vec2 &a, const float b) noexcept { return vec2(a.x / b, a.y / b); }
+    SUI_INLINE constexpr vec2 operator+(const vec2 &a, const float b) noexcept { return vec2(a.x + b, a.y + b); }
+    SUI_INLINE constexpr vec2 operator-(const vec2 &a, const float b) noexcept { return vec2(a.x - b, a.y - b); }
+    SUI_INLINE constexpr vec2 operator*(const vec2 &a, const float b) noexcept { return vec2(a.x * b, a.y * b); }
+    SUI_INLINE constexpr vec2 operator/(const vec2 &a, const float b) noexcept { return vec2(a.x / b, a.y / b); }
 
-    constexpr vec2 operator+(const float a, const vec2 &b) noexcept { return vec2(a + b.x, a + b.y); }
-    constexpr vec2 operator-(const float a, const vec2 &b) noexcept { return vec2(a - b.x, a - b.y); }
-    constexpr vec2 operator*(const float a, const vec2 &b) noexcept { return vec2(a * b.x, a * b.y); }
-    constexpr vec2 operator/(const float a, const vec2 &b) noexcept { return vec2(a / b.x, a / b.y); }
+    SUI_INLINE constexpr vec2 operator+(const float a, const vec2 &b) noexcept { return vec2(a + b.x, a + b.y); }
+    SUI_INLINE constexpr vec2 operator-(const float a, const vec2 &b) noexcept { return vec2(a - b.x, a - b.y); }
+    SUI_INLINE constexpr vec2 operator*(const float a, const vec2 &b) noexcept { return vec2(a * b.x, a * b.y); }
+    SUI_INLINE constexpr vec2 operator/(const float a, const vec2 &b) noexcept { return vec2(a / b.x, a / b.y); }
 
-    constexpr vec2 abs(const vec2 &a) noexcept { return vec2(std::abs(a.x), std::abs(a.y)); }
-    constexpr vec2 max(const vec2 &a, const vec2 &b) noexcept { return vec2(std::max(a.x, b.x), std::max(a.y, b.y)); }
-    constexpr vec2 min(const vec2 &a, const vec2 &b) noexcept { return vec2(std::min(a.x, b.x), std::min(a.y, b.y)); }
-
-    struct unit {
-      enum class type {
-        not_specified,
-        absolute,
-        density_independent,
-        scaled_pixels,
-        relative,
-        //relative_w, // относительные координаты нужно применить к соответствующему числу дополнительно
-        //relative_h, // тогда как остальные ни к чему
-        count
-      };
-
-      float value;
-      enum type type;
-
-      constexpr unit() noexcept : value(0.0f), type(type::not_specified) {}
-      constexpr unit(const float value) noexcept : value(value), type(type::absolute) {}
-      constexpr unit(const float value, const enum type type) noexcept : value(value), type(type) {}
-      // наверное нужно передать контекст, в нем должны храниться рассчитанные константы размеров экрана,
-      // то есть необходимый мультипликатор для типа
-      constexpr float get(const float mult = 1.0f) const noexcept { return value*mult; }
-      float get(const context* ctx) const noexcept;
-
-      //unit() noexcept = default;
-      constexpr unit(const unit &copy) noexcept = default;
-      constexpr unit(unit &&move) noexcept = default;
-      constexpr unit & operator=(const unit &copy) noexcept = default;
-      constexpr unit & operator=(unit &&move) noexcept = default;
-    };
-
-    namespace literals {
-      using float_t = long double;
-      using uint_t = unsigned long long;
-      constexpr unit operator ""_pct(const float_t num) noexcept { return unit(num / 100.0, unit::type::relative); }
-      constexpr unit operator ""_pct(const uint_t num) noexcept { return unit(float_t(num) / 100.0, unit::type::relative); }
-      constexpr unit operator ""_frac(const float_t num) noexcept { return unit(num, unit::type::relative); }
-      constexpr unit operator ""_dp(const float_t num) noexcept { return unit(num, unit::type::density_independent); }
-      constexpr unit operator ""_dp(const uint_t num) noexcept { return unit(num, unit::type::density_independent); }
-      constexpr unit operator ""_px(const float_t num) noexcept { return unit(num, unit::type::absolute); }
-      constexpr unit operator ""_px(const uint_t num) noexcept { return unit(num, unit::type::absolute); }
-      constexpr unit operator ""_sp(const float_t num) noexcept { return unit(num, unit::type::scaled_pixels); }
-      constexpr unit operator ""_sp(const uint_t num) noexcept { return unit(num, unit::type::scaled_pixels); }
-    }
+    SUI_INLINE constexpr vec2 operator-(const vec2 &a) noexcept { return vec2(-a.x, -a.y); }
+    SUI_INLINE constexpr vec2 abs(const vec2 &a) noexcept { return vec2(std::abs(a.x), std::abs(a.y)); }
+    SUI_INLINE constexpr vec2 max(const vec2 &a, const vec2 &b) noexcept { return vec2(std::max(a.x, b.x), std::max(a.y, b.y)); }
+    SUI_INLINE constexpr vec2 min(const vec2 &a, const vec2 &b) noexcept { return vec2(std::min(a.x, b.x), std::min(a.y, b.y)); }
 
     struct extent {
       unit w, h;
@@ -277,6 +239,11 @@ namespace devils_engine {
       constexpr rect extent_to_contain(const rect &r) const noexcept {
         const auto min_p = min(offset, r.offset);
         return rect(min_p, max(offset+extent, r.offset+r.extent) - min_p);
+      }
+
+      constexpr rect shrink_to_intersection(const rect &r) const noexcept {
+        const auto min_p = max(offset, r.offset);
+        return rect(min_p, max(min(offset+extent, r.offset+r.extent) - min_p, vec2(0,0)));
       }
     };
 
@@ -522,16 +489,35 @@ namespace devils_engine {
     rect column_layout(layout_t &l, const rect &next);
     rect nine_slice_layout(layout_t &l, const rect &next);
 
+    // размеры которые мы сюда передаем должны быть относительно предыдущего виджета
+    // когда мы хотим расчитать конечный квадрат, мы расчитываем начиная с самого первого виджета (по вложенности)
+    // проходим по иерархии и считаем поди compute_next
+    // в микроюи данные лэйаута предыдущего виджета наследуются
+    // по идее лэйаут не должен знать о том где находится и размер контента
+    // при добавлении bounds мы можем добавить прокрутку, контент баундс тут ни к чему
+    // короч нужно тогда форсить пользователя всегда задавать размеры (хотя мож и не обязательно)
+    // точнее так: боксу можно не задавать а всем остальным обязательно нужно задать размеры
+    // возможно размеры должны быть заданы в формате density_independent
+    // если боксу не задаем размеры явно, то в зависимости от realtive_to бокс получит часть размера родителя
+    // по крайней мере офсет (а размер че? по идее по контенту, ай проще просто задать по родительскому размеру)
     class layout_i {
     public:
       rect bounds;
       rect content_bounds;
+      vec2 size;
+      vec2 max;
       vec2 offset;
       size_t counter;
 
-      inline layout_i(const rect &bounds) noexcept : bounds(bounds), content_bounds(bounds), offset(0,0), counter(0) {}
+      SUI_INLINE layout_i(const rect &bounds, const rect &content_bounds) noexcept :
+        bounds(bounds), content_bounds(content_bounds), counter(0)
+      {}
+
       virtual ~layout_i() noexcept = default;
       virtual rect compute_next(const rect &next) = 0;
+      // возможно было бы неплохо превратить относительные размеры в абсолютные тоже тут
+      virtual rect make_absolute(const rel_rect &r) const = 0; // ctx?
+      virtual rect compute_scissor() const = 0;
     };
 
     class layout_default : public layout_i {
@@ -552,7 +538,8 @@ namespace devils_engine {
 
       float weights_summ;
       size_t count;
-      std::array<float, maximum_weights> weights; // спан не сработает, нужна отдельная память 
+      std::array<float, maximum_weights> weights; // спан не сработает, нужна отдельная память
+      rect elem_bounds;
 
       layout_row(const rect &bounds, const std::span<float> &weights) noexcept;
       rect compute_next(const rect &next) override;
@@ -575,7 +562,7 @@ namespace devils_engine {
       float weights_summ;
       std::vector<float> weights;
 
-      layout_row(const rect &bounds, const std::span<float> &weights) noexcept;
+      layout_row_dyn(const rect &bounds, const std::span<float> &weights) noexcept;
       rect compute_next(const rect &next) override;
     };
 
@@ -584,7 +571,7 @@ namespace devils_engine {
       float weights_summ;
       std::vector<float> weights;
 
-      layout_column(const rect &bounds, const std::span<float> &weights) noexcept;
+      layout_column_dyn(const rect &bounds, const std::span<float> &weights) noexcept;
       rect compute_next(const rect &next) override;
     };
 
@@ -592,8 +579,16 @@ namespace devils_engine {
     public:
       rect inner_bounds;
 
-      layout_column(const rect &bounds, const rect &inner_bounds) noexcept;
+      layout_nine_slice(const rect &bounds, const rect &inner_bounds) noexcept;
       rect compute_next(const rect &next) override;
+    };
+
+    // либо этот оставить либо убрать в пользу widget_data_t
+    struct container_t {
+      rect bounds;
+      rect content_bounds;
+      vec2 content_size; // обновляется как раз когда мы заканчиваем виджет
+      vec2 scroll;
     };
 
     // тут как минимум нужно выделять память для текста + картинка занимает довольно много места
@@ -620,6 +615,7 @@ namespace devils_engine {
       std::string_view text;
     };
 
+    // наверное над лэйаутом будет еще контейнер, который может хранить данные между кадрами
     struct widget_data_t {
       //layout_t layout;
       layout_i* layout;
