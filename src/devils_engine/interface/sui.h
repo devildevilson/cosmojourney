@@ -19,13 +19,12 @@
 
 #define SUI_INLINE inline
 
+#define SUI_EPSILON 0.000001
+
+// наверное все структуры лучше назвать с окончанием _t, чтобы путаницы не было
+
 namespace devils_engine {
-  // нужно сменить название, чет dgui в куче мест используется
-  // чат джпт посоветовал использовать CarbonUI, что неплохо
-  // можно потроллить язык карбон, но на самом деле надо бы придумать что то еще
-  // было бы неплохо использовать слово на S и добавить UI чтобы сокращение получилось sui
-  // например SereneUI, StarUI, SuppleUI
-  // может быть реально использовать SuppleUI
+  // SuppleUI
   namespace sui {
     struct context;
 
@@ -54,10 +53,11 @@ namespace devils_engine {
     };
 
     // все эти энумы мы можем смоделировать задав особый extent
+    // нет, relative_to останется
     enum class relative_to {
-      top_left,   // extent(x,y)
-      top_center, // offset(0.5_frac, 0), extent(x,y)
-      top_right,  // extent(-x,y)
+      top_left,
+      top_center,
+      top_right,
       middle_left,
       middle_center,
       middle_right,
@@ -66,11 +66,12 @@ namespace devils_engine {
       bottom_right,
       count
     };
-
+    
+    // хотя может и не надо добавлять _t, в других библотечках нет такого
     struct handle {
       constexpr static const size_t underlying_size = 16;
 
-      // тип?
+      // нужен ли тип?
       size_t type;
       uint8_t mem[underlying_size];
 
@@ -111,7 +112,7 @@ namespace devils_engine {
 
       SUI_INLINE constexpr vec2() noexcept : x(0.0f), y(0.0f) {}
       SUI_INLINE constexpr vec2(const float x, const float y) noexcept : x(x), y(y) {}
-      SUI_INLINE constexpr ~vec2() noexcept = default;
+      SUI_INLINE ~vec2() noexcept = default;
 
       SUI_INLINE constexpr vec2(const vec2 &v) noexcept = default;
       SUI_INLINE constexpr vec2(vec2 &&v) noexcept = default;
@@ -154,6 +155,9 @@ namespace devils_engine {
     SUI_INLINE constexpr vec2 max(const vec2 &a, const vec2 &b) noexcept { return vec2(std::max(a.x, b.x), std::max(a.y, b.y)); }
     SUI_INLINE constexpr vec2 min(const vec2 &a, const vec2 &b) noexcept { return vec2(std::min(a.x, b.x), std::min(a.y, b.y)); }
 
+    //SUI_INLINE constexpr bool operator==(const vec2 &a, const vec2 &b) noexcept { return a.x == b.x && a.y == b.y; }
+    //SUI_INLINE constexpr bool operator!=(const vec2 &a, const vec2 &b) noexcept { return !operator==(a,b); }
+
     struct extent {
       unit w, h;
 
@@ -162,17 +166,7 @@ namespace devils_engine {
       constexpr extent(const unit &w, const unit &h) noexcept : w(w), h(h) {}
     };
 
-    // нужно учесть что нам требуется подстроить позицию по размеру бокса
-    // поизиция скорее всего нуждается еще в дополнительных данных:
-    // относительная позиция - относительно чего? относительно какого угла бокса?
-    // наверное для любой позиции это справедливо
-    // либо расчет размеров все таки переложить на плечи пользователя?
-    // еще большой вопрос: может быть вообще в принципе все размеры относительные по умолчанию?
-    // чем это плохо? относительно чего размер и позиция? можно использовать специальные единицы измерения
-    // как в джетпак, в общем то скорее всего требуется какие то единицы измерения относительно физического размера экрана
-    // а может и нет... ну то есть физический размер окна действительно нужно учитывать чтобы
-    // сделать удачное отображение контента на экране
-    // оставляем чисто пользователю ебаторию с конкретными единицами измерения
+    // сделал юниты, скорее всего юнитам нужно убрать конструктор только по float
     struct offset {
       unit x, y;
 
@@ -180,16 +174,18 @@ namespace devils_engine {
       constexpr offset(const float x, const float y) noexcept : x(x), y(y) {}
       constexpr offset(const unit &x, const unit &y) noexcept : x(x), y(y) {}
     };
-
-    struct rel_rect {
+    
+    // основной класс для пользователя должен быть этот
+    struct rect {
       struct offset offset;
       struct extent extent;
 
-      constexpr rel_rect() noexcept = default;
-      constexpr rel_rect(const struct offset &of, const struct extent &ex) noexcept : offset(of), extent(ex) {}
+      constexpr rect() noexcept = default;
+      constexpr rect(const struct extent &ex) noexcept : offset(0.0f, 0.0f), extent(ex) {}
+      constexpr rect(const struct offset &of, const struct extent &ex) noexcept : offset(of), extent(ex) {}
     };
 
-    struct rect {
+    struct abs_rect {
       vec2 offset;
       vec2 extent;
       // не уверен где это будет лучше всего раположить
@@ -209,10 +205,10 @@ namespace devils_engine {
       // нет наверное хотелось бы вычислять размеры некоторых окон по размеру контента
       // что такое контент? это боксы заданных размеров: например текст определенного размера шрифта
       // имеет такой то размер по x,y, то есть зная размер шрифта легко вычислять размер бокса вокруг текста
-      constexpr rect() noexcept = default;
+      constexpr abs_rect() noexcept = default;
       //rect(const vec2 &of);
       //rect(const vec2 &ex);
-      constexpr rect(const vec2 &of, const vec2 &ex) noexcept : offset(of), extent(ex) {}
+      constexpr abs_rect(const vec2 &of, const vec2 &ex) noexcept : offset(of), extent(ex) {}
       // const relative_to alignment = relative_to::top_left
 
       constexpr bool intersect(const vec2 &v) const noexcept {
@@ -225,31 +221,47 @@ namespace devils_engine {
                to_space.y >= 0 && to_space.y <= extent.y;
       }
 
-      constexpr bool intersect(const rect &r) const noexcept {
+      constexpr bool intersect(const abs_rect &r) const noexcept {
         const auto center_point_to_space = abs((offset + extent / 2) - (r.offset + r.extent / 2)) * 2;
         const auto ext = extent + r.extent;
         return center_point_to_space.x <= ext.x &&
                center_point_to_space.y <= ext.y;
       }
 
-      constexpr bool contain(const rect &r) const noexcept {
+      constexpr bool contain(const abs_rect &r) const noexcept {
         return contain(r.offset) && contain(r.offset+r.extent);
       }
 
-      constexpr rect extent_to_contain(const rect &r) const noexcept {
+      constexpr abs_rect extent_to_contain(const abs_rect &r) const noexcept {
         const auto min_p = min(offset, r.offset);
-        return rect(min_p, max(offset+extent, r.offset+r.extent) - min_p);
+        return abs_rect(min_p, max(offset+extent, r.offset+r.extent) - min_p);
       }
 
-      constexpr rect shrink_to_intersection(const rect &r) const noexcept {
+      constexpr abs_rect shrink_to_intersection(const abs_rect &r) const noexcept {
         const auto min_p = max(offset, r.offset);
-        return rect(min_p, max(min(offset+extent, r.offset+r.extent) - min_p, vec2(0,0)));
+        return abs_rect(min_p, max(min(offset+extent, r.offset+r.extent) - min_p, vec2(0,0)));
+      }
+
+      constexpr vec2 make_extent(const abs_rect &next) noexcept {
+        auto ext = next.extent;
+        if (std::abs(ext.x) < SUI_EPSILON) { ext.x = extent.x - offset.x; }
+        if (std::abs(ext.y) < SUI_EPSILON) { ext.y = extent.y - offset.y; }
+        if (ext.x < 0) { ext.x += extent.x - offset.x; }
+        if (ext.y < 0) { ext.y += extent.y - offset.y; }
+        return ext;
+      }
+
+      // посчитаем бокс относительно этого
+      constexpr abs_rect compute_absolute(const abs_rect &r) {
+        const auto offset = offset+r.offset;
+        const auto ext = make_extent(r);
+        return abs_rect(offset, ext);
       }
     };
 
-    static_assert(rect(vec2(-1,-1), vec2(6,6)).intersect(rect(vec2(5,5), vec2(2,2))));
-    static_assert(rect(vec2(-1,-1), vec2(6,6)).contain(rect(vec2(-1,-1), vec2(6,6))));
-    static_assert(rect(vec2(-1,-1), vec2(6,6)).extent_to_contain(rect(vec2(-2,-2), vec2(6,6))).contain(rect(vec2(-2,-2), vec2(7,7))));
+    static_assert(abs_rect(vec2(-1,-1), vec2(6,6)).intersect(abs_rect(vec2(5,5), vec2(2,2))));
+    static_assert(abs_rect(vec2(-1,-1), vec2(6,6)).contain(abs_rect(vec2(-1,-1), vec2(6,6))));
+    static_assert(abs_rect(vec2(-1,-1), vec2(6,6)).extent_to_contain(abs_rect(vec2(-2,-2), vec2(6,6))).contain(abs_rect(vec2(-2,-2), vec2(7,7))));
 
     // нам 250% потребуется взять часть изображения, в наклире использовались 2байта переменные
     // в микроюи вообще не использовались картинки, структура уже занимает 48 байт
@@ -258,8 +270,8 @@ namespace devils_engine {
       vec2 size;
       rect region;
 
-      constexpr image() noexcept : size(0,0) {}
-      constexpr image(const struct handle &handle) noexcept : handle(handle), size(0,0) {}
+      constexpr image() noexcept = default;
+      constexpr image(const struct handle &handle) noexcept : handle(handle) {}
       constexpr image(const struct handle &handle, const vec2 &size, const rect &region) noexcept :
         handle(handle), size(size), region(region)
       {}
@@ -267,9 +279,12 @@ namespace devils_engine {
 
     //void init_context(context* ctx);
 
+    // наверное тут нужно будет откидывать дробную часть
+    abs_rect compute_absolute(const context* ctx, const rect &r);
+
     // точка входа для гуи - просто бокс с дополнительными настройками
-    //
-    raii_elem window(context* ctx, const std::string_view &name, const rect &bounds = rect(), const relative_to content = relative_to::top_left);
+    // имеет смысл тут вместо названия задать просто хеш, и функция называться должна по другому
+    raii_elem window(context* ctx, const std::string_view &name, const rect &bounds, const relative_to content = relative_to::top_left);
     // надо бы как нибудь уметь изменять размеры окна, и передавать в окно хендл
 
     // размер может определяться относительно родительского элемента, но и может быть абсолютным
@@ -285,9 +300,10 @@ namespace devils_engine {
     // короче я вот что еще подумал: при вызове функции бокс нужно передавать ей специальную структуру
     // в которой будет содержаться размеры бокса относительно родительского элемента
     // итоговый размер родителя будем расчитывать в функции энд (точнее итоговый размер контента родителя)
+    raii_elem box(context* ctx, const abs_rect &bounds = rect(), const relative_to content = relative_to::top_left);
     raii_elem box(context* ctx, const rect &bounds = rect(), const relative_to content = relative_to::top_left);
     // позволит сохранить текущее положение бокса контента, bounds - это стартовый размер, потом он перезапишется
-    raii_elem box(context* ctx, const std::string_view &name, const rect &bounds = rect(), const relative_to content = relative_to::top_left);
+    raii_elem box(context* ctx, const size_t hash, const abs_rect &bounds = rect(), const relative_to content = relative_to::top_left);
     raii_elem box(context* ctx, const size_t hash, const rect &bounds = rect(), const relative_to content = relative_to::top_left);
     // + боксы должны уметь быстро переопределять стиль отображения виджетов
     // как быть со стилями? стили по идее представляют из себя набор данных
@@ -297,21 +313,24 @@ namespace devils_engine {
     // а можем сказать что у нас есть класс боксов у которых эти свойства похожи
     // просто возьми цвета и картинки вот отсюда
 
-    raii_elem box(context* ctx, const extent &bounds, const relative_to content = relative_to::top_left);
-    raii_elem box(context* ctx, const std::string_view &name, const extent &bounds, const relative_to content = relative_to::top_left);
-    raii_elem box(context* ctx, const size_t hash, const extent &bounds, const relative_to content = relative_to::top_left);
-
     // тот же бокс но который не сохраняет стейт и не реагирует на инпут
     // наверное по итогу не нужно, инпут будет иерархическим - единственная беда: кнопка в кнопке
     // я бы сказал что кнопка в кнопке - скорее неудачная идея
-    raii_elem group(context* ctx, const rect &bounds, const relative_to content = relative_to::top_left);
+    //raii_elem_t group(context* ctx, const rect &bounds, const relative_to content = relative_to::top_left);
 
     // ожидаем последним аргументом веса будущих виджетов
     // эти функции - это не сами боксы это только бокс лайауты, тогда тут размер не нужен
     // эти функции должны последовательно ставить следующие виджеты друг за другом
     // увеличивая content_bounds (скорее всего content_bounds должен увеличиваться автоматически при расчете размеров)
-    raii_elem row(context* ctx, const rect &bounds, const std::span<float> &templ);
-    raii_elem column(context* ctx, const rect &bounds, const std::span<float> &templ);
+    // вообще нам необязательно указывать размеры, мы получим их в любом случае
+    // если по весам то по идее неважно какой знак
+    raii_elem row(context* ctx, const rect &bounds, const std::span<float> &templ); // веса
+    raii_elem row(context* ctx, const rect &bounds, const std::span<unit> &templ);  // конкретный размер
+    raii_elem row(context* ctx, const rect &bounds); // ставим друг за другом
+    
+    raii_elem column(context* ctx, const rect &bounds, const std::span<float> &templ); // веса
+    raii_elem column(context* ctx, const rect &bounds, const std::span<unit> &templ);  // конкретный размер
+    raii_elem column(context* ctx, const rect &bounds); // ставим друг за другом
 
     // какой инпут? внутренний бокс + 9 изображений? или ожидаем бокс + 9 виджетов после
     // как мы можем убрать часть границ? просто не рисовать их вообще
@@ -324,24 +343,13 @@ namespace devils_engine {
     // и край с границей, полностью залитый край - это по идее точки края + одна точка в углу
     // край с границей - это по идее "путь" но нужно уметь "отодвигать" одну сторону
     // от другой, ну и еще один вариант - генерить точки для всего рендера, что нужно делать и так и сяк
+    raii_elem nine_slice(context* ctx, const abs_rect &bounds, const abs_rect &inner_bounds);
     raii_elem nine_slice(context* ctx, const rect &bounds, const rect &inner_bounds);
 
     // когда мы делаем функции row, column, nineslice ожидаем ли мы что функции
     // text, image, color будут занимать один слот? или все таки нужно оборачивать в бокс?
     // я бы предположил что второе, то есть чтобы продвинуть счетчик виджета нужно вызвать обязательно функцию бокс
     // а контент (text, image, color) - это чисто контент и он будет использовать предыдущие значения для отрисовки себя
-
-    // размер определяется длиной строки и размером шрифта + нужно ли переводить на другую строку
-    // определенно должен быть текст который займет ровно столько места сколько отведено
-    // короче говоря чтобы враппинг сделать нормальный в любом случае нужна помощь со стороны боксов
-    // я должен создать дополнительный бокс по высоте и ширине текста (или слова в тексте)
-    // + алигнмент этих боксов
-    template <typename... Args>
-    void textf(context* ctx, const std::string_view &format, Args&&... args) {
-      // нужно fmt пока что подключить
-    }
-
-    void text(context* ctx, const std::string_view &text);
 
     // наверное нужно добавить еще вариант который бы определялся внешним боксом
     // как сделать цвет для текста? какие то настроечки для виджетов можно добавить дополнительно после
@@ -360,16 +368,40 @@ namespace devils_engine {
     };
     void circle_corner(context* ctx, const corner_type type); // предыдущий виджет - это размеры
 
-    // размер определяется внешним боксом + опять же настроки отображения (кроп, растяжение и проч)
-    // также в изображении иногда требуется взять определенный регион
+    // контент строго берет только последний бокс? или получает свой? наверное первое
+    enum class content_scale {
+      fit,
+      crop,
+      fill_width,
+      fill_height,
+      fill_bounds,
+      inside,
+      none,
+      count
+    };
     void decorate(context* ctx, const image &img);
+    void decorate(context* ctx, const handle &img, const vec2 &img_size, const content_scale scale = content_scale::fit);
 
-    struct color {
+    struct color_t {
       uint32_t container;
 
-      color(const float r = 0.0f, const float g = 0.0f, const float b = 0.0f, const float a = 0.0f);
+      explicit color_t(const float r, const float g, const float b, const float a = 1.0f) noexcept;
+      explicit color_t(const int r = 0, const int g = 0, const int b = 0, const int a = 255) noexcept;
     };
-    void fill(context* ctx, const color &c); // заливка бокса цветом
+    void fill(context* ctx, const color_t &c); // заливка бокса цветом
+
+    // размер определяется длиной строки и размером шрифта + нужно ли переводить на другую строку
+    // определенно должен быть текст который займет ровно столько места сколько отведено
+    // короче говоря чтобы враппинг сделать нормальный в любом случае нужна помощь со стороны боксов
+    // я должен создать дополнительный бокс по высоте и ширине текста (или слова в тексте)
+    // + алигнмент этих боксов
+    // текст пытаемся впихнуть в тот бокс который предоставили
+    template <typename... Args>
+    void textf(context* ctx, const color_t &color, const std::string_view &format, Args&&... args) {
+      // нужно fmt пока что подключить
+    }
+
+    void text(context* ctx, const color_t &color, const std::string_view &text);
 
     // ничего, пропускаем это место, эквивалентно вызову пустой функции бокс
     void space(context* ctx);
@@ -500,24 +532,28 @@ namespace devils_engine {
     // возможно размеры должны быть заданы в формате density_independent
     // если боксу не задаем размеры явно, то в зависимости от realtive_to бокс получит часть размера родителя
     // по крайней мере офсет (а размер че? по идее по контенту, ай проще просто задать по родительскому размеру)
+    // короч предыдущий виджет должен точно знать свои размеры, значит бокс с дефолтными значениями должен 
+    // занимать весь размер, в других билиотечках сразу заданы несколько виджетов по умолчанию
+    // которые только вызывают compute_next не создавая новых лэйаутов, что делать с относительными размерами?
+    // посчитать их заранее просто да и все
     class layout_i {
     public:
-      rect bounds;
-      rect content_bounds;
-      vec2 size;
-      vec2 max;
-      vec2 offset;
       size_t counter;
+      rect bounds;
+      rect last_rect;
+      //vec2 size;
+      //vec2 offset;
+      vec2 max_size;
 
-      SUI_INLINE layout_i(const rect &bounds, const rect &content_bounds) noexcept :
-        bounds(bounds), content_bounds(content_bounds), counter(0)
+      SUI_INLINE layout_i(const rect &bounds) noexcept :
+        counter(0), bounds(bounds), max_size(-1000000, -1000000) // size(size),
       {}
 
       virtual ~layout_i() noexcept = default;
-      virtual rect compute_next(const rect &next) = 0;
+      virtual rect compute_next(const rect &next) = 0; // должен возвращать абсолютные размеры
       // возможно было бы неплохо превратить относительные размеры в абсолютные тоже тут
-      virtual rect make_absolute(const rel_rect &r) const = 0; // ctx?
-      virtual rect compute_scissor() const = 0;
+      //virtual rect make_absolute(const rel_rect &r) const = 0; // ctx?
+      //virtual rect compute_scissor() const = 0;
     };
 
     class layout_default : public layout_i {
@@ -539,7 +575,7 @@ namespace devils_engine {
       float weights_summ;
       size_t count;
       std::array<float, maximum_weights> weights; // спан не сработает, нужна отдельная память
-      rect elem_bounds;
+      //rect elem_bounds;
 
       layout_row(const rect &bounds, const std::span<float> &weights) noexcept;
       rect compute_next(const rect &next) override;
@@ -640,9 +676,7 @@ namespace devils_engine {
 
       widget_data_t* prev;
 
-      widget_data_t(widget_data_t* prev, const rect &bounds, const relative_to content, layout_t::layout_func_t func) noexcept;
-      widget_data_t(widget_data_t* prev, const rect &bounds, const std::span<float> &weights, layout_t::layout_func_t func) noexcept;
-      widget_data_t(widget_data_t* prev, const rect &bounds, const rect &inner_bounds, layout_t::layout_func_t func) noexcept;
+      widget_data_t(widget_data_t* prev, layout_i* layout) noexcept;
     };
 
     struct window_t : public utils::ring::list<window_t, 0> {
@@ -672,9 +706,7 @@ namespace devils_engine {
       window_t* parent;
 
       window_t(const std::string_view &str) noexcept;
-      widget_data_t* create_new_widget(const rect &bounds, const relative_to content, layout_t::layout_func_t func) noexcept;
-      widget_data_t* create_new_widget(const rect &bounds, const std::span<float> &weights, layout_t::layout_func_t func) noexcept;
-      widget_data_t* create_new_widget(const rect &bounds, const rect &inner_bounds, layout_t::layout_func_t func) noexcept;
+      //widget_data_t* create_new_widget(const rect &bounds, layout_i* l) noexcept;
     };
 
     // наклир выделяет аж 19 команд, но мне наверное будет достаточно лишь:
@@ -716,7 +748,13 @@ namespace devils_engine {
 
       unit_container unit;
 
-      utils::arena_allocator window_data;
+      // какие размеры? может быть имеет смысл сделать компил тайм данные
+      // но вообще window_data может хранить вообще все
+      // где хранить clip rect? + где аллокатор для комманд? где хранить неважно: нужны указатели в окне
+      // нужно где то хранить дополнительные данные виджетов: например текущую прокрутку
+      // где? насколько большие эти данные?
+      utils::arena_allocator command_allocator;
+      utils::arena_allocator widget_allocator;
       utils::block_allocator window_pool;
       window_t* windows;
       window_t* current;
@@ -731,6 +769,7 @@ namespace devils_engine {
       context();
 
       window_t* next_window(window_t* prev) const;
+      window_t* find_window(const size_t hash) const;
     };
 
     // вот мы создали это дело в контексте, что потом

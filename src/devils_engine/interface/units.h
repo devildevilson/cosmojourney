@@ -1,6 +1,8 @@
 #ifndef DEVILS_ENGINE_INTERFACE_UNITS_H
 #define DEVILS_ENGINE_INTERFACE_UNITS_H
 
+#include <utility>
+
 #define DE_INTEFACE_UNITS_LIST \
   X(absolute) \
   X(density_independent) \
@@ -18,7 +20,7 @@ namespace devils_engine {
       float value; \
       SUI_INLINE constexpr name() noexcept : value(0.0) {} \
       SUI_INLINE constexpr name(const float value) noexcept : value(value) {} \
-      SUI_INLINE constexpr ~name() noexcept = default; \
+      SUI_INLINE ~name() noexcept = default; \
       SUI_INLINE constexpr name(const name &copy) noexcept = default; \
       SUI_INLINE constexpr name(name &&move) noexcept = default; \
       SUI_INLINE constexpr name & operator=(const name &copy) noexcept = default; \
@@ -31,6 +33,7 @@ namespace devils_engine {
       SUI_INLINE constexpr name & operator-=(const float v) noexcept { value -= v; return *this; } \
       SUI_INLINE constexpr name & operator*=(const float v) noexcept { value *= v; return *this; } \
       SUI_INLINE constexpr name & operator/=(const float v) noexcept { value /= v; return *this; } \
+      friend auto operator<=>(const name&, const name&) noexcept = default; \
     }; \
     SUI_INLINE constexpr name operator+(const name &a, const name &b) noexcept { return name(a.value + b.value); } \
     SUI_INLINE constexpr name operator-(const name &a, const name &b) noexcept { return name(a.value - b.value); } \

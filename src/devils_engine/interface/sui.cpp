@@ -9,6 +9,52 @@ namespace devils_engine {
       return get(mult);
     }
 
+    abs_rect compute_absolute(const context* ctx, const rect &r) {
+      auto cur_window = ctx->current;
+      utils_assertc(cur_window != nullptr, "probably forgot to create a window");
+      auto prev_widget = cur_window->last;
+      utils_assertc(prev_widget != nullptr, "current widget not found");
+
+      // надо вынести в отдельную функцию где мы вернем посчитанный контент баундс
+      float x = r.offset.x.get(ctx);
+      float y = r.offset.y.get(ctx);
+      float w = r.extent.w.get(ctx);
+      float h = r.extent.h.get(ctx);
+      if (r.offset.x.type == unit::type::relative) {
+        x = x * prev_widget->layout->bounds.extent.x;
+      } else if (r.offset.x.type == unit::type::not_specified) {
+        x = 0;
+      }
+
+      if (r.offset.y.type == unit::type::relative) {
+        y = y * prev_widget->layout->bounds.extent.y;
+      } else if (r.offset.y.type == unit::type::not_specified) {
+        y = 0;
+      }
+
+      if (r.extent.w.type == unit::type::relative) {
+        w = w * prev_widget->layout->bounds.extent.x;
+      } else if (r.extent.w.type == unit::type::not_specified) {
+        w = prev_widget->layout->bounds.extent.x;
+      }
+
+      if (r.extent.h.type == unit::type::relative) {
+        h = h * prev_widget->layout->bounds.extent.y;
+      } else if (r.extent.h.type == unit::type::not_specified) {
+        h = prev_widget->layout->bounds.extent.y;
+      }
+
+      return abs_rect(
+        vec2(
+          std::floor(x),
+          std::floor(y)
+        ), vec2(
+          std::floor(w),
+          std::floor(h)
+        )
+      );
+    }
+
     raii_elem window(context* ctx, const std::string_view &name, const rect &bounds, const relative_to content) {
       // значит что мы тут должны сделать? добавить окно в стак, посмотреть было ли у нас окно ранее,
       // возможно поменять настройки,
@@ -29,15 +75,20 @@ namespace devils_engine {
         // находим эту руну в шрифте, смотрим на ее размер, получаем количество символов и ширину строки
       }
 
-      window_t* w;
-      auto [ ptr, data_index ] = w->widget_stack.create<widget_data_t>();
-      w->last = ptr;
+      const size_t hash = 1;
+      auto w = ctx->find_window(hash);
+      if (w == nullptr) {
+        // создаем
+      }
+
+      auto layout = ctx->window_data.create<layout_default>(bounds, relative_to::top_left);
+      w->last = ctx->window_data.create<widget_data_t>(nullptr, layout);
 
       // как хранить данные окна? окно не удаляется если мы его не видим по идее
       // значит мы там храним все старые данные
       // хотя наверное все равно надо бы как то понять что окно нужно подчистить
       // по идее нужно каждый раз вызывать эту функцию для того чтобы окно существовало
-      ptr->layout.bounds = bounds;
+      //ptr->layout.bounds = bounds;
 
       // окно может быть закрыто, тогда трогать его ни к чему
 
@@ -47,13 +98,11 @@ namespace devils_engine {
       return raii_elem(ctx);
     }
 
-    raii_elem box(context* ctx, const rect &bounds, const relative_to content) {
+    raii_elem box(context* ctx, const abs_rect &bounds, const relative_to content) {
       // в текущее окно нужно добавить бокс, когда считаем размеры?
       // насколько это вообще необходимо считать размеры бокса по детям? это скорее удобно
       //
-    }
 
-    raii_elem box(context* ctx, const extent &bounds, const relative_to content) {
       // где расчитывается extent? при запуске бокса или при разрушении elem?
       // по идее если отказаться от возможности сделать бокс размеры которого определяются его контентом
       // то мы резко сможем вычислять все размеры прямо на месте,
@@ -80,44 +129,24 @@ namespace devils_engine {
       auto prev_widget = cur_window->last;
       utils_assertc(prev_widget != nullptr, "current widget not found");
 
-      // надо вынести в отдельную функцию где мы вернем посчитанный контент баундс
-      float w = bounds.w.get(ctx);
-      float h = bounds.h.get(ctx);
-      if (bounds.w.type == unit::type::relative) {
-        w = w * prev_widget->layout->bounds.extent.x;
-      } else if (bounds.w.type == unit::type::not_specified) {
-        w = prev_widget->layout->bounds.extent.x;
-      }
-
-      if (bounds.h.type == unit::type::relative) {
-        h = h * prev_widget->layout->bounds.extent.y;
-      } else if (bounds.h.type == unit::type::not_specified) {
-        h = prev_widget->layout->bounds.extent.y;
-      }
-
-      // ну да еще нужно посчитать контент баундс для предыдущего виджета
-      // и как то учесть незаданные заранее размеры бокса (хотя это по идее полный размер + ресайз в энде)
-      const auto r = rect(vec2(0, 0), vec2(w, h)); // размеры
-      // вызываем compute_next в end'е
-      // когда мы хотим чтобы виджет менял свои размеры относительно детей?
-      const auto pos = prev_widget->layout->compute_next(r); // абсолютный размер и позиция
-      // bounds здесь - это content_bounds виджета, а pos это непосредственно размер и позиция следующего виджета
-      // также может пригодится передавать относительные значения в лэйаут, как это правильно сделать
-      // вообще наверное удачнее предрассчитать абсолютные значения в лэйауте
-      // что делать с отступом, у расположения может быть отступ который например вообще имеет смысл в боксах
-      // но в лэйаут ров например уже непонятен, по идее можно оставить, единственное что нам нужно - это
-      // посчитать правильно ножницы (внутренее объединение двух прямоугольников)
-
+      // предыдущий - это клип для текущего, точнее клип потихоньку уменьшается походу продвижения в глубь интерфейса
+      const auto pos = prev_widget->layout->compute_next(bounds);
+      //const bool contain = prev_widget->layout->bounds.contain(pos);
 
       // было бы неплохо контроллировать общий аллокатор для всей гуишки
       //auto cur = cur_window->create_new_widget(pos, content, default_layout);
-      auto l = ctx->window_data.create<layout_default>(r, content);
-      const auto scissor = pos.shrink_to_intersection(r);
+      auto l = ctx->window_data.create<layout_default>(pos, content);
+      prev_widget = ctx->window_data.create<widget_data_t>(prev_widget, l);
+      //const auto scissor = pos.shrink_to_intersection(r);
 
       // что тут? вот мы создали бокс и теперь следующие виджеты или контент
       // займут эту область
 
       return raii_elem(ctx);
+    }
+
+    raii_elem box(context* ctx, const rect &bounds, const relative_to content) {
+      return box(ctx, compute_absolute(box, bounds), content);
     }
 
     void end(context* ctx) {
@@ -126,26 +155,22 @@ namespace devils_engine {
       // в наклире в энде автор дорисовывал окно - не лучшая идея на мой взгляд
       // что такое закрыть с моей точки зрения? в энде мы имеем полное представление о том
       // сколько места у нас занимает контент и соответственно можем нарисовать виджет
-      // по размеру контента, поэтому наверное в энде мы должны сформировать
-      // команду к отрисовке и вытащить текущий виджет из стека
-
-      // тут мы расчитаем размер контента, запомним его если есть хеш, запомним прокрутку
-      // запомним еще какие нибудь вещи
+      // виджет должен рисоваться по мере вызова функций
+      //
 
       auto cur_window = ctx->current;
       utils_assertc(cur_window != nullptr, "probably forgot to create a window");
       auto cur_widget = cur_window->last;
       utils_assertc(cur_widget != nullptr, "current widget not found");
 
-      const auto widget_size = cur_widget->layout->bounds;
-      // нужно как то посчитать абсолютную позицию, к сожалению нам обязательно нужно запомнить индекс виджета
-      // если мы хотим правильно посчитать позицию тут
-      const auto absolute_size = cur_widget->prev->layout->compute_next(widget_size);
+      cur_window->last = cur_widget->prev;
+      auto layout = cur_widget->layout;
+      ctx->window_data.destroy(cur_widget);
+      ctx->window_data.destroy(layout);
 
-      // тут мы узнаем что у виджета есть контент
-      const bool has_content = true;
-      if (has_content) {
-
+      // убираем окно
+      if (cur_window->last == nullptr) {
+        ctx->current = nullptr;
       }
     }
 
@@ -165,34 +190,50 @@ namespace devils_engine {
       // активностью окна добавить перемещение окна вперед
     }
 
-    layout_t::layout_t(const rect &bounds, const relative_to content, layout_func_t func) noexcept :
-      bounds(bounds), counter(0), maximum_child_size(0,0), content(content), weights_summ(0.0f), inc_counter_and_get(std::move(func))
-    {}
-
-    layout_t::layout_t(const rect &bounds, const std::span<float> &weights, layout_func_t func) noexcept :
-      bounds(bounds), counter(0), maximum_child_size(0,0),
-      content(relative_to::top_left), weights_summ(0.0f), weights(weights),
-      inc_counter_and_get(std::move(func))
-    {}
-
-    layout_t::layout_t(const rect &bounds, const rect &inner_bounds, layout_func_t func) noexcept :
-      bounds(bounds), counter(0), maximum_child_size(0,0),
-      inner_bounds(inner_bounds), content(relative_to::top_left), weights_summ(0.0f),
-      inc_counter_and_get(std::move(func))
-    {}
-
-    widget_data_t::widget_data_t(widget_data_t* prev, const rect &bounds, const relative_to content, layout_t::layout_func_t func) noexcept :
-      layout(bounds, content, std::move(func)), content_pos(0,0), input_state(0), prev(prev)
-    {
-      // вообще нужно тут input_state посчитать
+    // функция должна быть очень простой: получаем бокс в котором располагается текст,
+    // этот бокс может быть не виден из-за ограничителей, убираем то что не видно,
+    // выделяем память на text_command и размер текста, задаем собственно текст, 
+    // позицию, цвет, шрифт
+    // как получать бокс? вообще я думал просто взять бокс последнего лэйаута
+    // надо вот что: разделить собственно виджет текст и отрисовку текста
+    // виджет будет брать новый бокс, а сейчас мне нужно сделать текст с чем есть
+    // цвет и шрифт вынесем в контекст
+    void text(context* ctx, const color_t &color, const std::string_view &text) {
+      
     }
 
-    widget_data_t::widget_data_t(widget_data_t* prev, const rect &bounds, const std::span<float> &weights, layout_t::layout_func_t func) noexcept :
-      layout(bounds, weights, std::move(func)), content_pos(0,0), input_state(0), prev(prev)
-    {}
+    // layout_t::layout_t(const rect &bounds, const relative_to content, layout_func_t func) noexcept :
+    //   bounds(bounds), counter(0), maximum_child_size(0,0), content(content), weights_summ(0.0f), inc_counter_and_get(std::move(func))
+    // {}
 
-    widget_data_t::widget_data_t(widget_data_t* prev, const rect &bounds, const rect &inner_bounds, layout_t::layout_func_t func) noexcept :
-      layout(bounds, inner_bounds, std::move(func)), content_pos(0,0), input_state(0), prev(prev)
+    // layout_t::layout_t(const rect &bounds, const std::span<float> &weights, layout_func_t func) noexcept :
+    //   bounds(bounds), counter(0), maximum_child_size(0,0),
+    //   content(relative_to::top_left), weights_summ(0.0f), weights(weights),
+    //   inc_counter_and_get(std::move(func))
+    // {}
+
+    // layout_t::layout_t(const rect &bounds, const rect &inner_bounds, layout_func_t func) noexcept :
+    //   bounds(bounds), counter(0), maximum_child_size(0,0),
+    //   inner_bounds(inner_bounds), content(relative_to::top_left), weights_summ(0.0f),
+    //   inc_counter_and_get(std::move(func))
+    // {}
+
+    // widget_data_t::widget_data_t(widget_data_t* prev, const rect &bounds, const relative_to content, layout_t::layout_func_t func) noexcept :
+    //   layout(bounds, content, std::move(func)), content_pos(0,0), input_state(0), prev(prev)
+    // {
+    //   // вообще нужно тут input_state посчитать
+    // }
+
+    // widget_data_t::widget_data_t(widget_data_t* prev, const rect &bounds, const std::span<float> &weights, layout_t::layout_func_t func) noexcept :
+    //   layout(bounds, weights, std::move(func)), content_pos(0,0), input_state(0), prev(prev)
+    // {}
+
+    // widget_data_t::widget_data_t(widget_data_t* prev, const rect &bounds, const rect &inner_bounds, layout_t::layout_func_t func) noexcept :
+    //   layout(bounds, inner_bounds, std::move(func)), content_pos(0,0), input_state(0), prev(prev)
+    // {}
+
+    widget_data_t(widget_data_t* prev, layout_i* layout) noexcept :
+      layout(layout), input_state(0), prev(prev)
     {}
 
     window_t::window_t(const std::string_view &str) noexcept :
@@ -207,217 +248,192 @@ namespace devils_engine {
       memcpy(name_str, str.data(), str.size());
     }
 
-    widget_data_t* window_t::create_new_widget(const rect &bounds, const relative_to content, layout_t::layout_func_t func) noexcept {
-      last = widget_stack.create<widget_data_t>(last, bounds, content, std::move(func));
-      return last;
-    }
+    // widget_data_t* window_t::create_new_widget(const rect &bounds, const relative_to content, layout_t::layout_func_t func) noexcept {
+    //   last = widget_stack.create<widget_data_t>(last, bounds, content, std::move(func));
+    //   return last;
+    // }
 
-    widget_data_t* window_t::create_new_widget(const rect &bounds, const std::span<float> &weights, layout_t::layout_func_t func) noexcept {
-      auto ptr = widget_stack.create<widget_data_t>(last, bounds, weights, std::move(func));
-      last = ptr;
-      return ptr;
-    }
+    // widget_data_t* window_t::create_new_widget(const rect &bounds, const std::span<float> &weights, layout_t::layout_func_t func) noexcept {
+    //   auto ptr = widget_stack.create<widget_data_t>(last, bounds, weights, std::move(func));
+    //   last = ptr;
+    //   return ptr;
+    // }
 
-    widget_data_t* window_t::create_new_widget(const rect &bounds, const rect &inner_bounds, layout_t::layout_func_t func) noexcept {
-      auto ptr = widget_stack.create<widget_data_t>(last, bounds, inner_bounds, std::move(func));
-      last = ptr;
-      return ptr;
-    }
+    // widget_data_t* window_t::create_new_widget(const rect &bounds, const rect &inner_bounds, layout_t::layout_func_t func) noexcept {
+    //   auto ptr = widget_stack.create<widget_data_t>(last, bounds, inner_bounds, std::move(func));
+    //   last = ptr;
+    //   return ptr;
+    // }
+
+    // widget_data_t* window_t::create_new_widget(const rect &bounds, layout_i* l) noexcept {
+    //   last = widget_stack.create<widget_data_t>(last, bounds, content, std::move(func));
+    //   return last;
+    // }
 
     // теперь у нас есть юниты, нам бы сначала задать размер в них
     // а потом из них посчитать абсолютные значения
 
+    static vec2 make_extent(const rect &bounds, const rect &next) noexcept {
+      auto ext = next.extent;
+      if (std::abs(ext.x) < SUI_EPSILON) { ext.x = bounds.extent.x - offset.x; }
+      if (std::abs(ext.y) < SUI_EPSILON) { ext.y = bounds.extent.y - offset.y; }
+      if (ext.x < 0) { ext.x += bounds.extent.x - offset.x; }
+      if (ext.y < 0) { ext.y += bounds.extent.y - offset.y; }
+      return ext;
+    }
+
     // нужно еще как нибудь с офсетом поработать, например на крайних значениях очень легко
     // а вот на центральных непонятно что делать, тип делить на половину и менять знак?
-    rect compute_top_left(const rect &bounds, const rect &next) {
-      const auto offset = next.offset;
-      return rect(bounds.offset+offset, next.extent);
+    static rect compute_top_left(const rect &bounds, const rect &next) noexcept {
+      const auto ext = make_extent(bounds, next);
+      const auto offset = vec2(0,0) + next.offset;
+      return rect(bounds.offset+offset, ext);
     }
 
-    rect compute_top_center(const rect &bounds, const rect &next) {
-      const auto offset = vec2(bounds.extent.x / 2 - next.extent.x / 2, next.offset.y);
-      return rect(bounds.offset+offset, next.extent);
+    static rect compute_top_center(const rect &bounds, const rect &next) noexcept {
+      const auto ext = make_extent(bounds, next);
+      const auto offset = vec2(bounds.extent.x / 2 - ext.x / 2, 0) + next.offset;
+      return rect(bounds.offset+offset, ext);
     }
 
-    rect compute_top_right(const rect &bounds, const rect &next) {
-      const auto offset = vec2(bounds.extent.x - next.extent.x - next.offset.x, next.offset.y);
-      return rect(bounds.offset+offset, next.extent);
+    static rect compute_top_right(const rect &bounds, const rect &next) noexcept {
+      const auto ext = make_extent(bounds, next);
+      const auto offset = vec2(bounds.extent.x - ext.x, 0) + next.offset;
+      return rect(bounds.offset+offset, ext);
     }
 
-    rect compute_middle_left(const rect &bounds, const rect &next) {
-      const auto offset = vec2(next.offset.x, bounds.extent.y / 2 - next.extent.y / 2);
-      return rect(bounds.offset+offset, next.extent);
+    static rect compute_middle_left(const rect &bounds, const rect &next) noexcept {
+      const auto ext = make_extent(bounds, next);
+      const auto offset = vec2(0, bounds.extent.y / 2 - ext.y / 2) + next.offset;
+      return rect(bounds.offset+offset, ext);
     }
 
-    rect compute_middle_center(const rect &bounds, const rect &next) {
-      const auto offset = bounds.extent / 2 - next.extent / 2;
-      return rect(bounds.offset+offset, next.extent);
+    static rect compute_middle_center(const rect &bounds, const rect &next) noexcept {
+      const auto ext = make_extent(bounds, next);
+      const auto offset = bounds.extent / 2 - ext / 2 + next.offset;
+      return rect(bounds.offset+offset, ext);
     }
 
-    rect compute_middle_right(const rect &bounds, const rect &next) {
-      const auto offset = vec2(bounds.extent.x - next.extent.x - next.offset.x, bounds.extent.y / 2 - next.extent.y / 2);
-      return rect(bounds.offset+offset, next.extent);
+    static rect compute_middle_right(const rect &bounds, const rect &next) noexcept {
+      const auto ext = make_extent(bounds, next);
+      const auto offset = vec2(bounds.extent.x - ext.x, bounds.extent.y / 2 - ext.y / 2) + next.offset;
+      return rect(bounds.offset+offset, ext);
     }
 
-    rect compute_bottom_left(const rect &bounds, const rect &next) {
-      const auto offset = vec2(next.offset.x, bounds.extent.y - next.extent.y);
-      return rect(bounds.offset+offset, next.extent);
+    static rect compute_bottom_left(const rect &bounds, const rect &next) noexcept {
+      const auto ext = make_extent(bounds, next);
+      const auto offset = vec2(0, bounds.extent.y - ext.y) + next.offset;
+      return rect(bounds.offset+offset, ext);
     }
 
-    rect compute_bottom_center(const rect &bounds, const rect &next) {
-      const auto offset = vec2(bounds.extent.x / 2 - next.extent.x / 2, bounds.extent.y - next.extent.y - next.offset.y);
-      return rect(bounds.offset+offset, next.extent);
+    static rect compute_bottom_center(const rect &bounds, const rect &next) noexcept {
+      const auto ext = make_extent(bounds, next);
+      const auto offset = vec2(bounds.extent.x / 2 - ext.x / 2, bounds.extent.y - ext.y) + next.offset;
+      return rect(bounds.offset+offset, ext);
     }
 
-    rect compute_bottom_right(const rect &bounds, const rect &next) {
-      const auto offset = bounds.extent - next.extent - next.offset;
-      return rect(bounds.offset+offset, next.extent);
+    static rect compute_bottom_right(const rect &bounds, const rect &next) noexcept {
+      const auto ext = make_extent(bounds, next);
+      const auto offset = bounds.extent - ext + next.offset;
+      return rect(bounds.offset+offset, ext);
     }
 
-    rect add_scrolls(const rect &bounds, const vec2 &scrolls) {
+    static rect add_scrolls(const rect &bounds, const vec2 &scrolls) noexcept {
       return rect(bounds.offset - scrolls, bounds.extent);
     }
 
-    // в джетпак композе мы задавали размеры в качесте модификатора к следующему виджету
-    // ну хотя тут мы примерно тоже самое делаем
-    rect default_layout(layout_t &l, const rect &next) {
-      l.counter += 1;
-
-      rect final_rect;
-      switch (l.content) {
-        case relative_to::top_left     : final_rect = compute_top_left     (l.bounds, next); break;
-        case relative_to::top_center   : final_rect = compute_top_center   (l.bounds, next); break;
-        case relative_to::top_right    : final_rect = compute_top_right    (l.bounds, next); break;
-        case relative_to::middle_left  : final_rect = compute_middle_left  (l.bounds, next); break;
-        case relative_to::middle_center: final_rect = compute_middle_center(l.bounds, next); break;
-        case relative_to::middle_right : final_rect = compute_middle_right (l.bounds, next); break;
-        case relative_to::bottom_left  : final_rect = compute_bottom_left  (l.bounds, next); break;
-        case relative_to::bottom_center: final_rect = compute_bottom_center(l.bounds, next); break;
-        case relative_to::bottom_right : final_rect = compute_bottom_right (l.bounds, next); break;
-        default: utils::error("Enum is not supported");
-      }
-
-      l.bounds = l.bounds.extent_to_contain(final_rect); // ???
-
-      return final_rect;
-    }
-
-    rect ns_top_left(const rect &outer, const rect &inner) {
+    static rect ns_top_left(const rect &outer, const rect &inner) noexcept {
       const auto p1 = outer.offset;
       const auto p2 = inner.offset;
       const auto ext = abs(p2 - p1);
       return rect(p1, ext);
     }
 
-    rect ns_top_center(const rect &outer, const rect &inner) {
+    static rect ns_top_center(const rect &outer, const rect &inner) noexcept {
       const auto p1 = vec2(inner.offset.x, outer.offset.y);
       const auto p2 = vec2(inner.offset.x + inner.extent.x, inner.offset.y);
       const auto ext = abs(p2 - p1);
       return rect(p1, ext);
     }
 
-    rect ns_top_right(const rect &outer, const rect &inner) {
+    static rect ns_top_right(const rect &outer, const rect &inner) noexcept {
       const auto p1 = vec2(inner.offset.x + inner.extent.x, outer.offset.y);
       const auto p2 = vec2(outer.offset.x + outer.extent.x, inner.offset.y);
       const auto ext = abs(p2 - p1);
       return rect(p1, ext);
     }
 
-    rect ns_middle_left(const rect &outer, const rect &inner) {
+    static rect ns_middle_left(const rect &outer, const rect &inner) noexcept {
       const auto p1 = vec2(outer.offset.x, inner.offset.y);
       const auto p2 = vec2(inner.offset.x, inner.offset.y+inner.extent.y);
       const auto ext = abs(p2 - p1);
       return rect(p1, ext);
     }
 
-    rect ns_middle_center(const rect &outer, const rect &inner) {
+    static rect ns_middle_center(const rect &outer, const rect &inner) noexcept {
       const auto pos = inner.offset;
       const auto ext = inner.extent;
       return rect(pos, ext);
     }
 
-    rect ns_middle_right(const rect &outer, const rect &inner) {
+    static rect ns_middle_right(const rect &outer, const rect &inner) noexcept {
       const auto p1 = vec2(inner.offset.x + inner.extent.x, inner.offset.y);
       const auto p2 = vec2(outer.offset.x + outer.extent.x, inner.offset.y+inner.extent.y);
       const auto ext = abs(p2 - p1);
       return rect(p1, ext);
     }
 
-    rect ns_bottom_left(const rect &outer, const rect &inner) {
+    static rect ns_bottom_left(const rect &outer, const rect &inner) noexcept {
       const auto p1 = vec2(outer.offset.x, inner.offset.y+inner.extent.y);
       const auto p2 = vec2(inner.offset.x, outer.offset.y + outer.extent.y);
       const auto ext = abs(p2 - p1);
       return rect(p1, ext);
     }
 
-    rect ns_bottom_center(const rect &outer, const rect &inner) {
+    static rect ns_bottom_center(const rect &outer, const rect &inner) noexcept {
       const auto p1 = vec2(inner.offset.x, inner.offset.y+inner.extent.y);
       const auto p2 = vec2(inner.offset.x+inner.extent.x, outer.offset.y+outer.extent.y);
       const auto ext = abs(p2 - p1);
       return rect(p1, ext);
     }
 
-    rect ns_bottom_right(const rect &outer, const rect &inner) {
+    static rect ns_bottom_right(const rect &outer, const rect &inner) noexcept {
       const auto p1 = vec2(inner.offset.x+inner.extent.x, inner.offset.y+inner.extent.y);
       const auto p2 = vec2(outer.offset.x+outer.extent.x, outer.offset.y+outer.extent.y);
       const auto ext = abs(p2 - p1);
       return rect(p1, ext);
     }
 
-    // предполагаем что каждый раздел слайса начинается слева вверху? наверное самое удачное что мы можем сделать
-    rect nine_slice_layout(layout_t &l, const rect &next) {
-      // тут нужно предусмотреть ТОЛЬКО 9 детей
-      // хотя возможно нужно сделать это ограничение легким
-      const size_t cur = l.counter; // % static_cast<size_t>(relative_to::count)
-      l.counter += 1;
-
-      rect final_rect;
-      switch(static_cast<relative_to>(cur)) {
-        case relative_to::top_left     : final_rect = compute_top_left(ns_top_left     (l.bounds, l.inner_bounds), next); break;
-        case relative_to::top_center   : final_rect = compute_top_left(ns_top_center   (l.bounds, l.inner_bounds), next); break;
-        case relative_to::top_right    : final_rect = compute_top_left(ns_top_right    (l.bounds, l.inner_bounds), next); break;
-        case relative_to::middle_left  : final_rect = compute_top_left(ns_middle_left  (l.bounds, l.inner_bounds), next); break;
-        case relative_to::middle_center: final_rect = compute_top_left(ns_middle_center(l.bounds, l.inner_bounds), next); break;
-        case relative_to::middle_right : final_rect = compute_top_left(ns_middle_right (l.bounds, l.inner_bounds), next); break;
-        case relative_to::bottom_left  : final_rect = compute_top_left(ns_bottom_left  (l.bounds, l.inner_bounds), next); break;
-        case relative_to::bottom_center: final_rect = compute_top_left(ns_bottom_center(l.bounds, l.inner_bounds), next); break;
-        case relative_to::bottom_right : final_rect = compute_top_left(ns_bottom_right (l.bounds, l.inner_bounds), next); break;
-        default: utils::error("Enum is not supported");
-      }
-
-      // найнслайс наверное должен быть сделан так чтобы не допускать выходов за пределы внешнего бокса
-      // то есть иннер бокс должен быть строго внутри основного бокса
-      return final_rect;
-    }
-
     layout_default::layout_default(const rect &bounds, const relative_to content) noexcept :
       layout_i(bounds), content(content)
     {}
 
+    // тут мы можем передать next в формате (1,1,-1,-1), это должен быть отступ в пикселях
     rect layout_default::compute_next(const rect &next) {
       counter += 1;
 
-      rect final_rect;
+      rect final_rect = next;
       switch (content) {
-        case relative_to::top_left     : final_rect = compute_top_left     (bounds, next); break;
-        case relative_to::top_center   : final_rect = compute_top_center   (bounds, next); break;
-        case relative_to::top_right    : final_rect = compute_top_right    (bounds, next); break;
-        case relative_to::middle_left  : final_rect = compute_middle_left  (bounds, next); break;
-        case relative_to::middle_center: final_rect = compute_middle_center(bounds, next); break;
-        case relative_to::middle_right : final_rect = compute_middle_right (bounds, next); break;
-        case relative_to::bottom_left  : final_rect = compute_bottom_left  (bounds, next); break;
-        case relative_to::bottom_center: final_rect = compute_bottom_center(bounds, next); break;
-        case relative_to::bottom_right : final_rect = compute_bottom_right (bounds, next); break;
+        case relative_to::top_left     : final_rect = compute_top_left     (bounds, final_rect); break;
+        case relative_to::top_center   : final_rect = compute_top_center   (bounds, final_rect); break;
+        case relative_to::top_right    : final_rect = compute_top_right    (bounds, final_rect); break;
+        case relative_to::middle_left  : final_rect = compute_middle_left  (bounds, final_rect); break;
+        case relative_to::middle_center: final_rect = compute_middle_center(bounds, final_rect); break;
+        case relative_to::middle_right : final_rect = compute_middle_right (bounds, final_rect); break;
+        case relative_to::bottom_left  : final_rect = compute_bottom_left  (bounds, final_rect); break;
+        case relative_to::bottom_center: final_rect = compute_bottom_center(bounds, final_rect); break;
+        case relative_to::bottom_right : final_rect = compute_bottom_right (bounds, final_rect); break;
         default: utils::error("Enum is not supported {}", static_cast<size_t>(content));
       }
 
-      content_bounds = content_bounds.extent_to_contain(final_rect);
+      max_size = max(max_size, final_rect.offset+final_rect.extent);
+      last_rect = final_rect;
 
       return final_rect;
     }
 
     layout_row::layout_row(const rect &bounds, const std::span<float> &weights) noexcept :
-      layout_i(bounds), weights_summ(0.0f), count(weights.size()), elem_bounds(bounds)
+      layout_i(bounds), weights_summ(0.0f), count(weights.size())
     {
       memcpy(this->weights.data(), weights.data(), weights.size()*sizeof(float));
       for (size_t i = 0; i < count; ++i) {
@@ -430,6 +446,7 @@ namespace devils_engine {
     // ко всему прочему нужно сделать последовательное размещение виджетов друг за другом
     // новый размер мы используем чтобы разместить после него другой виджет,
     // при этом мы должны обновить данные у виджета выше по иерархии (тип размер контент изменился)
+    // это веса, но у нас еще могут быть, просто размеры в разных значениях
     rect layout_row::compute_next(const rect &next) {
       const size_t cur = counter;
       counter += 1;
@@ -437,27 +454,36 @@ namespace devils_engine {
       const size_t row_num   = cur / count;
       const size_t row_index = cur % count;
 
+      // могут ли веса быть отрицательными?
+      // если у нас есть offset то мы можем неиспользовать цикл
       const float width_len_rel = weights_summ / weights[row_index];
-      float accumulated_width = 0.0f;
+      //const float accumulated_width = offset.x;
+      //offset.x += width_len_rel;
+      //float accumulated_width = 0.0f;
       for (size_t i = 0; i < row_index; ++i) {
         const float width_rel = weights_summ / weights[i];
-        accumulated_width += elem_bounds.extent.x * width_rel;
+        accumulated_width += bounds.extent.x * width_rel;
       }
 
       // как высоту посчитать? чет я еще не придумал, но по идее это максимальная высота детей в строке
       // наверное доступна в лайауте? высота должна браться по размерам виджета
-      const float box_offset_y = elem_bounds.extent.y * row_num;
-      offset.y = box_offset_y;
+      const float box_offset_y = bounds.extent.y * row_num;
+      //offset.y = box_offset_y;
 
       const auto comp_b = rect(
-        vec2(elem_bounds.offset.x+accumulated_width, elem_bounds.offset.y+box_offset_y),
-        vec2(elem_bounds.extent.x*width_len_rel,     elem_bounds.extent.y) // l.bounds.extent.y
+        vec2(bounds.offset.x+accumulated_width, bounds.offset.y+box_offset_y),
+        vec2(bounds.extent.x*width_len_rel,     bounds.extent.y)
       );
 
-      bounds = bounds.extent_to_contain(comp_b);
+      // в next мы можем указать например отступы тип ((1,1),(-1,-1))
+      // нужно учесть это дело в функциях
+      //bounds = bounds.extent_to_contain(comp_b);
       const auto computed = compute_top_left(comp_b, next);
-      content_bounds = content_bounds.extent_to_contain(computed);
+      //content_bounds = content_bounds.extent_to_contain(computed);
+      max_size = max(max_size, computed.offset+computed.extent);
+      last_rect = computed;
       return computed;
+      //return comp_b;
     }
 
     layout_column::layout_column(const rect &bounds, const std::span<float> &weights) noexcept :
@@ -476,11 +502,6 @@ namespace devils_engine {
       const size_t column_num   = cur / count;
       const size_t column_index = cur % count;
 
-      // как высоту посчитать? чет я еще не придумал, но по идее это максимальная высота детей в строке
-      // наверное доступна в лайауте? высота должна браться по размерам виджета
-      const float box_offset_x = offset.x;
-      offset.x += next.offset.x;
-
       const float height_len_rel = weights_summ / weights[column_index];
       float accumulated_height = 0.0f;
       for (size_t i = 0; i < column_index; ++i) {
@@ -488,17 +509,25 @@ namespace devils_engine {
         accumulated_height += bounds.extent.y * width_rel;
       }
 
+      const float box_offset_x = bounds.extent.x * row_num;
+
       const auto comp_b = rect(
-        vec2(bounds.offset.x+box_offset_x,   bounds.offset.y+accumulated_height),
-        vec2(bounds.extent.x*height_len_rel, bounds.extent.y) // l.bounds.extent.y
+        vec2(bounds.offset.x+box_offset_x, bounds.offset.y+accumulated_height),
+        vec2(bounds.extent.x,              bounds.extent.y*height_len_rel)
       );
-      return compute_top_left(comp_b, next);
+
+      const auto computed = compute_top_left(comp_b, next);
+      max_size = max(max_size, computed.offset+computed.extent);
+      last_rect = computed;
+      return computed;
     }
 
+    // в каком формате будет inner_bounds? сейчас он в абсолютных значениях
+    // пусть он здесь так остается, но в функцию мы положим относительные размеры 
     layout_nine_slice::layout_nine_slice(const rect &bounds, const rect &inner_bounds) noexcept :
       layout_i(bounds), inner_bounds(inner_bounds)
     {}
-
+    
     rect layout_nine_slice::compute_next(const rect &next) {
       // тут нужно предусмотреть ТОЛЬКО 9 детей
       // хотя возможно нужно сделать это ограничение легким
@@ -521,63 +550,15 @@ namespace devils_engine {
 
       // найнслайс наверное должен быть сделан так чтобы не допускать выходов за пределы внешнего бокса
       // то есть иннер бокс должен быть строго внутри основного бокса
+      max_size = max(max_size, final_rect.offset+final_rect.extent);
+      last_rect = final_rect;
       return final_rect;
     }
 
-    // располагаем элементы друг за другом в линию в количестве l.weights.size() штук
-    // затем начинаем новую линию которая ниже предыдущей на 1.0 * высоту виджета
-    // если размеры предыдущего виджета больше, то линии будут просто наслаиваться друг на друга вниз,
-    // если же нет, то линия обрежется по границе предыдущего виджета и у предыдущего виджета может появиться полоса прокрутки
-    // конкретно этот вариант позволяет только расположить виджеты друг за другом посчитав их размер заранее
-    // мне нужен еще способ расположить друг за другом виджеты произвольно размера, как это сделать?
-    // по идее вместе с счетчиком мне нужно увеличивать отступ
-    rect row_layout(layout_t &l, const rect &next) {
-      const size_t cur = l.counter;
-      l.counter += 1;
-
-      const size_t row_num   = cur / l.weights.size();
-      const size_t row_index = cur % l.weights.size();
-
-      // как высоту посчитать? чет я еще не придумал, но по идее это максимальная высота детей в строке
-      // наверное доступна в лайауте? высота должна браться по размерам виджета
-      const float box_height = row_num * l.maximum_child_size.y;
-
-      const float width_len_rel = l.weights_summ / l.weights[row_index];
-      float accumulated_width = 0.0f;
-      for (size_t i = 0; i < row_index; ++i) {
-        const float width_rel = l.weights_summ / l.weights[i];
-        accumulated_width += l.bounds.extent.x * width_rel;
-      }
-
-      const auto comp_b = rect(
-        vec2(l.bounds.offset.x+accumulated_width, l.bounds.offset.y),
-        vec2(l.bounds.extent.x*width_len_rel,     box_height) // l.bounds.extent.y
-      );
-      return compute_top_left(comp_b, next);
-    }
-
-    rect column_layout(layout_t &l, const rect &next) {
-      const size_t cur = l.counter;
-      l.counter += 1;
-
-      const size_t column_num   = cur / l.weights.size();
-      const size_t column_index = cur % l.weights.size();
-
-      // как посчитать ширину?
-      const float box_width = column_num * l.maximum_child_size.x;
-
-      const float height_len_rel = l.weights_summ / l.weights[column_index];
-      float accumulated_height = 0.0f;
-      for (size_t i = 0; i < column_index; ++i) {
-        const float height_rel = l.weights_summ / l.weights[i];
-        accumulated_height += l.bounds.extent.y * height_rel;
-      }
-
-      const auto comp_b = rect(
-        vec2(l.bounds.offset.x, l.bounds.offset.y+accumulated_height),
-        vec2(box_width,         l.bounds.extent.y*height_len_rel) //l.bounds.extent.x
-      );
-      return compute_top_left(comp_b, next);
+    window_t* context::find_window(const size_t hash) const {
+      auto w = windows;
+      for (; w != nullptr && w->hash != hash; w = next_window(windows)) {}
+      return w;
     }
   }
 }
