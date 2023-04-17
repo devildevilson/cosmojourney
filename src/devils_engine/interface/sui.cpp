@@ -198,8 +198,16 @@ namespace devils_engine {
     // надо вот что: разделить собственно виджет текст и отрисовку текста
     // виджет будет брать новый бокс, а сейчас мне нужно сделать текст с чем есть
     // цвет и шрифт вынесем в контекст
-    void text(context* ctx, const color_t &color, const std::string_view &text) {
-      
+    void text(context* ctx, const abs_rect &size, const std::string_view &text) {
+      // просто текст по идее должен брать размер извне
+      const size_t text_size = utils::align_to(text.size()+1, alignof(command_text));
+      auto ptr = ctx->command_allocator.allocate(sizeof(command_text)+text_size);
+      auto text_ptr = reinterpret_cast<char*>(ptr)+sizeof(command_text);
+      memcpy(text_ptr, text.data(), text.size());
+      text_ptr[text.size()] = '\0';
+      auto comm_ptr = new (ptr) command_text(ctx->font, size, std::string_view(text_ptr, text.size()));
+      if (ctx->commands->tail == nullptr) ctx->commands->head = ctx->commands->tail = comm_ptr;
+      else utils::forw::list_add<0>(ctx->commands->tail, comm_ptr);
     }
 
     // layout_t::layout_t(const rect &bounds, const relative_to content, layout_func_t func) noexcept :
@@ -273,7 +281,7 @@ namespace devils_engine {
     // теперь у нас есть юниты, нам бы сначала задать размер в них
     // а потом из них посчитать абсолютные значения
 
-    static vec2 make_extent(const rect &bounds, const rect &next) noexcept {
+    static vec2 make_extent(const abs_rect &bounds, const abs_rect &next) noexcept {
       auto ext = next.extent;
       if (std::abs(ext.x) < SUI_EPSILON) { ext.x = bounds.extent.x - offset.x; }
       if (std::abs(ext.y) < SUI_EPSILON) { ext.y = bounds.extent.y - offset.y; }
@@ -284,132 +292,132 @@ namespace devils_engine {
 
     // нужно еще как нибудь с офсетом поработать, например на крайних значениях очень легко
     // а вот на центральных непонятно что делать, тип делить на половину и менять знак?
-    static rect compute_top_left(const rect &bounds, const rect &next) noexcept {
+    static abs_rect compute_top_left(const abs_rect &bounds, const abs_rect &next) noexcept {
       const auto ext = make_extent(bounds, next);
       const auto offset = vec2(0,0) + next.offset;
-      return rect(bounds.offset+offset, ext);
+      return abs_rect(bounds.offset+offset, ext);
     }
 
-    static rect compute_top_center(const rect &bounds, const rect &next) noexcept {
+    static abs_rect compute_top_center(const abs_rect &bounds, const abs_rect &next) noexcept {
       const auto ext = make_extent(bounds, next);
       const auto offset = vec2(bounds.extent.x / 2 - ext.x / 2, 0) + next.offset;
-      return rect(bounds.offset+offset, ext);
+      return abs_rect(bounds.offset+offset, ext);
     }
 
-    static rect compute_top_right(const rect &bounds, const rect &next) noexcept {
+    static abs_rect compute_top_right(const abs_rect &bounds, const abs_rect &next) noexcept {
       const auto ext = make_extent(bounds, next);
       const auto offset = vec2(bounds.extent.x - ext.x, 0) + next.offset;
-      return rect(bounds.offset+offset, ext);
+      return abs_rect(bounds.offset+offset, ext);
     }
 
-    static rect compute_middle_left(const rect &bounds, const rect &next) noexcept {
+    static abs_rect compute_middle_left(const abs_rect &bounds, const abs_rect &next) noexcept {
       const auto ext = make_extent(bounds, next);
       const auto offset = vec2(0, bounds.extent.y / 2 - ext.y / 2) + next.offset;
-      return rect(bounds.offset+offset, ext);
+      return abs_rect(bounds.offset+offset, ext);
     }
 
-    static rect compute_middle_center(const rect &bounds, const rect &next) noexcept {
+    static abs_rect compute_middle_center(const abs_rect &bounds, const abs_rect &next) noexcept {
       const auto ext = make_extent(bounds, next);
       const auto offset = bounds.extent / 2 - ext / 2 + next.offset;
-      return rect(bounds.offset+offset, ext);
+      return abs_rect(bounds.offset+offset, ext);
     }
 
-    static rect compute_middle_right(const rect &bounds, const rect &next) noexcept {
+    static abs_rect compute_middle_right(const abs_rect &bounds, const abs_rect &next) noexcept {
       const auto ext = make_extent(bounds, next);
       const auto offset = vec2(bounds.extent.x - ext.x, bounds.extent.y / 2 - ext.y / 2) + next.offset;
-      return rect(bounds.offset+offset, ext);
+      return abs_rect(bounds.offset+offset, ext);
     }
 
-    static rect compute_bottom_left(const rect &bounds, const rect &next) noexcept {
+    static abs_rect compute_bottom_left(const abs_rect &bounds, const abs_rect &next) noexcept {
       const auto ext = make_extent(bounds, next);
       const auto offset = vec2(0, bounds.extent.y - ext.y) + next.offset;
-      return rect(bounds.offset+offset, ext);
+      return abs_rect(bounds.offset+offset, ext);
     }
 
-    static rect compute_bottom_center(const rect &bounds, const rect &next) noexcept {
+    static abs_rect compute_bottom_center(const abs_rect &bounds, const abs_rect &next) noexcept {
       const auto ext = make_extent(bounds, next);
       const auto offset = vec2(bounds.extent.x / 2 - ext.x / 2, bounds.extent.y - ext.y) + next.offset;
-      return rect(bounds.offset+offset, ext);
+      return abs_rect(bounds.offset+offset, ext);
     }
 
-    static rect compute_bottom_right(const rect &bounds, const rect &next) noexcept {
+    static abs_rect compute_bottom_right(const abs_rect &bounds, const abs_rect &next) noexcept {
       const auto ext = make_extent(bounds, next);
       const auto offset = bounds.extent - ext + next.offset;
-      return rect(bounds.offset+offset, ext);
+      return abs_rect(bounds.offset+offset, ext);
     }
 
-    static rect add_scrolls(const rect &bounds, const vec2 &scrolls) noexcept {
-      return rect(bounds.offset - scrolls, bounds.extent);
+    static abs_rect add_scrolls(const abs_rect &bounds, const vec2 &scrolls) noexcept {
+      return abs_rect(bounds.offset - scrolls, bounds.extent);
     }
 
-    static rect ns_top_left(const rect &outer, const rect &inner) noexcept {
+    static abs_rect ns_top_left(const abs_rect &outer, const abs_rect &inner) noexcept {
       const auto p1 = outer.offset;
       const auto p2 = inner.offset;
       const auto ext = abs(p2 - p1);
-      return rect(p1, ext);
+      return abs_rect(p1, ext);
     }
 
-    static rect ns_top_center(const rect &outer, const rect &inner) noexcept {
+    static abs_rect ns_top_center(const abs_rect &outer, const abs_rect &inner) noexcept {
       const auto p1 = vec2(inner.offset.x, outer.offset.y);
       const auto p2 = vec2(inner.offset.x + inner.extent.x, inner.offset.y);
       const auto ext = abs(p2 - p1);
-      return rect(p1, ext);
+      return abs_rect(p1, ext);
     }
 
-    static rect ns_top_right(const rect &outer, const rect &inner) noexcept {
+    static abs_rect ns_top_right(const abs_rect &outer, const abs_rect &inner) noexcept {
       const auto p1 = vec2(inner.offset.x + inner.extent.x, outer.offset.y);
       const auto p2 = vec2(outer.offset.x + outer.extent.x, inner.offset.y);
       const auto ext = abs(p2 - p1);
-      return rect(p1, ext);
+      return abs_rect(p1, ext);
     }
 
-    static rect ns_middle_left(const rect &outer, const rect &inner) noexcept {
+    static abs_rect ns_middle_left(const abs_rect &outer, const abs_rect &inner) noexcept {
       const auto p1 = vec2(outer.offset.x, inner.offset.y);
       const auto p2 = vec2(inner.offset.x, inner.offset.y+inner.extent.y);
       const auto ext = abs(p2 - p1);
-      return rect(p1, ext);
+      return abs_rect(p1, ext);
     }
 
-    static rect ns_middle_center(const rect &outer, const rect &inner) noexcept {
+    static abs_rect ns_middle_center(const abs_rect &outer, const abs_rect &inner) noexcept {
       const auto pos = inner.offset;
       const auto ext = inner.extent;
-      return rect(pos, ext);
+      return abs_rect(pos, ext);
     }
 
-    static rect ns_middle_right(const rect &outer, const rect &inner) noexcept {
+    static abs_rect ns_middle_right(const abs_rect &outer, const abs_rect &inner) noexcept {
       const auto p1 = vec2(inner.offset.x + inner.extent.x, inner.offset.y);
       const auto p2 = vec2(outer.offset.x + outer.extent.x, inner.offset.y+inner.extent.y);
       const auto ext = abs(p2 - p1);
-      return rect(p1, ext);
+      return abs_rect(p1, ext);
     }
 
-    static rect ns_bottom_left(const rect &outer, const rect &inner) noexcept {
+    static abs_rect ns_bottom_left(const abs_rect &outer, const abs_rect &inner) noexcept {
       const auto p1 = vec2(outer.offset.x, inner.offset.y+inner.extent.y);
       const auto p2 = vec2(inner.offset.x, outer.offset.y + outer.extent.y);
       const auto ext = abs(p2 - p1);
-      return rect(p1, ext);
+      return abs_rect(p1, ext);
     }
 
-    static rect ns_bottom_center(const rect &outer, const rect &inner) noexcept {
+    static abs_rect ns_bottom_center(const abs_rect &outer, const abs_rect &inner) noexcept {
       const auto p1 = vec2(inner.offset.x, inner.offset.y+inner.extent.y);
       const auto p2 = vec2(inner.offset.x+inner.extent.x, outer.offset.y+outer.extent.y);
       const auto ext = abs(p2 - p1);
-      return rect(p1, ext);
+      return abs_rect(p1, ext);
     }
 
-    static rect ns_bottom_right(const rect &outer, const rect &inner) noexcept {
+    static abs_rect ns_bottom_right(const abs_rect &outer, const abs_rect &inner) noexcept {
       const auto p1 = vec2(inner.offset.x+inner.extent.x, inner.offset.y+inner.extent.y);
       const auto p2 = vec2(outer.offset.x+outer.extent.x, outer.offset.y+outer.extent.y);
       const auto ext = abs(p2 - p1);
-      return rect(p1, ext);
+      return abs_rect(p1, ext);
     }
 
-    layout_default::layout_default(const rect &bounds, const relative_to content) noexcept :
+    layout_default::layout_default(const abs_rect &bounds, const relative_to content) noexcept :
       layout_i(bounds), content(content)
     {}
 
     // тут мы можем передать next в формате (1,1,-1,-1), это должен быть отступ в пикселях
-    rect layout_default::compute_next(const rect &next) {
+    abs_rect layout_default::compute_next(const abs_rect &next) {
       counter += 1;
 
       rect final_rect = next;
@@ -426,8 +434,10 @@ namespace devils_engine {
         default: utils::error("Enum is not supported {}", static_cast<size_t>(content));
       }
 
-      max_size = max(max_size, final_rect.offset+final_rect.extent);
-      last_rect = final_rect;
+      // max_size здесь буквально выполняет роль content_bounds, лучше наверное все таки использовать его
+      //max_size = max(max_size, final_rect.offset+final_rect.extent);
+      content_bounds = content_bounds.extent_to_contain(final_rect);
+      last_rect = final_rect; // тут last_rect ни к чему
 
       return final_rect;
     }
@@ -447,7 +457,7 @@ namespace devils_engine {
     // новый размер мы используем чтобы разместить после него другой виджет,
     // при этом мы должны обновить данные у виджета выше по иерархии (тип размер контент изменился)
     // это веса, но у нас еще могут быть, просто размеры в разных значениях
-    rect layout_row::compute_next(const rect &next) {
+    abs_rect layout_row::compute_next(const abs_rect &next) {
       const size_t cur = counter;
       counter += 1;
 
@@ -470,7 +480,7 @@ namespace devils_engine {
       const float box_offset_y = bounds.extent.y * row_num;
       //offset.y = box_offset_y;
 
-      const auto comp_b = rect(
+      const auto comp_b = abs_rect(
         vec2(bounds.offset.x+accumulated_width, bounds.offset.y+box_offset_y),
         vec2(bounds.extent.x*width_len_rel,     bounds.extent.y)
       );
@@ -479,8 +489,8 @@ namespace devils_engine {
       // нужно учесть это дело в функциях
       //bounds = bounds.extent_to_contain(comp_b);
       const auto computed = compute_top_left(comp_b, next);
-      //content_bounds = content_bounds.extent_to_contain(computed);
-      max_size = max(max_size, computed.offset+computed.extent);
+      content_bounds = content_bounds.extent_to_contain(computed);
+      //max_size = max(max_size, computed.offset+computed.extent);
       last_rect = computed;
       return computed;
       //return comp_b;
@@ -495,7 +505,7 @@ namespace devils_engine {
       }
     }
 
-    rect layout_column::compute_next(const rect &next) {
+    abs_rect layout_column::compute_next(const abs_rect &next) {
       const size_t cur = counter;
       counter += 1;
 
@@ -511,13 +521,14 @@ namespace devils_engine {
 
       const float box_offset_x = bounds.extent.x * row_num;
 
-      const auto comp_b = rect(
+      const auto comp_b = abs_rect(
         vec2(bounds.offset.x+box_offset_x, bounds.offset.y+accumulated_height),
         vec2(bounds.extent.x,              bounds.extent.y*height_len_rel)
       );
 
       const auto computed = compute_top_left(comp_b, next);
-      max_size = max(max_size, computed.offset+computed.extent);
+      content_bounds = content_bounds.extent_to_contain(computed);
+      //max_size = max(max_size, computed.offset+computed.extent);
       last_rect = computed;
       return computed;
     }
@@ -528,7 +539,7 @@ namespace devils_engine {
       layout_i(bounds), inner_bounds(inner_bounds)
     {}
     
-    rect layout_nine_slice::compute_next(const rect &next) {
+    abs_rect layout_nine_slice::compute_next(const abs_rect &next) {
       // тут нужно предусмотреть ТОЛЬКО 9 детей
       // хотя возможно нужно сделать это ограничение легким
       const size_t cur = counter; // % static_cast<size_t>(relative_to::count)
@@ -550,15 +561,31 @@ namespace devils_engine {
 
       // найнслайс наверное должен быть сделан так чтобы не допускать выходов за пределы внешнего бокса
       // то есть иннер бокс должен быть строго внутри основного бокса
-      max_size = max(max_size, final_rect.offset+final_rect.extent);
+      //max_size = max(max_size, final_rect.offset+final_rect.extent);
+      content_bounds = content_bounds.extent_to_contain(final_rect);
       last_rect = final_rect;
       return final_rect;
     }
 
-    window_t* context::find_window(const size_t hash) const {
+    window_t* next_window(window_t* prev, window_t* start) const noexcept {
+      return utils::ring::list_next<0>(prev, start);
+    }
+
+    window_t* context::find_window(const size_t hash) const noexcept {
       auto w = windows;
-      for (; w != nullptr && w->hash != hash; w = next_window(windows)) {}
+      for (; w != nullptr && w->hash != hash; w = next_window(w, windows)) {}
       return w;
+    }
+
+    window_t* context::create_window(const size_t hash, const std::string_view &str) noexcept {
+      auto w = window_pool.create(str);
+      w->hash = hash;
+      utils::ring::list_radd<0>(windows, w);
+      return w;
+    }
+
+    void context::remove_window(window_t* w) noexcept {
+      window_pool.destroy(w);
     }
   }
 }

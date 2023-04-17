@@ -383,7 +383,14 @@ namespace devils_engine {
     void decorate(context* ctx, const handle &img, const vec2 &img_size, const content_scale scale = content_scale::fit);
 
     struct color_t {
-      uint32_t container;
+      constexpr static const arr_size = sizeof(uint32_t);
+      union {
+        struct {
+          uint8_t r,g,b,a;
+        };
+        uint8_t arr[arr_size];
+        uint32_t container;
+      };
 
       explicit color_t(const float r, const float g, const float b, const float a = 1.0f) noexcept;
       explicit color_t(const int r = 0, const int g = 0, const int b = 0, const int a = 255) noexcept;
@@ -397,11 +404,12 @@ namespace devils_engine {
     // + алигнмент этих боксов
     // текст пытаемся впихнуть в тот бокс который предоставили
     template <typename... Args>
-    void textf(context* ctx, const color_t &color, const std::string_view &format, Args&&... args) {
+    void textf(context* ctx, const std::string_view &format, Args&&... args) {
       // нужно fmt пока что подключить
     }
 
-    void text(context* ctx, const color_t &color, const std::string_view &text);
+    // должен быть некий базовый стиль для просто текста и заднего фона
+    void text(context* ctx, const std::string_view &text);
 
     // ничего, пропускаем это место, эквивалентно вызову пустой функции бокс
     void space(context* ctx);
@@ -489,38 +497,6 @@ namespace devils_engine {
       handle userdata;
     };
 
-    // имеет смысл сделать виртуальный класс с основными компонентами
-    // bounds, counter, offset, content_bounds, а остальные компоненты убрать по
-    // наследникам + написать свою реализацию Арены памяти (memory arena)
-    // откуда собственно получать память для всех структур ГУИ
-    struct layout_t {
-      using layout_func_t = std::function<rect(layout_t &, const rect &)>;
-
-      rect bounds; // общий размер
-      size_t counter;
-      vec2 maximum_child_size;
-
-      // частично можно положить в юнион
-      rect inner_bounds; // размер внутреннего поля для nine_slice
-      relative_to content;
-      // здесь особо не получится расширить на все будущие выдумки, придется так
-      float weights_summ;
-      std::span<float> weights;
-      // как отличить row, column, nine_slice и другие?
-      // вообще это все дело отличается по поведению
-
-      layout_func_t inc_counter_and_get;
-
-      layout_t(const rect &bounds, const relative_to content, layout_func_t func) noexcept;
-      layout_t(const rect &bounds, const std::span<float> &weights, layout_func_t func) noexcept;
-      layout_t(const rect &bounds, const rect &inner_bounds, layout_func_t func) noexcept;
-    };
-
-    rect default_layout(layout_t &l, const rect &next);
-    rect row_layout(layout_t &l, const rect &next);
-    rect column_layout(layout_t &l, const rect &next);
-    rect nine_slice_layout(layout_t &l, const rect &next);
-
     // размеры которые мы сюда передаем должны быть относительно предыдущего виджета
     // когда мы хотим расчитать конечный квадрат, мы расчитываем начиная с самого первого виджета (по вложенности)
     // проходим по иерархии и считаем поди compute_next
@@ -539,29 +515,31 @@ namespace devils_engine {
     class layout_i {
     public:
       size_t counter;
-      rect bounds;
-      rect last_rect;
+      abs_rect bounds;
+      abs_rect content_bounds;
+      abs_rect last_rect;
       //vec2 size;
       //vec2 offset;
-      vec2 max_size;
+      //vec2 max_size;
 
-      SUI_INLINE layout_i(const rect &bounds) noexcept :
-        counter(0), bounds(bounds), max_size(-1000000, -1000000) // size(size),
+      SUI_INLINE layout_i(const abs_rect &bounds) noexcept :
+        counter(0), bounds(bounds), content_bounds(bounds) // size(size),
       {}
 
       virtual ~layout_i() noexcept = default;
-      virtual rect compute_next(const rect &next) = 0; // должен возвращать абсолютные размеры
+      virtual abs_rect compute_next(const abs_rect &next) = 0; // должен возвращать абсолютные размеры
       // возможно было бы неплохо превратить относительные размеры в абсолютные тоже тут
-      //virtual rect make_absolute(const rel_rect &r) const = 0; // ctx?
-      //virtual rect compute_scissor() const = 0;
+      //virtual abs_rect make_absolute(const rect &r) const = 0; // ctx?
+      //virtual abs_rect compute_scissor() const = 0;
+      inline bool within_bounds() const noexcept { return bounds.contain(content_bounds); }
     };
 
     class layout_default : public layout_i {
     public:
       relative_to content;
 
-      layout_default(const rect &bounds, const relative_to content) noexcept;
-      rect compute_next(const rect &next) override;
+      layout_default(const abs_rect &bounds, const relative_to content) noexcept;
+      abs_rect compute_next(const abs_rect &next) override;
     };
 
     // как удалить память? наверное нужно сделать деинит функцию
@@ -577,8 +555,8 @@ namespace devils_engine {
       std::array<float, maximum_weights> weights; // спан не сработает, нужна отдельная память
       //rect elem_bounds;
 
-      layout_row(const rect &bounds, const std::span<float> &weights) noexcept;
-      rect compute_next(const rect &next) override;
+      layout_row(const abs_rect &bounds, const std::span<float> &weights) noexcept;
+      abs_rect compute_next(const abs_rect &next) override;
     };
 
     class layout_column : public layout_i {
@@ -589,8 +567,8 @@ namespace devils_engine {
       size_t count;
       std::array<float, maximum_weights> weights; // спан не сработает, нужна отдельная память 
 
-      layout_column(const rect &bounds, const std::span<float> &weights) noexcept;
-      rect compute_next(const rect &next) override;
+      layout_column(const abs_rect &bounds, const std::span<float> &weights) noexcept;
+      abs_rect compute_next(const abs_rect &next) override;
     };
 
     class layout_row_dyn : public layout_i {
@@ -598,8 +576,8 @@ namespace devils_engine {
       float weights_summ;
       std::vector<float> weights;
 
-      layout_row_dyn(const rect &bounds, const std::span<float> &weights) noexcept;
-      rect compute_next(const rect &next) override;
+      layout_row_dyn(const abs_rect &bounds, const std::span<float> &weights) noexcept;
+      abs_rect compute_next(const abs_rect &next) override;
     };
 
     class layout_column_dyn : public layout_i {
@@ -607,16 +585,16 @@ namespace devils_engine {
       float weights_summ;
       std::vector<float> weights;
 
-      layout_column_dyn(const rect &bounds, const std::span<float> &weights) noexcept;
-      rect compute_next(const rect &next) override;
+      layout_column_dyn(const abs_rect &bounds, const std::span<float> &weights) noexcept;
+      abs_rect compute_next(const abs_rect &next) override;
     };
 
     class layout_nine_slice : public layout_i {
     public:
       rect inner_bounds;
 
-      layout_nine_slice(const rect &bounds, const rect &inner_bounds) noexcept;
-      rect compute_next(const rect &next) override;
+      layout_nine_slice(const abs_rect &bounds, const abs_rect &inner_bounds) noexcept;
+      abs_rect compute_next(const abs_rect &next) override;
     };
 
     // либо этот оставить либо убрать в пользу widget_data_t
@@ -649,6 +627,70 @@ namespace devils_engine {
       color c;
       struct image image;
       std::string_view text;
+    };
+
+    struct draw_list {
+
+    };
+
+    class command_base : 
+      // может быть ring ?
+      public utils::forw::list<command_base, 0> 
+    {
+    public:
+      //struct handle handle; // хендл тут?
+
+      virtual ~command_base() noexcept = default;
+      virtual void compute(draw_list* l) const = 0; // конст?
+      inline command_base* next() const noexcept { return utils::forw::list_next<0>(this); };
+      //inline command_base* next(const command_base* ref) const noexcept { return utils::ring::list_next<0>(this, ref); };
+    };
+
+    // ножницы добавляются только в разного рода панелях, с учетом того что мы должны знать размер панели заранее
+    // ножницы мы можем добавить на этапе создания панели (собственно чаще всего так и происходит)
+    class command_scissor : public command_base {
+    public:
+      abs_rect size;
+      command_scissor(const abs_rect &size) noexcept;
+      void compute(draw_list* l) const override;
+    };
+
+    class command_square : public command_base {
+    public:
+      //float rounding; // наверное проще сделать через отдельную команду отрисовки скругленного угла
+      //float line_thickness; // проще сделать через отрисовку 9slice
+      abs_rect size;
+      struct color color;
+
+      command_square(const abs_rect &size, const struct color &color) noexcept;
+      // составим 2 треугольника для залитого квадрата
+      // наверное в драв лист нужно указать что мы рисуем именно отдельными треугольниками
+      void compute(draw_list* l) const override;
+    };
+
+    class command_round_corner : public command_square {
+    public:
+      // по идее ничего больше не нужно
+      command_round_corner(const abs_rect &size, const struct color &color) noexcept;
+      void compute(draw_list* l) const override;
+    };
+
+    class command_image : public command_square {
+    public:
+      struct image img;
+
+      command_image(const abs_rect &size, const struct color &color, const struct image &img) noexcept;
+      void compute(draw_list* l) const override;
+    };
+
+    class command_text : public command_base {
+    public:
+      const struct user_font *font;
+      abs_rect size;
+      std::string_view str; // место для строки возьмем сразу после этого класса
+
+      command_text(const struct user_font *font, const abs_rect &size, const std::string_view &str) noexcept;
+      void compute(draw_list* l) const override;
     };
 
     // наверное над лэйаутом будет еще контейнер, который может хранить данные между кадрами
@@ -709,6 +751,8 @@ namespace devils_engine {
       //widget_data_t* create_new_widget(const rect &bounds, layout_i* l) noexcept;
     };
 
+    window_t* next_window(window_t* prev, window_t* start) const noexcept;
+
     // наклир выделяет аж 19 команд, но мне наверное будет достаточно лишь:
     // ножницы, прямоугольник, текст, картинка, полигон, кривая (?) (насчет последних двух я не уверен)
     // не помню как именно это все дело превращалось в вершины и индесы,
@@ -726,6 +770,42 @@ namespace devils_engine {
     struct unit_container {
       constexpr static const size_t number_count = static_cast<size_t>(unit::type::count);
       float mults[number_count];
+    };
+
+    // имеет ли смысл делать command_buffer для каждого окна?
+    struct command_buffer {
+      struct command_base *head, *tail;
+      struct abs_rect clip;
+      int use_clipping;
+      handle userdata; // ??
+    };
+    
+    // стиль должен быть расширяемый (должен содержать стили по типам)
+    // как сделать? сопоставить типу индекс? необходимо сделать эту штуку уникальной для контекста
+    struct style {
+      template <typename T>
+      static size_t get_type_id() noexcept;
+      static size_t type_id;
+
+      struct basic_style basic_style;
+      utils::arena_allocator style_allocator;
+      std::array<style_header*, 128> styles;
+
+      template <typename T>
+      size_t setup_style(const T& obj);
+      template <typename T>
+      T* get_style() const noexcept;
+      style_header* get_style(const size_t index) const noexcept;
+    };
+
+    struct style_header {
+      size_t type;
+    };
+
+    struct basic_style {
+      const struct font* font;
+      const struct color text_color;
+      const struct color background_color;
     };
 
     struct context {
@@ -758,6 +838,7 @@ namespace devils_engine {
       utils::block_allocator window_pool;
       window_t* windows;
       window_t* current;
+      struct command_buffer commands;
 
       // наверное практически для всей либы достаточно будет одного большого arena_allocator'а
       // окна скорее всего будут оставаться в памяти, стак виджетов будет активен только один
@@ -768,8 +849,9 @@ namespace devils_engine {
 
       context();
 
-      window_t* next_window(window_t* prev) const;
-      window_t* find_window(const size_t hash) const;
+      window_t* find_window(const size_t hash) const noexcept;
+      window_t* create_window(const size_t hash, const std::string_view &str) noexcept;
+      void remove_window(window_t* w) noexcept;
     };
 
     // вот мы создали это дело в контексте, что потом
