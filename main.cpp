@@ -14,6 +14,7 @@
 #include "sound/system.h"
 #include "utils/core.h"
 #include "utils/type_traits.h"
+#include "utils/bitstream.h"
 
 using namespace devils_engine;
 
@@ -142,21 +143,21 @@ int main(int argc, char const *argv[]) {
   //   std::this_thread::sleep_for(std::chrono::microseconds(1000));
   // }
 
-  spdlog::set_level(spdlog::level::trace);
+  // spdlog::set_level(spdlog::level::trace);
 
-  {
-    traced_func();
-  }
+  // {
+  //   traced_func();
+  // }
 
-  {
-    const utils::tracer t12313;
-    traced_func2();
-  }
+  // {
+  //   const utils::tracer t12313;
+  //   traced_func2();
+  // }
 
-  {
-    utils::tracer t;
-    traced_func3();
-  }
+  // {
+  //   utils::tracer t;
+  //   traced_func3();
+  // }
 
   //utils_assertf(5==4, "test assert {}", 1);
   //utils_assert(5==4);
@@ -164,5 +165,49 @@ int main(int argc, char const *argv[]) {
 
   utils::println(utils::type_name<decltype(&main)>(), utils::type_id<decltype(&main)>());
 
+  
+  // надо наверное добавить сюда размер, на всякий случай?
+  uint8_t buf[1024];
+  memset(buf, 0, 1024);
+  utils::bitstream bs(buf);
+
+  enum abc {
+    e1,
+    e2,
+    e3,
+    e4,
+    e5,
+    e6,
+    count
+  };
+
+  constexpr size_t enum_bits = utils::count_significant(abc::count);
+
+  // можно ли считать что это дело готово?
+  bs.write(enum_bits, e2);
+  bs.write(enum_bits, e4);
+  bs.write(enum_bits, e6);
+  assert(static_cast<abc>(bs.peek_at(0, enum_bits)) == abc::e2);
+  assert(static_cast<abc>(bs.peek_at(enum_bits, enum_bits)) == abc::e4);
+  assert(static_cast<abc>(bs.peek_at(enum_bits+enum_bits, enum_bits)) == abc::e6);
+  utils::println("enum_bits", enum_bits, "bs.pos", bs.position());
+
   return 0;
 }
+
+// небольшие мысли по поводу архитектуры: открыл vcmi там походу полностью клиент-серверная архитектура даже для локальной игры
+// было бы неплохо сделать примерно тоже самое, там полностью определены все (?) типы взаимодействия в игре
+// client/Client.h - множество функций например: giveHeroArtifact или setMovePoints
+// я так понимаю мне нужно будет сделать что то похожее, но в моем случае почти все взаимодействия
+// будут сделаны через скрипты, нужно синхронизовать выполнение скрипта, вообще выполнение игры должно быть разделено на "тики"
+// состояние игры в определенный тик на клиенте должно соответствовать состоянию игры в тот же тик на сервере
+// возможно это не стейт-оф-зе-арт в 2023, но это хотя бы понятно как сделать
+// как общается клиент и сервер - по идее через "пайп", то есть через буфер сырых данных, 
+// клиент запоняет буфер, сервер потихоньку считывает данные, считает мир и отправляет обратно изменения
+// в скриптах мы четко знаем какая функция просто считывает данные, а какая только их задает 
+// нужно брать игровые данные за О(1), у нас будет как минимум 2 типа инпута:
+// инпут с клавы (передвижение), запуск скрипта (что то еще?)
+// инпут с клавы можно передвать и так, там данных немного и они достаточно очевидны
+// ЛЮБОЙ скрипт оканчивается запуском функции эффектов (точнее нас интересуют только скрипты эффекты)
+// и тут у нас два варианта: либо полностью ждать на клиенте пока у нас придет нужный снапшот из сервака
+// либо пытаться предугадать что будет и составить снапшот клиенту, а потом когда с сервера придет 

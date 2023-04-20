@@ -26,11 +26,15 @@ set(SRC_LIST
   core.cpp
   block_allocator.cpp
   stack_allocator.cpp
+  bits.cpp
+  bitstream.cpp
 )
 
 set(HDR_LIST
   block_allocator.h
   stack_allocator.h
+  bits.h
+  bitstream.h
   memory_pool.h
   type_traits.h
   core.h

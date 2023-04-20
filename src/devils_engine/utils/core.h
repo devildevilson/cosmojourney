@@ -12,7 +12,7 @@
 
 namespace devils_engine {
   namespace utils {
-#   ifdef _WIN32
+#   ifdef _MSC_VER
 #     define utils_pretty_function __FUNCSIG__
 #   else
 #     define utils_pretty_function __PRETTY_FUNCTION__
@@ -145,6 +145,21 @@ namespace devils_engine {
       tracer & operator=(const tracer &copy) noexcept = delete;
       tracer & operator=(tracer &&move) noexcept = delete;
     };
+
+    template <typename T>
+    constexpr size_t count_significant(T v) {
+      if constexpr (std::is_enum_v<T>) { return count_significant(static_cast<int64_t>(v)); }
+      else {
+        size_t i = 0;
+        for (; v != 0; v >>= 1, ++i) {}
+        return i;
+      }
+    }
+
+    static_assert(count_significant(1) == 1);
+    static_assert(count_significant(2) == 2);
+    static_assert(count_significant(3) == 2);
+    static_assert(count_significant(4) == 3);
   }
 }
 

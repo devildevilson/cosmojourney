@@ -3,7 +3,8 @@
 
 #include <cstddef>
 #include <atomic>
-#include <concepts>
+#include "utils/core.h"
+#include "utils/type_traits.h"
 
 namespace devils_engine {
   namespace utils {
@@ -21,16 +22,19 @@ namespace devils_engine {
 
       template <typename T, typename... Args>
       T* create(Args&&... args) {
-        static_assert(std::is_trivially_destructible_v<T>);
+        static_assert(std::is_trivially_destructible_v<T>, "Must sutisfy is_trivially_destructible_v");
         auto ptr = allocate(sizeof(T));
+        utils_assertf(ptr != nullptr, "Could not allocate memory for '{}', size: {} allocated: {}", utils::type_name<T>(), m_size, m_allocated);
         return new (ptr) T(std::forward<Args>(args)...);
       }
 
       void clear() noexcept;
 
-      size_t size() const noexcept;
+      size_t capacity() const noexcept;
       size_t aligment() const noexcept;
-      size_t allocated_size() const noexcept;
+      size_t size() const noexcept;
+      char* data() noexcept;
+      const char* data() const noexcept;
     private:
       size_t m_aligment;
       size_t m_size;
@@ -52,8 +56,9 @@ namespace devils_engine {
 
       template <typename T, typename... Args>
       T* create(Args&&... args) {
-        static_assert(std::is_trivially_destructible_v<T>);
+        static_assert(std::is_trivially_destructible_v<T>, "Must sutisfy is_trivially_destructible_v");
         auto ptr = allocate(sizeof(T));
+        utils_assertf(ptr != nullptr, "Could not allocate memory for '{}', size: {} allocated: {}", utils::type_name<T>(), m_size, m_allocated);
         return new (ptr) T(std::forward<Args>(args)...);
       }
 
@@ -62,6 +67,8 @@ namespace devils_engine {
       size_t size() const noexcept;
       size_t aligment() const noexcept;
       size_t allocated_size() const noexcept;
+      char* data() noexcept;
+      const char* data() const noexcept;
     private:
       size_t m_aligment;
       size_t m_size;
