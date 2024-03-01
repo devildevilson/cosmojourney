@@ -13,7 +13,11 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
   set(CMAKE_CXX_STANDARD 20)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra")
+  if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR /Wall /permissive-")
+  else()
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra")
+  endif()
 
 endif()
 
@@ -24,9 +28,13 @@ include_directories(
   include/spdlog/include/
   include/vorbis/include/
   include/stb/
+  include/glm/
+  include/openal-soft/include
   src/devils_engine/
   src/cosmojorney/
 )
+
+link_directories(libs)
 
 # Find packages go here.
 
@@ -40,7 +48,7 @@ include_directories(
 
 # Link each target with other targets or add options, etc.
 add_subdirectory(src/devils_engine/utils/)
-#add_subdirectory(src/devils_engine/sound/)
+add_subdirectory(src/devils_engine/sound/)
 #add_subdirectory(src/devils_engine/interface/)
 
 # Adding something we can run - Output name matches target name
@@ -48,4 +56,4 @@ add_executable(${PROJECT_NAME} main.cpp)
 
 # Make sure you link your targets with this command. It can also link libraries and
 # even flags, so linking a target that does not exist will not give a configure-time error. sui
-target_link_libraries(${PROJECT_NAME} devils_utils) #sui devils_sound
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound) #sui 

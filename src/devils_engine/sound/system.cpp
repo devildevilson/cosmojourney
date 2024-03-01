@@ -19,20 +19,19 @@
 
 namespace devils_engine {
   namespace sound {
-    system::system() : device(nullptr), ctx(nullptr), counter(1) {
+    system::system(const size_t queue_size) : device(nullptr), ctx(nullptr), counter(1), queue_size(queue_size), sources_offset(1) {
       ALCenum error = AL_NO_ERROR;
 
       device = alc_call(alcOpenDevice, nullptr, nullptr);
       assert(device != nullptr);
 
       const auto actual_device_name = alc_call(alcGetString, device, ALC_DEVICE_SPECIFIER);
-      spdlog::info("Using sound output device {}", actual_device_name);
+      utils::info("sound::system: Using sound output device {}", actual_device_name);
 
       ctx = alc_call(alcCreateContext, device, nullptr);
 
       if (!alc_call(alcMakeContextCurrent, device, ctx)) {
-        spdlog::error("Could not make context current");
-        throw std::runtime_error("OpenAL error");
+        utils::error("sound::system: OpenAL: Could not make context current");
       }
 
       al_call_info(alDistanceModel, AL_LINEAR_DISTANCE_CLAMPED);
@@ -48,140 +47,250 @@ namespace devils_engine {
         alGenSources(1, &s.handle);
         error = error != AL_NO_ERROR ? error : alGetError();
 
-        sources.push_back(s);
+        sources.push_back(system::source_data(s, nullptr));
       }
 
-      if (sources.size() == 0 || (sources.size() == 1 && sources[0].handle == 0)) {
+      if (sources.size() == 0 || (sources.size() == 1 && sources[0].source.handle == 0)) {
         check_al_error(error);
       }
 
-      alDeleteBuffers(2, sources.back().buffers);
+      alDeleteBuffers(2, sources.back().source.buffers);
       sources.pop_back();
 
-      spdlog::info("Created {} sound sources", sources.size());
+      proc_array.reset(new sound_processing_data[sources.size() * queue_size]);
+
+      for (size_t i = 0; i < sources.size(); ++i) {
+        sources[i].queue = &proc_array[i*queue_size];
+      }
+
+      utils::info("sound::system: Created {} sound sources", sources.size());
     }
 
     system::~system() {
-      for (const auto &source : sources) {
-        alDeleteBuffers(2, source.buffers);
-        alDeleteSources(1, &source.handle);
+      for (const auto &data : sources) {
+        alDeleteBuffers(2, data.source.buffers);
+        alDeleteSources(1, &data.source.handle);
       }
 
       alc_call_info(alcMakeContextCurrent, device, nullptr);
       alc_call(alcDestroyContext, device, ctx);
       alc_call(alcCloseDevice, device);
 
-      for (const auto& [ name, res ] : resources) {
+      /*for (const auto& [ name, res ] : resources) {
         resource_pool.destroy(res);
-      }
+      }*/
     }
 
-    settings::settings() : settings(0) {}
+    settings::settings() noexcept : settings(0,0, false) {}
+
     settings::settings(
       const uint32_t type,
-      const float speed,
       const float volume,
-      const float rnd_pitch
-    ) : type(type), speed(std::max(0.0f, speed)), volume(std::clamp(volume, 0.0f, 1.0f)), rnd_pitch(rnd_pitch) {}
+      const float speed,
+      const float rnd_pitch,
+      const bool is_mono
+    ) noexcept : 
+      type(type), speed(speed), volume(volume), rnd_pitch(rnd_pitch), 
+      is_loop(false), is_mono(is_mono), is_needed(false), force_source(UINT32_MAX),
+      pos(0.0f, 0.0f, 0.0f),
+      dir(0.0f, 0.0f, 0.0f),
+      vel(0.0f, 0.0f, 0.0f)
+    {}
 
-    size_t system::play_sound(const std::string_view &name, const uint32_t type, const float speed, const float volume) {
-      return play_sound(name, settings(type, speed, volume));
-    }
+    settings::settings(
+      const uint32_t type,
+      const uint32_t force_source,
+      const bool is_mono
+    ) noexcept : 
+      type(type), speed(1.0f), volume(1.0f), rnd_pitch(0.0f), 
+      is_loop(false), is_mono(is_mono), is_needed(false), force_source(force_source),
+      pos(0.0f, 0.0f, 0.0f),
+      dir(0.0f, 0.0f, 0.0f),
+      vel(0.0f, 0.0f, 0.0f)
+    {}
 
-    size_t system::play_sound(const std::string_view &name, const settings &info) {
-      // нам может потребоваться отслеживать состояние звука (например чтобы сменить положение звука)
-      // как это сделать? можно вернуть указатель, но как проверить что звук все?
-      // нужно чтобы с того конца вернули указатель
-      // как понять какой звук нужно воспроизвести? строковый id, почему звуки будут храниться тут?
-      // с ресурсами у меня пока что беда, не понимаю как лучше сделать, вообще в идеале
-      // прямо сюда передавать собственно ресурс который мы хотим воспроизвести
-      // лан лучше не выпендриваться и все таки сделать по имени
-      // искать ресурс лучше прям здесь + прям здесь лучше всего ставить в очередь
-      const auto itr = resources.find(name);
-      if (itr == resources.end()) utils::error("Could not find resource {}", name);
+    size_t system::setup_sound(const system::resource *res, const settings &info) {
+      if (info.force_source < sources.size()) {
+        for (size_t i = 0; i < queue_size; ++i) {
+          auto &data = sources[info.force_source];
+          if (data.queue[i].id != 0) continue;
 
-      // по идее вот эту часть нужно закрыть за мьютексом
-      auto source = std::move(sources.back());
-      sources.pop_back();
-      const size_t current_id = counter;
-      counter += 1;
-      counter += size_t(counter == 0);
-      current_sounds.push_back(current_playing_data{source, info, itr->second, 0, 0, current_id});
+          const size_t sound_id = get_new_id();
+          data.queue[i].init(sound_id, res, info);
 
+          return sound_id;
+        }
 
-      // да но нужно тогда сразу куда то это пихать, в queue?
-
-      // нужно найти ресурс, взять свободный сорс, засунуть данные в очередь
-      // + способ передачи позиции и направления звука
-      // ничего лучше чем передавать указатель на класс с виртуальными методами мне в голову не приходит
-      // если отсутствие ресурса - это фатал эррор то мы можем и позже его обработать
-
-      //spdlog::info("Start playing {}", name);
-
-      return current_id;
-    }
-
-    void system::stop_sound(const size_t id) {
-      int64_t counter = int64_t(current_sounds.size())-1;
-      while (counter >= 0) {
-        auto &cur = current_sounds[counter];
-        counter -= 1;
-
-        if (cur.id != id) continue;
-
-        al_call(alSourceStop, cur.source.handle);
-        uint32_t buffers[2];
-        al_call(alSourceUnqueueBuffers, cur.source.handle, 2, buffers);
-
-        sources.emplace_back(cur.source);
-        std::swap(current_sounds[counter], current_sounds.back());
-        current_sounds.pop_back();
+        return 0;
       }
+
+      for (size_t i = 0; i < queue_size; ++i) {
+        for (size_t j = sources_offset; j < sources.size(); ++j) {
+          auto &data = sources[j];
+          if (data.queue[i].id != 0) continue;
+
+          const size_t sound_id = get_new_id();
+          data.queue[i].init(sound_id, res, info);
+
+          return sound_id;
+        }
+      }
+
+      return 0;
     }
 
-    // к сожалению мы работаем с объектами из массива по значению
-    // поэтому придется вешать мьютекст на весь апдейт
-    void system::update(const size_t time) {
-      int64_t counter = int64_t(current_sounds.size())-1; // мьютекс
-      while (counter >= 0) {
-        auto &cur = current_sounds[counter]; // мьютекс + копирование (по идее ничего тяжелого)
-        counter -= 1;
+    bool system::remove_sound(const size_t source_id) {
+      const auto [source_index, queue_index] = find_source_id(source_id);
+      if (source_index == SIZE_MAX) return false;
+      if (queue_index == 0) al_call(alSourceStop, sources[source_index].source.handle);
 
-        const auto &snd_res = cur.res->sound;
-        const size_t frames_to_load = second_to_pcm_frames_mono(SOUND_LOADING_COEFFICIENT, snd_res->sample_rate());
-        cur.init(frames_to_load);
-        cur.update_buffers(frames_to_load);
-        cur.time += time;
-        // обновляем громкость
+      // оставим всю основную работу апдейту?
+      remove_from_queue(sources[source_index].queue, queue_index);
+
+      return true;
+    }
+
+    bool system::play_sound(const size_t source_id) {
+      const auto [source_index, queue_index] = find_source_id(source_id);
+      if (source_index == SIZE_MAX) return false;
+
+      ALint ret; 
+      al_call(alGetSourcei, sources[source_index].source.handle, AL_SOURCE_STATE, &ret);
+      if (ret == AL_PLAYING) return true;
+      al_call(alSourcePlay, sources[source_index].source.handle);
+      return true;
+    }
+
+    bool system::stop_sound(const size_t source_id) {
+      const auto [source_index, queue_index] = find_source_id(source_id);
+      if (source_index == SIZE_MAX) return false;
+      if (queue_index != 0) return false; // паузим если только это первый звук в очереди
+
+      al_call(alSourcePause, sources[source_index].source.handle);
+      return true;
+    }
+
+    float system::stat_sound(const size_t source_id) const {
+      const auto [source_index, queue_index] = find_source_id(source_id);
+      if (source_index == SIZE_MAX) return -1.0f;
+      if (queue_index != 0) return 0.0f;
+
+      // надо проверять чему равно AL_SAMPLE_OFFSET + проверять как соотносятся фреймы и сэмплы
+      ALint ret;
+      al_call(alGetSourcei, sources[source_index].source.handle, AL_SAMPLE_OFFSET, &ret);
+      const size_t processed_samples = sources[source_index].queue[0].loaded_frames + ret;
+      //sources[source_index].queue[0].res
+      utils::info("loaded frames {} samples {}", sources[source_index].queue[0].loaded_frames, ret);
+      return 0.0f;
+    }
+
+    bool system::set_sound(const size_t source_id, const float place) {
+      // надо посчитать как много семплов это будет
+      return false;
+    }
+
+    bool system::set_sound(const size_t source_id, const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &vel) {
+      const auto [source_index, queue_index] = find_source_id(source_id);
+      if (source_index == SIZE_MAX) return false;
+
+      auto &info = sources[source_index].queue[queue_index].info;
+      info.pos = pos;
+      info.dir = dir;
+      info.vel = vel;
+
+      if (queue_index == 0) {
+        al_call(alSource3f, sources[source_index].source.handle, AL_POSITION, pos.x, pos.y, pos.z);
+        al_call(alSource3f, sources[source_index].source.handle, AL_DIRECTION, dir.x, dir.y, dir.z);
+        al_call(alSource3f, sources[source_index].source.handle, AL_VELOCITY, vel.x, vel.y, vel.z);
+      }
+
+      return true;
+    }
+
+    bool system::set_listener_pos(const glm::vec3 &pos) {
+      al_call(alListener3f, AL_POSITION, pos.x, pos.y, pos.z);
+      return true;
+    }
+
+    bool system::set_listener_ori(const glm::vec3 &look_at, const glm::vec3 &up) {
+      const ALfloat listener_ori[6] = { look_at.x, look_at.y, look_at.z, up.x, up.y, up.z };
+      al_call(alListenerfv, AL_ORIENTATION, listener_ori);
+      return true;
+    }
+
+    bool system::set_listener_vel(const glm::vec3 &vel) {
+      al_call(alListener3f, AL_VELOCITY, vel.x, vel.y, vel.z);
+      return true;
+    }
+
+    // пройдемся по всем источникам, если что то закончило играть ставим следующий звук в очереди
+    void system::update(const size_t time) {
+      for (auto &data : sources) {
+        if (data.queue->id == 0) continue;
+
+        const auto &snd_res = data.queue[0].res->sound;
+        const uint16_t channels_count = data.queue->info.is_mono ? 1 : snd_res->channels();
+        const size_t frames_to_load = second_to_pcm_frames(SOUND_LOADING_COEFFICIENT, snd_res->sample_rate(), channels_count);
+        data.init(frames_to_load); // по идее во всех новых звуках time должен быть 0
+        data.update_buffers(frames_to_load);
+        data.queue->time += time;
+
+        // громкость зависит от типа звука, тип звука указываем в настройках
 
         ALint state = AL_PLAYING;
-        al_call(alGetSourcei, cur.source.handle, AL_SOURCE_STATE, &state);
+        al_call(alGetSourcei, data.source.handle, AL_SOURCE_STATE, &state);
 
-        if (state == AL_PLAYING) continue;
+        if (state == AL_PLAYING || state == AL_PAUSED) continue;
 
-        // удаляем звук который перестал играть
-        spdlog::info("Stop playing {}", cur.res->id);
+        utils::info("Stop playing {}", data.queue->res->id);
         uint32_t buffers[2] = {0,0};
-        al_call(alSourceUnqueueBuffers, cur.source.handle, 2, buffers);
+        al_call(alSourceUnqueueBuffers, data.source.handle, 2, buffers);
 
-        // мьютекс
-        //al_call(alSourcei, cur.source.handle, AL_SOURCE_STATE, );
-        sources.emplace_back(cur.source);
-        std::swap(current_sounds[counter], current_sounds.back());
-        current_sounds.pop_back();
+        remove_from_queue(data.queue, 0);
       }
     }
 
-    void system::load_resource(std::string id, const enum resource::type type, std::vector<char> buffer) {
+    /*void system::load_resource(std::string id, const enum resource::type type, std::vector<char> buffer) {
       const auto itr = resources.find(id);
       if (itr != resources.end()) utils::error("Resource {} is already created", std::string_view(id));
 
       auto res = resource_pool.create(std::move(id), type, std::move(buffer));
       resources.emplace(res->id, res);
-    }
+    }*/
 
     size_t system::available_sources_count() const {
       return sources.size();
+    }
+
+    size_t system::get_new_id() { 
+      const size_t id = counter;
+      counter += 1;
+      counter += size_t(counter == 0);
+      return id;
+    }
+
+    std::tuple<size_t, size_t> system::find_source_id(const size_t source_id) const {
+      if (source_id == 0) return std::make_tuple(SIZE_MAX, SIZE_MAX);
+
+      // вообще необязательно использовать sources
+      for (size_t j = 0; j < sources.size(); ++j) {
+        for (size_t i = 0; i < queue_size; ++i) {
+          if (proc_array[j * queue_size + i].id != source_id) continue;
+
+          return std::make_tuple(j, i);
+        }
+      }
+
+      return std::make_tuple(SIZE_MAX, SIZE_MAX);
+    }
+
+    void system::remove_from_queue(system::sound_processing_data *queue, const size_t index) {
+      if (index >= queue_size) return;
+
+      for (size_t i = 0; i < queue_size-1; ++i) {
+        queue[i] = queue[i + 1];
+      }
+      queue[queue_size - 1] = sound_processing_data();
     }
 
     system::resource::resource() : type(type::undefined) {}
@@ -274,6 +383,78 @@ namespace devils_engine {
       // }
       // loaded_frames += frames;
       return frames;
+    }
+
+    system::sound_processing_data::sound_processing_data() noexcept
+      : res(nullptr), time(0), loaded_frames(0), id(0) {}
+
+    void system::sound_processing_data::init(
+        const size_t id, const resource *res,
+        const struct settings &info
+    ) noexcept {
+      this->id = id;
+      this->res = res;
+      this->info = info;
+      this->time = 0;
+      this->loaded_frames = 0;
+    }
+
+    void system::sound_processing_data::reset() noexcept { 
+      init(0, nullptr, settings());
+    }
+
+    size_t system::sound_processing_data::load_next(
+      const uint32_t buffer,
+      const size_t frames_count,
+      const uint16_t channels
+    ) {
+      if (!res->sound->seek(loaded_frames))
+        utils::error("seek to pcm frame {} failed in resource '{}'", loaded_frames, res->id);
+
+      const uint16_t final_channels = std::min(channels, res->sound->channels());
+      const size_t frames = res->sound->get_frames(buffer, frames_count, final_channels);
+
+      return frames;
+    }
+
+    system::source_data::source_data(const struct source &source, sound_processing_data *queue) noexcept 
+      : source(source), queue(queue)
+    {}
+
+    void system::source_data::init(const size_t frames_count) {
+      if (queue->time != 0) return;
+
+      const uint16_t channels_count = queue->info.is_mono ? 1 : UINT16_MAX;
+      queue->loaded_frames += queue->load_next(source.buffers[0], frames_count, channels_count);
+      queue->loaded_frames += queue->load_next(source.buffers[1], frames_count, channels_count);
+      al_call(alSourceQueueBuffers, source.handle, 2, source.buffers);
+      al_call(alSourcef, source.handle, AL_GAIN, queue->info.volume);
+      al_call(alSourcef, source.handle, AL_PITCH, queue->info.speed);
+
+      const auto pos = queue->info.pos, dir = queue->info.dir, vel = queue->info.vel;
+      al_call(alSource3f, source.handle, AL_POSITION, pos.x, pos.y, pos.z);
+      al_call(alSource3f, source.handle, AL_DIRECTION, dir.x, dir.y, dir.z);
+      al_call(alSource3f, source.handle, AL_VELOCITY, vel.x, vel.y, vel.z);
+
+      al_call(alSourcePlay, source.handle);
+    }
+
+    void system::source_data::update_buffers(const size_t frames_count) {
+      int32_t processed_buffers_count = 0;
+      al_call(alGetSourcei, source.handle, AL_BUFFERS_PROCESSED, &processed_buffers_count);
+      //spdlog::info("frames_count {} processed_buffers_count {} time {}", frames_count, processed_buffers_count, time);
+      if (processed_buffers_count == 0) return;
+      if (queue->loaded_frames >= queue->res->sound->frames_count() && !queue->info.is_loop) return;
+
+      queue->loaded_frames = queue->loaded_frames >= queue->res->sound->frames_count() ? 0 : queue->loaded_frames;
+
+      uint32_t buffer = 0;
+      al_call(alSourceUnqueueBuffers, source.handle, 1, &buffer);
+
+      const uint16_t channels_count = queue->info.is_mono ? 1 : UINT16_MAX;
+      queue->loaded_frames += queue->load_next(buffer, frames_count, channels_count); // как залупить звук? + как залупить мелкий звук?
+
+      al_call(alSourceQueueBuffers, source.handle, 1, &buffer);
     }
   }
 }

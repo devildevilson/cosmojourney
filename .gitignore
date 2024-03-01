@@ -35,3 +35,7 @@ build/
 exclude/
 *.kdev4
 .kdev4/
+out/
+.vs/
+CMakeSettings.json
+CMakeLists.txt.user

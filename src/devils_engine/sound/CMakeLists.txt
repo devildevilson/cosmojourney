@@ -48,4 +48,4 @@ set(HDR_LIST
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
-target_link_libraries(${DEVILS_LIBRARY_NAME} openal)
+target_link_libraries(${DEVILS_LIBRARY_NAME} OpenAL32) #openal 

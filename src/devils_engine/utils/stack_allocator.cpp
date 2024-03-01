@@ -7,7 +7,7 @@ namespace devils_engine {
     stack_allocator::stack_allocator(const size_t size, const size_t aligment) noexcept :
       m_aligment(aligment),
       m_size(utils::align_to(size, m_aligment)),
-      m_memory(::new (std::align_val_t{m_aligment}) char[m_size]),
+      m_memory(reinterpret_cast<char*>(::operator new(m_size, std::align_val_t{m_aligment}))),
       m_allocated(0)
     {}
 
@@ -58,7 +58,7 @@ namespace devils_engine {
     stack_allocator_mt::stack_allocator_mt(const size_t size, const size_t aligment) noexcept :
       m_aligment(aligment),
       m_size(utils::align_to(size, m_aligment)),
-      m_memory(::new (std::align_val_t{m_aligment}) char[m_size]),
+      m_memory(reinterpret_cast<char*>(::operator new(m_size, std::align_val_t{m_aligment}))),
       m_allocated(0)
     {}
 
