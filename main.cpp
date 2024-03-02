@@ -37,7 +37,7 @@ void func2(std::vector<void*> &vec) {
 }
 
 void load_file(const std::string &file_name, std::vector<char> &buffer) {
-  std::ifstream file(file_name);
+  std::ifstream file(file_name, std::ios::binary);
   if (!file) throw std::runtime_error("Could not load file " + file_name);
   //if (!file.is_open()) throw std::runtime_error("Could not load file " + file_name);
 
@@ -47,6 +47,7 @@ void load_file(const std::string &file_name, std::vector<char> &buffer) {
   //
   // file.read(&buffer[0], size);
   buffer = std::vector<char>((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  //utils::println("File", file_name, "size", buffer.size());
 }
 
 void traced_func(const utils::tracer = utils::tracer()) {
@@ -103,13 +104,15 @@ int main(int argc, char const *argv[]) {
   std::unique_ptr<sound::system::resource> res1;
   std::unique_ptr<sound::system::resource> res2;
   std::unique_ptr<sound::system::resource> res3;
+  std::unique_ptr<sound::system::resource> res4;
 
   {
-    const std::string file_name = "phonk.mp3";
+    const std::string file_name = "SARIGAMI.mp3";
     utils::time_log log("loading resource " + file_name);
     std::vector<char> buffer;
     load_file(file_name, buffer);
     res1 = std::make_unique<sound::system::resource>("test_mp3", sound::system::resource::type::mp3, std::move(buffer));
+    utils::println("File", file_name, "duration:", res1->duration(), "s");
   }
 
   {
@@ -118,28 +121,53 @@ int main(int argc, char const *argv[]) {
     std::vector<char> buffer;
     load_file(file_name, buffer);
     res2 = std::make_unique<sound::system::resource>("test_ogg", sound::system::resource::type::ogg, std::move(buffer));
+    utils::println("File", file_name, "duration:", res2->duration(), "s");
   }
 
   {
-    const std::string file_name = "save.wav";
+    const std::string file_name = "piano.wav";
     utils::time_log log("loading resource " + file_name);
     std::vector<char> buffer;
     load_file(file_name, buffer);
     res3 = std::make_unique<sound::system::resource>("test_wav", sound::system::resource::type::wav, std::move(buffer));
+    utils::println("File", file_name, "duration:", res3->duration(), "s");
+  }
+
+  {
+    const std::string file_name = "senbonzakura.flac";
+    utils::time_log log("loading resource " + file_name);
+    std::vector<char> buffer;
+    load_file(file_name, buffer);
+    res4 = std::make_unique<sound::system::resource>("test_flac", sound::system::resource::type::flac, std::move(buffer));
+    utils::println("File", file_name, "duration:", res4->duration(), "s");
   }
 
   sound::system s;
   
   size_t id = 0;
   {
-    utils::time_log log("start playing"); // чет долго ужс, надо первую загрузку спихнуть в апдейт
-    id = s.setup_sound(res1.get(), sound::settings());
+    utils::time_log log("start playing");
+    id = s.setup_sound(res4.get(), sound::settings());
   }
+
+  //s.set_master_volume(0.05f);
   
+  float master_gain = 0.0f;
+  size_t counter = 0;
+  const double dur = res4->duration();
   while (true) {
-    s.update(1000);
-    const float abc = s.stat_sound(id);
-    std::this_thread::sleep_for(std::chrono::microseconds(1000));
+    s.update(100000);
+    const double pos = s.stat_sound(id);
+    const double cur_seconds = pos * dur;
+    utils::println("Stat", pos, ":", cur_seconds, "s (", dur, "s) master_gain", master_gain);
+
+    //if (abc > 0.05 && abc < 0.5) s.set_sound(id, 0.5);
+    counter += 1;
+    if (counter%30 == 0) master_gain += 0.05f;
+
+    s.set_master_volume(master_gain);
+
+    std::this_thread::sleep_for(std::chrono::microseconds(100000));
   }
 
   // spdlog::set_level(spdlog::level::trace);

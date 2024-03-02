@@ -156,6 +156,19 @@ namespace devils_engine {
       }
     }
 
+    // https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
+    constexpr uint32_t next_power_of_2(uint32_t v) {
+      v--;
+      v |= v >> 1;
+      v |= v >> 2;
+      v |= v >> 4;
+      v |= v >> 8;
+      v |= v >> 16;
+      v++;
+
+      return v;
+    }
+
     static_assert(count_significant(1) == 1);
     static_assert(count_significant(2) == 2);
     static_assert(count_significant(3) == 2);

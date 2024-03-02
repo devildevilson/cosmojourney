@@ -73,26 +73,8 @@ namespace devils_engine {
           readed_frames = drflac_read_pcm_frames_s16(data, frames_count, block_data);
         }
 
-        // const size_t readed_block = readed_frames * data->channels;
-        // const size_t memory_size = readed_block / data->channels;
-        // memset(memory, 0, memory_size * sizeof(float));
-        // size_t counter = 0;
-        // for (size_t i = 0; i < readed_block; i += data->channels) {
-        //   for (size_t j = 1; j < data->channels; ++j) {
-        //     final_data[counter] += block_data[i+j];
-        //     //final_data[counter] = j == 0 ? block_data[i] : block_data[counter] + block_data[i+j];
-        //   }
-        //
-        //   final_data[counter] /= float(data->channels);
-        //   counter += 1;
-        // }
-
         make_mono(final_data, block_data, readed_frames, data->channels);
 
-        // const size_t memory_size = readed_block / data->channels;
-        // for (size_t i = 0, j = 0; i < readed_block && j < memory_size; i += data->channels, j += 1) {
-        //   final_data[j] = block_data[i];
-        // }
       } else if (channels == data->channels) {
         if constexpr (std::is_same_v<T, float>) {
           readed_frames = drflac_read_pcm_frames_f32(data, frames_count, final_data);
@@ -126,17 +108,6 @@ namespace devils_engine {
           readed_frames = drflac_read_pcm_frames_s16(data, frames_count, block_data); //.data()
         }
 
-        // const size_t readed_block = readed_frames * data->channels;
-        // size_t counter = 0;
-        // for (size_t i = 0; i < readed_block; i += data->channels) {
-        //   for (size_t j = 0; j < data->channels; ++j) {
-        //     block_data[counter] = j == 0 ? block_data[i] : block_data[counter] + block_data[i+j];
-        //   }
-        //
-        //   block_data[counter] /= float(data->channels);
-        //   counter += 1;
-        // }
-
         make_mono(block_data, block_data, readed_frames, data->channels);
 
         const size_t buffer_size = pcm_frames_to_bytes(readed_frames, channels, data->bitsPerSample);
@@ -168,10 +139,11 @@ namespace devils_engine {
       const uint16_t final_channels = channels_override != 0 ? channels_override : channels();
 
       size_t readed_frames = 0;
-      if (bits_per_channel() == 32) {
-        readed_frames = get_frames_templ<float>(data, buffer, memory, frames_count, final_channels);
-      } else if (bits_per_channel() == 16) {
+
+      if (bits_per_channel() <= 16) {
         readed_frames = get_frames_templ<int16_t>(data, buffer, memory, frames_count, final_channels);
+      } else if (bits_per_channel() <= 32) {
+        readed_frames = get_frames_templ<float>(data, buffer, memory, frames_count, final_channels);
       } else {
         utils::error("flac format with {} bits per channel is not supported", bits_per_channel());
       }
@@ -189,10 +161,11 @@ namespace devils_engine {
       const uint32_t final_sample_rate = sample_rate_override != 0 ? sample_rate_override : sample_rate();
 
       size_t readed_frames = 0;
-      if (bits_per_channel() == 32) {
-        readed_frames = get_frames_templ<float>(data, buffer, al_buffer, frames_count, final_channels, final_sample_rate);
-      } else if (bits_per_channel() == 16) {
+
+      if (bits_per_channel() <= 16) {
         readed_frames = get_frames_templ<int16_t>(data, buffer, al_buffer, frames_count, final_channels, final_sample_rate);
+      } else if (bits_per_channel() <= 32) {
+        readed_frames = get_frames_templ<float>(data, buffer, al_buffer, frames_count, final_channels, final_sample_rate);
       } else {
         utils::error("flac format with {} bits per channel is not supported", bits_per_channel());
       }

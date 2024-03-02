@@ -93,19 +93,35 @@ namespace devils_engine {
     int32_t to_al_format(const uint16_t channels, const uint32_t bitsPerChannel) {
       const bool stereo = channels > 1;
 
-      switch (bitsPerChannel) {
-        case 32:
-          if (stereo) return AL_FORMAT_STEREO_FLOAT32;
-          else return AL_FORMAT_MONO_FLOAT32;
-        case 16:
-          if (stereo) return AL_FORMAT_STEREO16;
-          else return AL_FORMAT_MONO16;
-        case 8:
-          if (stereo) return AL_FORMAT_STEREO8;
-          else return AL_FORMAT_MONO8;
+      if (bitsPerChannel <= 8) {
+        if (stereo) return AL_FORMAT_STEREO8;
+        else return AL_FORMAT_MONO8;
+      } else if (bitsPerChannel <= 16) {
+        if (stereo) return AL_FORMAT_STEREO16;
+        else return AL_FORMAT_MONO16;
+      } else if (bitsPerChannel <= 32) {
+        if (stereo) return AL_FORMAT_STEREO_FLOAT32;
+        else return AL_FORMAT_MONO_FLOAT32;
       }
 
+      // switch (bitsPerChannel) {
+      //   case 32:
+      //     if (stereo) return AL_FORMAT_STEREO_FLOAT32;
+      //     else return AL_FORMAT_MONO_FLOAT32;
+      //   case 16:
+      //     if (stereo) return AL_FORMAT_STEREO16;
+      //     else return AL_FORMAT_MONO16;
+      //   case 8:
+      //     if (stereo) return AL_FORMAT_STEREO8;
+      //     else return AL_FORMAT_MONO8;
+      // }
+
       return -1;
+    }
+
+    uint32_t adjust_bits_per_channel(const uint32_t bits_per_channel) {
+      if (bits_per_channel >= 32) return bits_per_channel;
+      return utils::next_power_of_2(bits_per_channel);
     }
 
     size_t pcm_frames_to_bytes(const size_t pcm_frames, const uint16_t channels, const uint32_t bits_per_sample) {
@@ -116,14 +132,18 @@ namespace devils_engine {
       return (bytes / channels) / (bits_per_sample/8);
     }
 
-    size_t second_to_pcm_frames(const size_t seconds, const size_t sample_rate, const uint16_t channels) {
-      return seconds * sample_rate * channels;
+    size_t second_to_pcm_frames(const size_t seconds, const size_t sample_rate) { // , const uint16_t channels
+      return seconds * sample_rate;
     }
 
-    size_t second_to_pcm_frames_mono(const size_t seconds, const size_t sample_rate) {
-      // я умножаю на количество каналов внутри декодера
-      // чтобы если что сделать конвертацию в моно звук
-      return seconds * sample_rate; // * channels
+    // size_t second_to_pcm_frames_mono(const size_t seconds, const size_t sample_rate) {
+    //   // я умножаю на количество каналов внутри декодера
+    //   // чтобы если что сделать конвертацию в моно звук
+    //   return seconds * sample_rate; // * channels
+    // }
+
+    double pcm_frames_to_seconds(const size_t pcm_frames, const size_t sample_rate) {
+      return double(pcm_frames) / double(sample_rate);
     }
   }
 }

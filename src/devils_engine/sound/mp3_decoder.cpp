@@ -67,25 +67,6 @@ namespace devils_engine {
 
         readed_frames = drmp3_read_pcm_frames_f32(&data, frames_count, block_data);
 
-        // const size_t readed_block = readed_frames * data.channels;
-        // const size_t memory_size = readed_block / data.channels;
-        // memset(memory, 0, memory_size * sizeof(float));
-        // size_t counter = 0;
-        // for (size_t i = 0; i < readed_block; i += data.channels) {
-        //   for (size_t j = 1; j < data.channels; ++j) {
-        //     final_data[counter] += block_data[i+j];
-        //     //final_data[counter] = j == 0 ? block_data[i] : block_data[counter] + block_data[i+j];
-        //   }
-        //
-        //   final_data[counter] /= float(data.channels);
-        //   counter += 1;
-        // }
-
-        // мы хотим сделать звук одноканальным, поэтому по идее можно использовать readed_frames, но так нагляднее
-        // for (size_t i = 0, j = 0; i < readed_block && j < memory_size; i += data.channels, j += 1) {
-        //   final_data[j] = block_data[i];
-        // }
-
         make_mono(final_data, block_data, readed_frames, data.channels);
       } else if (final_channels == data.channels) {
         readed_frames = drmp3_read_pcm_frames_f32(&data, frames_count, final_data);
@@ -111,18 +92,7 @@ namespace devils_engine {
 
       if (final_channels == 1 && data.channels != 1) {
         auto block_data = reinterpret_cast<float*>(buffer.data());
-        readed_frames = drmp3_read_pcm_frames_f32(&data, frames_count, block_data); //.data()
-
-        // const size_t readed_block = readed_frames * data.channels;
-        // size_t counter = 0;
-        // for (size_t i = 0; i < readed_block; i += data.channels) {
-        //   for (size_t j = 0; j < data.channels; ++j) {
-        //     block_data[counter] = j == 0 ? block_data[i] : block_data[counter] + block_data[i+j];
-        //   }
-        //
-        //   block_data[counter] /= float(data.channels);
-        //   counter += 1;
-        // }
+        readed_frames = drmp3_read_pcm_frames_f32(&data, frames_count, block_data);
 
         make_mono(block_data, block_data, readed_frames, data.channels);
         const size_t buffer_size = pcm_frames_to_bytes(readed_frames, final_channels, bits_per_channel());
@@ -132,13 +102,11 @@ namespace devils_engine {
       } else if (final_channels == data.channels) {
         auto block_data = reinterpret_cast<float*>(buffer.data());
         readed_frames = drmp3_read_pcm_frames_f32(&data, frames_count, block_data); //.data()
-        //const int32_t format = to_al_format(final_channels, bits_per_channel());
         const size_t buffer_size = pcm_frames_to_bytes(readed_frames, final_channels, bits_per_channel());
         al_call(alBufferData, al_buffer,
                 to_al_format(final_channels, bits_per_channel()),
                 block_data, buffer_size, final_sample_rate); //.data()
 
-        //spdlog::info("format {} sample_rate {} bits_per_channel {} block_size {}", format, sample_rate(), bits_per_channel(), block_size);
       } else {
         // ошибка, наверное просто вернем 0
       }

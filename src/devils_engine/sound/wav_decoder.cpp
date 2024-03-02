@@ -72,36 +72,25 @@ namespace devils_engine {
         const size_t block_bytes_size = pcm_frames_to_bytes(frames_count, data->channels, data->bitsPerSample);
         if (buffer.size() < block_bytes_size) buffer.resize(block_bytes_size, 0);
         auto block_data = reinterpret_cast<T*>(buffer.data());
-        readed_frames = drwav_read_pcm_frames(data, frames_count, block_data);
 
-        // if constexpr (std::is_same_v<T, float>) {
-        //   readed_frames = drflac_read_pcm_frames_f32(data, sample_count, block_data);
-        // } else if constexpr (std::is_same_v<T, int16_t>) {
-        //   readed_frames = drflac_read_pcm_frames_s16(data, sample_count, block_data);
-        // }
-
-        // const size_t readed_block = readed_frames * data->channels;
-        // for (size_t i = 0; i < readed_block; i += data->channels) {
-        //   for (size_t j = 1; j < data->channels; ++j) {
-        //     block_data[i] += block_data[i+j];
-        //   }
-        //
-        //   block_data[i] /= float(data->channels);
-        // }
-        //
-        // const size_t memory_size = readed_block / data->channels;
-        // for (size_t i = 0, j = 0; i < readed_block && j < memory_size; i += data->channels, j += 1) {
-        //   final_data[j] = block_data[i];
-        // }
+        if constexpr (std::is_same_v<T, float>) {
+          readed_frames = drwav_read_pcm_frames_f32(data, frames_count, block_data);
+        } else if constexpr (std::is_same_v<T, int16_t>) {
+          readed_frames = drwav_read_pcm_frames_s16(data, frames_count, block_data); //.data()
+        } if constexpr (std::is_same_v<T, uint8_t>) {
+          readed_frames = drwav_read_pcm_frames(data, frames_count, block_data); //.data()
+        }
 
         make_mono(final_data, block_data, readed_frames, data->channels);
       } else if (channels == data->channels) {
-        readed_frames = drwav_read_pcm_frames(data, frames_count, final_data);
-        // if constexpr (std::is_same_v<T, float>) {
-        //   readed_frames = drflac_read_pcm_frames_f32(data, sample_count, final_data);
-        // } else if constexpr (std::is_same_v<T, int16_t>) {
-        //   readed_frames = drflac_read_pcm_frames_s16(data, sample_count, final_data);
-        // }
+
+        if constexpr (std::is_same_v<T, float>) {
+          readed_frames = drwav_read_pcm_frames_f32(data, frames_count, final_data);
+        } else if constexpr (std::is_same_v<T, int16_t>) {
+          readed_frames = drwav_read_pcm_frames_s16(data, frames_count, final_data); //.data()
+        } if constexpr (std::is_same_v<T, uint8_t>) {
+          readed_frames = drwav_read_pcm_frames(data, frames_count, final_data); //.data()
+        }
       } else {
         // ошибка, наверное просто вернем 0
       }
@@ -122,52 +111,42 @@ namespace devils_engine {
         "Supported formats is float32, signed16 and unsigned8"
       );
 
-      const size_t block_bytes_size = pcm_frames_to_bytes(frames_count, data->channels, data->bitsPerSample);
+      const uint32_t final_bits = adjust_bits_per_channel(data->bitsPerSample);
+      const size_t block_bytes_size = pcm_frames_to_bytes(frames_count, data->channels, final_bits);
       if (buffer.size() < block_bytes_size) buffer.resize(block_bytes_size, 0);
 
       size_t readed_frames = 0;
       if (channels == 1 && data->channels != 1) {
         auto block_data = reinterpret_cast<T*>(buffer.data());
-        readed_frames = drwav_read_pcm_frames(data, frames_count, block_data);
-        // if constexpr (std::is_same_v<T, float>) {
-        //   readed_frames = drwav_read_pcm_frames(data, sample_count, block_data);
-        // } else if constexpr (std::is_same_v<T, int16_t>) {
-        //   readed_frames = drflac_read_pcm_frames_s16(data, sample_count, block_data); //.data()
-        // } if constexpr (std::is_same_v<T, uint8_t>) {
-        //   readed_frames = drflac_read_pcm_frames_s16(data, sample_count, block_data); //.data()
-        // }
 
-        // const size_t readed_block = readed_frames * data->channels;
-        // size_t counter = 0;
-        // for (size_t i = 0; i < readed_block; i += data->channels) {
-        //   for (size_t j = 0; j < data->channels; ++j) {
-        //     block_data[counter] = j == 0 ? block_data[i] : block_data[counter] + block_data[i+j];
-        //   }
-        //
-        //   block_data[counter] /= float(data->channels);
-        //   counter += 1;
-        // }
+        if constexpr (std::is_same_v<T, float>) {
+          readed_frames = drwav_read_pcm_frames_f32(data, frames_count, block_data);
+        } else if constexpr (std::is_same_v<T, int16_t>) {
+          readed_frames = drwav_read_pcm_frames_s16(data, frames_count, block_data); //.data()
+        } if constexpr (std::is_same_v<T, uint8_t>) {
+          readed_frames = drwav_read_pcm_frames(data, frames_count, block_data); //.data()
+        }
 
         make_mono(block_data, block_data, readed_frames, data->channels);
 
-        const size_t buffer_size = pcm_frames_to_bytes(readed_frames, channels, data->bitsPerSample);
+        const size_t buffer_size = pcm_frames_to_bytes(readed_frames, channels, final_bits);
         al_call(alBufferData, al_buffer,
-                to_al_format(channels, data->bitsPerSample),
+                to_al_format(channels, final_bits),
                 block_data, buffer_size, sample_rate);
       } else if (channels == data->channels) {
         auto block_data = reinterpret_cast<T*>(buffer.data());
-        readed_frames = drwav_read_pcm_frames(data, frames_count, block_data);
-        // if constexpr (std::is_same_v<T, float>) {
-        //   readed_frames = drwav_read_pcm_frames_f32(data, sample_count, block_data); //.data()
-        // } else if constexpr (std::is_same_v<T, int16_t>) {
-        //   readed_frames = drwav_read_pcm_frames_s16(data, sample_count, block_data); //.data()
-        // } else if constexpr (std::is_same_v<T, uint8_t>) {
-        //   readed_frames = drwav_read_pcm_frames(data, sample_count, block_data);
-        // }
 
-        const size_t buffer_size = pcm_frames_to_bytes(readed_frames, channels, data->bitsPerSample);
+        if constexpr (std::is_same_v<T, float>) {
+          readed_frames = drwav_read_pcm_frames_f32(data, frames_count, block_data); //.data()
+        } else if constexpr (std::is_same_v<T, int16_t>) {
+          readed_frames = drwav_read_pcm_frames_s16(data, frames_count, block_data); //.data()
+        } else if constexpr (std::is_same_v<T, uint8_t>) {
+          readed_frames = drwav_read_pcm_frames(data, frames_count, block_data);
+        }
+
+        const size_t buffer_size = pcm_frames_to_bytes(readed_frames, channels, final_bits);
         al_call(alBufferData, al_buffer,
-                to_al_format(channels, data->bitsPerSample),
+                to_al_format(channels, final_bits),
                 block_data, buffer_size, sample_rate); //.data()
       } else {
         // ошибка, наверное просто вернем 0
@@ -182,12 +161,12 @@ namespace devils_engine {
       const uint16_t final_channels = channels_override != 0 ? channels_override : channels();
 
       size_t readed_frames = 0;
-      if (bits_per_channel() == 32) {
-        readed_frames = get_frames_templ<float>(&data, buffer, memory, frames_count, final_channels);
-      } else if (bits_per_channel() == 16) {
-        readed_frames = get_frames_templ<int16_t>(&data, buffer, memory, frames_count, final_channels);
-      } else if (bits_per_channel() == 8) {
+      if (bits_per_channel() <= 8) {
         readed_frames = get_frames_templ<uint8_t>(&data, buffer, memory, frames_count, final_channels);
+      } else if (bits_per_channel() <= 16) {
+        readed_frames = get_frames_templ<int16_t>(&data, buffer, memory, frames_count, final_channels);
+      } else if (bits_per_channel() <= 32) {
+        readed_frames = get_frames_templ<float>(&data, buffer, memory, frames_count, final_channels);
       } else {
         utils::error("wav format with {} bits per channel is not supported", bits_per_channel());
       }
@@ -205,12 +184,12 @@ namespace devils_engine {
       const uint32_t final_sample_rate = sample_rate_override != 0 ? sample_rate_override : sample_rate();
 
       size_t readed_frames = 0;
-      if (bits_per_channel() == 32) {
-        readed_frames =   get_frames_templ<float>(&data, buffer, al_buffer, frames_count, final_channels, final_sample_rate);
-      } else if (bits_per_channel() == 16) {
-        readed_frames = get_frames_templ<int16_t>(&data, buffer, al_buffer, frames_count, final_channels, final_sample_rate);
-      } else if (bits_per_channel() == 8) {
+      if (bits_per_channel() <= 8) {
         readed_frames = get_frames_templ<uint8_t>(&data, buffer, al_buffer, frames_count, final_channels, final_sample_rate);
+      } else if (bits_per_channel() <= 16) {
+        readed_frames = get_frames_templ<int16_t>(&data, buffer, al_buffer, frames_count, final_channels, final_sample_rate);
+      } else if (bits_per_channel() <= 32) {
+        readed_frames =   get_frames_templ<float>(&data, buffer, al_buffer, frames_count, final_channels, final_sample_rate);
       } else {
         utils::error("wav format with {} bits per channel is not supported", bits_per_channel());
       }
