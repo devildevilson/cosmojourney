@@ -39,7 +39,8 @@ namespace devils_engine {
 
     bool pcm_decoder::seek(const size_t seek_size) {
       current_index = pcm_frames_to_bytes(seek_size, channels(), bits_per_channel());
-      return current_index < buffer.size();
+      current_index = std::min(current_index, buffer.size());
+      return true;
     }
 
     size_t pcm_decoder::get_frames(void* memory, const size_t frames_count, const uint16_t channels_override) {
@@ -47,6 +48,8 @@ namespace devils_engine {
 
       const size_t expected_bytes = pcm_frames_to_bytes(frames_count, channels(), bits_per_channel());
       const size_t bytes_size = std::min(expected_bytes, buffer.size() - current_index);
+      if (bytes_size == 0) return 0;
+
       size_t readed_frames = 0;
       if (final_channels == 1 && channels() != 1) {
         // как понять тип данных оригинального файла? пока что я придерживаюсь того что возвращает to_al_format
@@ -82,6 +85,8 @@ namespace devils_engine {
 
       const size_t expected_bytes = pcm_frames_to_bytes(frames_count, channels(), bits_per_channel());
       const size_t bytes_size = std::min(expected_bytes, buffer.size() - current_index);
+      if (bytes_size == 0) return 0;
+
       size_t readed_frames = 0;
       if (final_channels == 1 && channels() != 1) {
         // как понять тип данных оригинального файла? пока что я придерживаюсь того что возвращает to_al_format
@@ -96,21 +101,23 @@ namespace devils_engine {
         } else if (format == AL_FORMAT_STEREO_FLOAT32) {
           make_mono(reinterpret_cast<float*>(tmp_buffer.data()), reinterpret_cast<float*>(&buffer[current_index]), readed_frames, channels());
         }
-        al_call(alBufferData, al_buffer,
-                to_al_format(final_channels, bits_per_channel()),
+        al_call(alBufferData, al_buffer, format,
                 tmp_buffer.data(), expected_mono_bytes, final_sample_rate);
 
         //if (buffer.size() - current_index < expected_bytes) throw std::runtime_error("check");
+        current_index += bytes_size;
       } else if (final_channels == channels()) {
         readed_frames = bytes_to_pcm_frames(bytes_size, final_channels, bits_per_channel());
-        al_call(alBufferData, al_buffer,
-                to_al_format(final_channels, bits_per_channel()),
-                &buffer[current_index], bytes_size, final_sample_rate);
+        const int32_t format = to_al_format(final_channels, bits_per_channel());
+        const auto ptr = &buffer[current_index];
+
+        al_call(alBufferData, al_buffer, format, ptr, bytes_size, final_sample_rate);
+
+        current_index += bytes_size;
       } else {
 
       }
 
-      current_index += bytes_size;
       //if (current_index >= buffer.size()) throw std::runtime_error("check2");
       return readed_frames;
     }

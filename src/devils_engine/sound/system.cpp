@@ -20,10 +20,28 @@
 
 namespace devils_engine {
   namespace sound {
+    static size_t compute_buffer_frames(const uint32_t buffer, const system::resource *res, const bool is_mono) {
+      ALint buffer_bytes = 0;
+      al_call(alGetBufferi, buffer, AL_SIZE, &buffer_bytes);
+      const uint32_t channels = is_mono ? 1 : res->sound->channels();
+      const uint32_t bits = adjust_bits_per_channel(res->sound->bits_per_channel());
+      const size_t frames = bytes_to_pcm_frames(buffer_bytes, channels, bits);
+      return frames;
+    }
+
     system::system(const size_t queue_size) : device(nullptr), ctx(nullptr), counter(1), queue_size(queue_size), sources_offset(1) {
       ALCenum error = AL_NO_ERROR;
 
-      device = alc_call(alcOpenDevice, nullptr, nullptr);
+      char *devices = (char *)alcGetString(NULL, ALC_DEVICE_SPECIFIER);
+      while (devices && *devices != NULL) {
+        //ALCdevice *device = alcOpenDevice(devices);
+        //utils::println("device", devices);
+        std::string_view str(devices);
+        if (str == "OpenAL Soft") device = alc_call(alcOpenDevice, nullptr, devices);
+        devices += strlen(devices) + 1;  // next device
+      }
+
+      if (device == nullptr) device = alc_call(alcOpenDevice, nullptr, nullptr);
       assert(device != nullptr);
 
       const auto actual_device_name = alc_call(alcGetString, device, ALC_DEVICE_SPECIFIER);
@@ -180,21 +198,12 @@ namespace devils_engine {
 
       const auto cur = sources[source_index].queue;
 
-      // текущая позиция звука расчитывается так:
-      // загруженные семплы - буфер - буфер + текущая позиция семпла
-      ALint ret;
-      al_call(alGetSourcei, sources[source_index].source.handle, AL_SAMPLE_OFFSET, &ret);
-      ALint buffer_bytes1;
-      ALint buffer_bytes2;
-      al_call(alGetBufferi, sources[source_index].source.buffers[0], AL_SIZE, &buffer_bytes1);
-      al_call(alGetBufferi, sources[source_index].source.buffers[1], AL_SIZE, &buffer_bytes2);
-      const uint32_t channels = cur->info.is_mono ? 1 : cur->res->sound->channels();
-      const uint32_t bits = adjust_bits_per_channel(cur->res->sound->bits_per_channel());
-      const size_t frames1 = bytes_to_pcm_frames(buffer_bytes1, channels, bits);
-      const size_t frames2 = bytes_to_pcm_frames(buffer_bytes2, channels, bits);
-      const size_t processed_samples = cur->loaded_frames - frames1 - frames2 + ret;
+      ALint samples_offset;
+      al_call(alGetSourcei, sources[source_index].source.handle, AL_SAMPLE_OFFSET, &samples_offset);
 
-      return double(processed_samples) / double(cur->res->sound->frames_count());
+      const size_t samples_count = cur->res->sound->frames_count();
+      const size_t processed_samples = cur->processed_frames % samples_count + samples_offset;
+      return double(processed_samples) / double(samples_count);
     }
 
     bool system::set_sound(const size_t source_id, const double place) {
@@ -371,70 +380,8 @@ namespace devils_engine {
       return pcm_frames_to_seconds(sound->frames_count(), sound->sample_rate());
     }
 
-    // void system::current_playing_data::init(const size_t frames_count) {
-    //   if (time != 0) return;
-    //   // максимальная скорость? должна быть по идее ограничена сверху количеством сэмплов в файле
-    //   // бессмысленно менять sample_rate если есть pitch
-    //   // я так понимаю в опенал без дополнительных прибамбасов это одно и тоже
-    //
-    //   //spdlog::info("resource {} sample rate {}", std::string_view(res->id), sample_rate);
-    //
-    //   // loaded_frames этой переменной наверное будет управлять полностью функция load_next
-    //   loaded_frames += load_next(source.buffers[0], frames_count, 1);
-    //   loaded_frames += load_next(source.buffers[1], frames_count, 1);
-    //   al_call(alSourceQueueBuffers, source.handle, 2, source.buffers);
-    //   al_call(alSourcef, source.handle, AL_GAIN, info.volume);
-    //   al_call(alSourcef, source.handle, AL_PITCH, info.speed);
-    //   al_call(alSourcePlay, source.handle);
-    // }
-    //
-    // void system::current_playing_data::update_buffers(const size_t frames_count) {
-    //   int32_t processed_buffers_count = 0;
-    //   al_call(alGetSourcei, source.handle, AL_BUFFERS_PROCESSED, &processed_buffers_count);
-    //   //spdlog::info("frames_count {} processed_buffers_count {} time {}", frames_count, processed_buffers_count, time);
-    //   if (processed_buffers_count == 0 || loaded_frames >= res->sound->frames_count()) return;
-    //
-    //   uint32_t buffer = 0;
-    //   al_call(alSourceUnqueueBuffers, source.handle, 1, &buffer);
-    //
-    //   //const int64_t sample_rate = res->sound->sample_rate() * info.speed;
-    //   //if (sample_rate <= 0) return;
-    //
-    //   loaded_frames += load_next(buffer, frames_count, 1); // как залупить звук? + как залупить мелкий звук?
-    //
-    //   al_call(alSourceQueueBuffers, source.handle, 1, &buffer);
-    // }
-    //
-    // size_t system::current_playing_data::load_next(
-    //   const uint32_t buffer,
-    //   const size_t frames_count,
-    //   const uint16_t channels
-    // ) {
-    //   // тут так не получится, нужно заполнять отдельный буфер, сейчас я буду перезаписывать данные в АЛ буфере
-    //   // size_t local_loaded_frames = frames_count;
-    //   // while (local_loaded_frames > 0) {
-    //   //   if (!res->sound->seek(loaded_frames))
-    //   //     utils::error("seek to pcm frame {} failed in resource '{}'", loaded_frames, res->id);
-    //   //
-    //   //   const size_t frames = res->sound->get_frames(buffer, local_loaded_frames, channels);
-    //   //   local_loaded_frames -= frames;
-    //   //
-    //   //
-    //   // }
-    //   if (!res->sound->seek(loaded_frames))
-    //     utils::error("seek to pcm frame {} failed in resource '{}'", loaded_frames, res->id);
-    //   const size_t frames = res->sound->get_frames(buffer, frames_count, channels);
-    //   // if (frames < frames_count) {
-    //   //   // если фреймов загрузили меньше чем требовали И этот звук нужно зациклить
-    //   //   // то нужно дозагрузить часть в буфер, если звук совсем маленький то может быть
-    //   //   // несколько раз сделать эту операцию
-    //   // }
-    //   // loaded_frames += frames;
-    //   return frames;
-    // }
-
     system::sound_processing_data::sound_processing_data() noexcept
-      : res(nullptr), time(0), loaded_frames(0), id(0) {}
+      : res(nullptr), time(0), loaded_frames(0), processed_frames(0), id(0) {}
 
     void system::sound_processing_data::init(
         const size_t id, const resource *res,
@@ -469,14 +416,16 @@ namespace devils_engine {
       : source(source), queue(queue)
     {}
 
-    void system::source_data::init(const float volume, const size_t frames_count) {
+    void system::source_data::init(const float volume, size_t frames_count) {
       if (queue->time != 0) return;
+
+      if (frames_count >= queue->res->sound->frames_count())
+        frames_count = queue->res->sound->frames_count() / 2 + 1;
 
       const uint16_t channels_count = queue->info.is_mono ? 1 : 0;
       queue->loaded_frames += queue->load_next(source.buffers[0], frames_count, channels_count);
       queue->loaded_frames += queue->load_next(source.buffers[1], frames_count, channels_count);
       al_call(alSourceQueueBuffers, source.handle, 2, source.buffers);
-      al_call(alSourcef, source.handle, AL_GAIN, queue->info.volume);
       al_call(alSourcef, source.handle, AL_PITCH, queue->info.speed);
 
       const auto pos = queue->info.pos, dir = queue->info.dir, vel = queue->info.vel;
@@ -505,6 +454,9 @@ namespace devils_engine {
 
       uint32_t buffer = 0;
       al_call(alSourceUnqueueBuffers, source.handle, 1, &buffer);
+      const size_t frames = compute_buffer_frames(buffer, queue->res, queue->info.is_mono);
+
+      queue->processed_frames += frames;
 
       const uint16_t channels_count = queue->info.is_mono ? 1 : 0;
       queue->loaded_frames += queue->load_next(buffer, frames_count, channels_count); // как залупить звук? + как залупить мелкий звук?

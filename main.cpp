@@ -116,7 +116,7 @@ int main(int argc, char const *argv[]) {
   }
 
   {
-    const std::string file_name = "ferambie.ogg";
+    const std::string file_name = "swim2.ogg";
     utils::time_log log("loading resource " + file_name);
     std::vector<char> buffer;
     load_file(file_name, buffer);
@@ -124,37 +124,39 @@ int main(int argc, char const *argv[]) {
     utils::println("File", file_name, "duration:", res2->duration(), "s");
   }
 
-  {
+  /*{
     const std::string file_name = "piano.wav";
     utils::time_log log("loading resource " + file_name);
     std::vector<char> buffer;
     load_file(file_name, buffer);
     res3 = std::make_unique<sound::system::resource>("test_wav", sound::system::resource::type::wav, std::move(buffer));
     utils::println("File", file_name, "duration:", res3->duration(), "s");
-  }
+  }*/
 
-  {
+  /*{
     const std::string file_name = "senbonzakura.flac";
     utils::time_log log("loading resource " + file_name);
     std::vector<char> buffer;
     load_file(file_name, buffer);
     res4 = std::make_unique<sound::system::resource>("test_flac", sound::system::resource::type::flac, std::move(buffer));
     utils::println("File", file_name, "duration:", res4->duration(), "s");
-  }
+  }*/
 
   sound::system s;
   
   size_t id = 0;
   {
     utils::time_log log("start playing");
-    id = s.setup_sound(res4.get(), sound::settings());
+    sound::settings ss;
+    ss.is_loop = true;
+    id = s.setup_sound(res1.get(), ss);
   }
 
-  //s.set_master_volume(0.05f);
+  s.set_master_volume(0.1f);
   
   float master_gain = 0.0f;
   size_t counter = 0;
-  const double dur = res4->duration();
+  const double dur = res1->duration();
   while (true) {
     s.update(100000);
     const double pos = s.stat_sound(id);
@@ -162,10 +164,10 @@ int main(int argc, char const *argv[]) {
     utils::println("Stat", pos, ":", cur_seconds, "s (", dur, "s) master_gain", master_gain);
 
     //if (abc > 0.05 && abc < 0.5) s.set_sound(id, 0.5);
-    counter += 1;
-    if (counter%30 == 0) master_gain += 0.05f;
+    //counter += 1;
+    //if (counter%30 == 0) master_gain += 0.05f;
 
-    s.set_master_volume(master_gain);
+    //s.set_master_volume(master_gain);
 
     std::this_thread::sleep_for(std::chrono::microseconds(100000));
   }

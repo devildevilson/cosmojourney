@@ -106,7 +106,7 @@ namespace devils_engine {
       bool set_listener_vel(const glm::vec3 &vel);
 
       // 1 - очень громко, наверное по умолчанию нужно ставить 0.2
-      // хотя может быть вообе замаппить [0, 0.2]
+      // хотя может быть вообще замаппить [0, 0.2]
       void set_master_volume(const float val);
       void set_source_volume(const uint32_t type, const float val);
 
@@ -116,23 +116,6 @@ namespace devils_engine {
 
       size_t available_sources_count() const;
     private:
-      // немного поменяем структуру: у каждого источника очередь из 3-5 звуков
-      // звуки кладем в пустую очередь, в апдейте проверяем очереди
-      // некоторые звуки имеют явный приоритет над другими, тогда как будто срочно нужно поменять воспроизводимый звук
-      // 
-      // struct current_playing_data {
-      //   struct source source;
-      //   struct settings info; // возможно не все настройки нам отсюда нужны
-      //   const resource* res;
-      //   size_t time;
-      //   size_t loaded_frames; // по идее по количеству фреймов мы можем понять долю звука
-      //   size_t id;
-      //
-      //   void init(const size_t frames_count);
-      //   void update_buffers(const size_t frames_count);
-      //   size_t load_next(const uint32_t buffer, const size_t frames_count, const uint16_t channels);
-      // };
-
       struct volume_set {
         static const size_t sound_types_count = 8;
         float master;
@@ -146,6 +129,7 @@ namespace devils_engine {
         const resource *res;
         size_t time;
         size_t loaded_frames;
+        size_t processed_frames;
         size_t id;
 
         sound_processing_data() noexcept;
@@ -172,14 +156,8 @@ namespace devils_engine {
 
       volume_set volume;
 
-      //std::vector<source> sources;
-      //std::vector<current_playing_data> current_sounds;
-
       std::vector<source_data> sources;
       std::unique_ptr<sound_processing_data[]> proc_array;
-
-      //utils::memory_pool<resource, sizeof(resource)*100> resource_pool;
-      //std::unordered_map<std::string_view, resource*> resources;
 
       size_t get_new_id();
       std::tuple<size_t, size_t> find_source_id(const size_t source_id) const;
