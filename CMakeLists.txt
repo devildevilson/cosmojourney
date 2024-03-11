@@ -41,6 +41,7 @@ include_directories(
   include/stb/
   include/glm/
   include/openal-soft/include
+  include/sml/include
   src/devils_engine/
   src/cosmojorney/
 )
@@ -63,7 +64,7 @@ add_subdirectory(src/devils_engine/sound/)
 #add_subdirectory(src/devils_engine/interface/)
 
 # Adding something we can run - Output name matches target name
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.cpp "src/devils_engine/demiurg/system.h")
 
 # Make sure you link your targets with this command. It can also link libraries and
 # even flags, so linking a target that does not exist will not give a configure-time error. sui

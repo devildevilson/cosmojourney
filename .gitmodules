@@ -13,3 +13,6 @@
 [submodule "include/openal-soft"]
 	path = include/openal-soft
 	url = https://github.com/kcat/openal-soft.git
+[submodule "include/sml"]
+	path = include/sml
+	url = https://github.com/boost-ext/sml.git
