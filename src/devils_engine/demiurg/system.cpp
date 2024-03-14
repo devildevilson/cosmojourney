@@ -1,6 +1,7 @@
 #include "system.h"
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 namespace fs = std::filesystem;
 
 namespace devils_engine {
@@ -46,6 +47,12 @@ namespace devils_engine {
       }
 
       // обходим все аллокаторы
+    }
+
+    void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type) {
+      std::ifstream file(file_name, type);
+      if (!file) utils::error("Could not load file {}", file_name);
+      buffer = std::vector<char>((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     }
   }
 }

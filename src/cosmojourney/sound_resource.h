@@ -4,15 +4,25 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <functional>
 #include <demiurg/resource_base.h>
 #include <sound/system.h>
 using namespace devils_engine;
 
 namespace cosmojourney {
+  class sound_resource;
+
+  namespace sound_actions_detail {
+#define X(name) void name(sound_resource* res, void* ptr);
+  DEMIURG_ACTIONS_LIST
+#undef X
+  }  // namespace sound_actions_detail
+
+  // толку с этого особенно никакого нет
   struct sound_resource_table {
       auto operator()() const {
-#define X(name) const auto name = [](demiurg::resource_interface* res, void* ptr) { res->name(ptr); };
-      DEMIURG_ACTIONS_LIST
+#define X(name) const std::function<void(sound_resource* res, void* ptr)> name = &sound_actions_detail::name;
+        DEMIURG_ACTIONS_LIST
 #undef X
 
       using namespace sml;
@@ -25,7 +35,7 @@ namespace cosmojourney {
 
   class sound_resource : demiurg::resource_base<sound_resource_table> {
   public:
-    sound_resource() noexcept = default;
+    sound_resource() noexcept;
     ~sound_resource() noexcept = default;
 
     void unload(void* userptr) override;

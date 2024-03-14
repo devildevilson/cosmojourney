@@ -95,6 +95,16 @@ namespace devils_engine {
       }
 
       // декоратор?
+      // нет тут по итогу нужно совсем другое
+      // достаточно определить 2 функции 
+      // событие последовательной загрузки и 
+      // событие последовательной выгрузки
+
+      // и достаточно определить их в resource_base
+      // и все, все конкретные функции можно уже определить в дочернем классе
+
+      virtual void loading(void* userptr) {}
+      virtual void unloading(void* userptr) {}
 
 #define X(name) virtual void name(void* userptr) {}
       DEMIURG_ACTIONS_LIST
@@ -108,7 +118,8 @@ namespace devils_engine {
     template <typename Table>
     class resource_base : public resource_interface {
     public:
-      inline resource_base() noexcept : sm{static_cast<resource_interface*>(this)} {}
+      template <typename T>
+      inline resource_base(T* ptr) noexcept : sm{ptr} {}
 
       template <typename T>
       bool is(T&& arg) const {
@@ -119,6 +130,14 @@ namespace devils_engine {
       template <typename... Args>
       void process_event(Args&&... arg) {
         sm.process_event(std::forward<Args>(arg)...);
+      }
+
+      void loading(void* userptr) override {
+        process_event(demiurg::loading{});
+      }
+
+      void unloading(void* userptr) override {
+        process_event(demiurg::unloading{});
       }
 
     protected:

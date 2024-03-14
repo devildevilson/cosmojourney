@@ -1,12 +1,13 @@
 #include "sound_resource.h"
 #include <utils/core.h>
 #include <fstream>
+#include <demiurg/system.h>
 
-void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type = std::ios::binary) {
-  std::ifstream file(file_name, type);
-  if (!file) utils::error("Could not load file {}", file_name);
-  buffer = std::vector<char>((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-}
+//void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type = std::ios::binary) {
+//  std::ifstream file(file_name, type);
+//  if (!file) utils::error("Could not load file {}", file_name);
+//  buffer = std::vector<char>((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+//}
 
 namespace cosmojourney {
   /*auto sound_resource_table::operator()() const {
@@ -20,6 +21,14 @@ namespace cosmojourney {
        state<demiurg::memory_load> + event<demiurg::unloading> / unload = state<demiurg::unload>
     );
   }*/
+
+  namespace sound_actions_detail {
+#define X(name) void name(sound_resource* res, void* ptr) { res->name(ptr); }
+    DEMIURG_ACTIONS_LIST
+#undef X
+  }
+
+  sound_resource::sound_resource() noexcept : resource_base<sound_resource_table>(this) {}
 
   // тут по идее должен передаваться демиурговский стейт
   // там у нас например такие вещи как загруженные в память модули
@@ -42,7 +51,11 @@ namespace cosmojourney {
       }
     }
 
-    load_file(path, file_memory);
+    if (sound_type == sound::system::resource::type::undefined) {
+      utils::error("Sound format '{}' is not supported, path: {}", ext, path);
+    }
+
+    demiurg::load_file(path, file_memory, std::ios::binary);
     raw_size = file_memory.size();
     res = std::make_unique<sound::system::resource>(path, sound_type, std::move(file_memory));
     file_memory.clear();
