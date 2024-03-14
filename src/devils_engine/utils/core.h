@@ -107,6 +107,8 @@ namespace devils_engine {
       print_detail(std::forward<Args>(args)...);
     }
 
+    inline void print() {}
+
     template <typename Arg, typename... Args>
     void print(Arg&& arg, Args&&... args) {
       std::cout << arg;

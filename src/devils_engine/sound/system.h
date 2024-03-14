@@ -17,6 +17,14 @@
 typedef struct ALCdevice ALCdevice;
 typedef struct ALCcontext ALCcontext;
 
+// как бы аккуратно сделать поиск?
+#define SOUND_SYSTEM_EXTENCION_LIST \
+  X(mp3)  \
+  X(flac) \
+  X(wav)  \
+  X(ogg)  \
+  X(pcm)  \
+
 namespace devils_engine {
   namespace sound {
     struct settings {
@@ -64,14 +72,16 @@ namespace devils_engine {
 
       struct resource {
         enum class type {
-          mp3,
-          flac,
-          wav,
-          ogg,
-          pcm,
+#define X(name) name,
+          SOUND_SYSTEM_EXTENCION_LIST
+#undef X
+
           undefined
         };
 
+        static std::string_view type_to_string(const size_t index);
+        
+        // теперь не нужно
         std::string id;
         enum type type;
         std::unique_ptr<sound::decoder> sound;

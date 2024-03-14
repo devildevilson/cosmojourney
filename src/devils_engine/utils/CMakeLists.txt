@@ -38,6 +38,7 @@ set(HDR_LIST
   memory_pool.h
   type_traits.h
   core.h
+  string.h
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})

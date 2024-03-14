@@ -345,6 +345,16 @@ namespace devils_engine {
     {}
 
     const size_t system::volume_set::sound_types_count;
+    const std::string_view type_names[] = {
+#define X(name) #name ,
+      SOUND_SYSTEM_EXTENCION_LIST
+#undef X
+
+      "undefined"
+    };
+    std::string_view system::resource::type_to_string(const size_t index) {
+      return type_names[index];
+    }
 
     system::resource::resource() : type(type::undefined) {}
     system::resource::resource(std::string id, enum type type, std::vector<char> buffer) :

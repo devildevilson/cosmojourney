@@ -15,6 +15,8 @@
 #include "utils/core.h"
 #include "utils/type_traits.h"
 #include "utils/bitstream.h"
+#include "utils/string.h"
+#include "demiurg/system.h"
 
 using namespace devils_engine;
 
@@ -67,6 +69,40 @@ void traced_func3() {
   //utils_assertf(5==4, "test assert {}", 1);
 }
 
+void parse_table_line(
+  const std::string_view &line, 
+  std::string_view &current_state, 
+  std::string_view &event, 
+  // было бы неплохо тут вернуть количество, с другой стороны мы можем проверить пустую строку
+  std::string_view *guard_list, const size_t max_guards, 
+  std::string_view *action_list, const size_t max_actions, 
+  std::string_view &final_state
+) {
+  const size_t mem_size = 8;
+  std::array<std::string_view, mem_size> mem;
+  size_t count = 0;
+  count = utils::string::split(line, "=", mem.data(), mem_size);
+  assert(count <= 2);
+  const auto left_value = utils::string::trim(mem[0]);
+  final_state = utils::string::trim(mem[1]);
+  count = utils::string::split(left_value, "->", mem.data(), mem_size);
+  assert(count <= 2);
+  const auto before_action = utils::string::trim(mem[0]);
+  const auto actions = utils::string::trim(mem[1]);
+  count = utils::string::split(before_action, "+", mem.data(), mem_size);
+  assert(count == 2);
+  current_state = utils::string::trim(mem[0]);
+  const auto event_and_guards = utils::string::trim(mem[1]);
+  event = utils::string::trim(event_and_guards.substr(0, event_and_guards.find("[")));
+  const auto guards = utils::string::trim(utils::string::inside(event_and_guards, "[", "]"));
+  count = utils::string::split(guards, ",", guard_list, max_guards);
+  assert(count < max_guards);
+  for (size_t i = 0; i < count; ++i) guard_list[i] = utils::string::trim(guard_list[i]);
+  count = utils::string::split(actions, ",", action_list, max_actions);
+  assert(count < max_actions);
+  for (size_t i = 0; i < count; ++i) action_list[i] = utils::string::trim(action_list[i]);
+}
+
 int main(int argc, char const *argv[]) {
   //const size_t test_count = 100000;
 
@@ -101,7 +137,7 @@ int main(int argc, char const *argv[]) {
   //   sync(timer);
   // }
 
-  std::unique_ptr<sound::system::resource> res1;
+  /*std::unique_ptr<sound::system::resource> res1;
   std::unique_ptr<sound::system::resource> res2;
   std::unique_ptr<sound::system::resource> res3;
   std::unique_ptr<sound::system::resource> res4;
@@ -122,7 +158,7 @@ int main(int argc, char const *argv[]) {
     load_file(file_name, buffer);
     res2 = std::make_unique<sound::system::resource>("test_ogg", sound::system::resource::type::ogg, std::move(buffer));
     utils::println("File", file_name, "duration:", res2->duration(), "s");
-  }
+  }*/
 
   /*{
     const std::string file_name = "piano.wav";
@@ -142,35 +178,35 @@ int main(int argc, char const *argv[]) {
     utils::println("File", file_name, "duration:", res4->duration(), "s");
   }*/
 
-  sound::system s;
-  
-  size_t id = 0;
-  {
-    utils::time_log log("start playing");
-    sound::settings ss;
-    ss.is_loop = true;
-    id = s.setup_sound(res1.get(), ss);
-  }
+  //sound::system s;
+  //
+  //size_t id = 0;
+  //{
+  //  utils::time_log log("start playing");
+  //  sound::settings ss;
+  //  ss.is_loop = true;
+  //  id = s.setup_sound(res1.get(), ss);
+  //}
 
-  s.set_master_volume(0.1f);
-  
-  float master_gain = 0.0f;
-  size_t counter = 0;
-  const double dur = res1->duration();
-  while (true) {
-    s.update(100000);
-    const double pos = s.stat_sound(id);
-    const double cur_seconds = pos * dur;
-    utils::println("Stat", pos, ":", cur_seconds, "s (", dur, "s) master_gain", master_gain);
+  //s.set_master_volume(0.1f);
+  //
+  //float master_gain = 0.0f;
+  //size_t counter = 0;
+  //const double dur = res1->duration();
+  //while (true) {
+  //  s.update(100000);
+  //  const double pos = s.stat_sound(id);
+  //  const double cur_seconds = pos * dur;
+  //  utils::println("Stat", pos, ":", cur_seconds, "s (", dur, "s) master_gain", master_gain);
 
-    //if (abc > 0.05 && abc < 0.5) s.set_sound(id, 0.5);
-    //counter += 1;
-    //if (counter%30 == 0) master_gain += 0.05f;
+  //  //if (abc > 0.05 && abc < 0.5) s.set_sound(id, 0.5);
+  //  //counter += 1;
+  //  //if (counter%30 == 0) master_gain += 0.05f;
 
-    //s.set_master_volume(master_gain);
+  //  //s.set_master_volume(master_gain);
 
-    std::this_thread::sleep_for(std::chrono::microseconds(100000));
-  }
+  //  std::this_thread::sleep_for(std::chrono::microseconds(100000));
+  //}
 
   // spdlog::set_level(spdlog::level::trace);
 
@@ -220,6 +256,43 @@ int main(int argc, char const *argv[]) {
   //assert(static_cast<abc>(bs.peek_at(enum_bits, enum_bits)) == abc::e4);
   //assert(static_cast<abc>(bs.peek_at(enum_bits+enum_bits, enum_bits)) == abc::e6);
   //utils::println("enum_bits", enum_bits, "bs.pos", bs.position());
+
+  //const size_t arr_size = 3;
+  //std::array<std::string_view, arr_size> arr;
+  //const std::string_view test = "abc+def";
+  //const size_t count = utils::string::split(test, "+", arr.data(), arr_size);
+  //utils::println("count", count);
+  ////assert(count == SIZE_MAX);
+  //for (size_t i = 0; i < std::min(count, arr_size); ++i) {
+  //  utils::print(i+1, arr[i], ";");
+  //}
+  //utils::println();
+
+  //const std::string_view test2 = "event [ guard1, guard2 ]";
+  //const auto inside = utils::string::trim(utils::string::inside(test2, "[", "]"));
+  //utils::println(test2, "|", inside);
+
+  //const std::string_view test3 = "   aa  a   ";
+  //utils::println(utils::string::trim(test3));
+
+  //const std::string_view table_line = "*s1 + e1 [ guard1, guard2 ] -> core/states/scripts/action1, core/states/scripts/action2 = s2";
+  //std::string_view current_state, final_state, event;
+  //std::array<std::string_view, 8> guards, actions;
+  //parse_table_line(table_line, current_state, event, guards.data(), 8, actions.data(), 8, final_state);
+  //utils::println(table_line);
+  //utils::print(current_state, "+", event, "[", guards[0]);
+  //for (size_t i = 1; guards[i] != ""; ++i) {
+  //  utils::print(",", guards[i]);
+  //}
+  //utils::print(" ] ->", actions[0]);
+  //for (size_t i = 1; actions[i] != ""; ++i) {
+  //  utils::print(",", actions[i]);
+  //}
+  //utils::print(" =", final_state);
+  //utils::println();
+
+  demiurg::system sys("folder1");
+  sys.parse_file_tree();
 
   return 0;
 }

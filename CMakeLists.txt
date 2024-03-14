@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.1...3.25)
 project(
   cosmojourney
   VERSION 0.1
-  LANGUAGES CXX)
+  LANGUAGES CXX
+)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   # Let's ensure -std=c++xx instead of -std=g++xx
@@ -64,7 +65,7 @@ add_subdirectory(src/devils_engine/sound/)
 #add_subdirectory(src/devils_engine/interface/)
 
 # Adding something we can run - Output name matches target name
-add_executable(${PROJECT_NAME} main.cpp "src/devils_engine/demiurg/system.h")
+add_executable(${PROJECT_NAME} main.cpp "src/devils_engine/demiurg/system.h" "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/devils_engine/demiurg/resource_base.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/demiurg/system.cpp")
 
 # Make sure you link your targets with this command. It can also link libraries and
 # even flags, so linking a target that does not exist will not give a configure-time error. sui
