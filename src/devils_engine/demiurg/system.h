@@ -12,6 +12,8 @@
 #include <span>
 #include <demiurg/resource_base.h>
 #include <utils/block_allocator.h>
+#include <qc-hash.hpp>
+#include <functional>
 
 namespace devils_engine {
   namespace demiurg {
@@ -23,8 +25,7 @@ namespace devils_engine {
         std::array<std::string_view, 16> exts;
         resource_interface* type_list;
         utils::block_allocator allocator;
-        // тут добавится функция создания (нужно упаковать тип в функцию)
-        // разрушение - вызываем деструктор + чистим в памяти
+        std::function<> create;
       };
 
       system() noexcept = default;

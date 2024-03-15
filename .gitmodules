@@ -16,3 +16,6 @@
 [submodule "include/sml"]
 	path = include/sml
 	url = https://github.com/boost-ext/sml.git
+[submodule "include/qc-hash"]
+	path = include/qc-hash
+	url = https://github.com/Daskie/qc-hash.git

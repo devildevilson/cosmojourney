@@ -43,6 +43,7 @@ include_directories(
   include/glm/
   include/openal-soft/include
   include/sml/include
+  include/qc-hash/
   src/devils_engine/
   src/cosmojorney/
 )
