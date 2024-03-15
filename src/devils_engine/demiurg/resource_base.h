@@ -21,6 +21,7 @@ namespace sml = boost::sml;
 
 #define DEMIURG_RESOURCE_FLAGS_LIST \
   X(underlying_owner_of_raw_memory) \
+  X(binary) \
 
 namespace devils_engine {
   namespace demiurg {
