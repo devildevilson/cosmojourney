@@ -30,7 +30,8 @@ namespace cosmojourney {
 
   sound_resource::sound_resource() noexcept : 
     resource_base<sound_resource_table>(this) {
-    utils::println("res ptr", this);
+    set_flag(demiurg::resource_flags::binary, true);
+    //utils::println("res ptr", this);
   }
 
   // тут по идее должен передаваться демиурговский стейт

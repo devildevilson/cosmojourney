@@ -73,6 +73,7 @@ namespace devils_engine {
       std::string_view module_name;
       std::string_view type;
       std::string_view loading_type;
+      size_t loading_type_id;
 
       std::vector<char> file_memory;
       std::string_view file_text;
@@ -82,7 +83,14 @@ namespace devils_engine {
       uint32_t width, height; // images
       double duration; // sound
 
-      inline resource_interface() noexcept : replacing_order(0), raw_size(0), width(0), height(0), duration(0) {}
+      inline resource_interface() noexcept : 
+        loading_type_id(0), 
+        replacing_order(0),
+        raw_size(0),
+        width(0),
+        height(0),
+        duration(0) 
+      {}
       virtual ~resource_interface() noexcept = default;
 
       void set_path(std::string path, const std::string_view &root);

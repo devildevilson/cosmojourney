@@ -18,6 +18,7 @@
 #include "utils/string.h"
 #include "demiurg/system.h"
 #include "sound_resource.h"
+#include "utils/dice.h"
 
 using namespace devils_engine;
 
@@ -294,38 +295,52 @@ int main(int argc, char const *argv[]) {
 
   demiurg::system sys("folder1");
   sys.register_type<cosmojourney::sound_resource>("sound", "ogg,flac,mp3,wav");
-  sys.parse_file_tree();
-
+  // в первый раз оказалось дольше
   {
-    utils::time_log l("sound/ferambie");
-    const auto found1 = sys.find("sound/ferambie");
-    utils::println();
-    utils::println("sound/ferambie", found1.size());
-    for (const auto ptr : found1) {
-      utils::println(ptr->id);
-    }
+    utils::time_log l("parse_file_tree");
+    sys.parse_file_tree();
   }
 
   {
-    utils::time_log l("sound/s");
-    const auto found2 = sys.find("sound/s");
-    utils::println();
-    utils::println("sound/s", found2.size());
-    for (const auto ptr : found2) {
-      utils::println(ptr->id);
-    }
+    utils::time_log l("parse_file_tree");
+    sys.parse_file_tree();
   }
 
-  {
-    utils::time_log l("sound/");
-    const auto found3 = sys.find("sound/");
-    utils::println();
-    utils::println("sound/", found3.size());
-    for (const auto ptr : found3) {
-      utils::println(ptr->id);
-      ptr->loading(nullptr);
-    }
-  }
+  //{
+  //  utils::time_log l("sound/ferambie");
+  //  const auto found1 = sys.find("sound/ferambie");
+  //  utils::println();
+  //  utils::println("sound/ferambie", found1.size());
+  //  for (const auto ptr : found1) {
+  //    utils::println(ptr->id);
+  //  }
+  //}
+
+  //{
+  //  utils::time_log l("sound/s");
+  //  const auto found2 = sys.find("sound/s");
+  //  utils::println();
+  //  utils::println("sound/s", found2.size());
+  //  for (const auto ptr : found2) {
+  //    utils::println(ptr->id);
+  //  }
+  //}
+
+  //{
+  //  utils::time_log l("sound/");
+  //  const auto found3 = sys.find("sound/");
+  //  utils::println();
+  //  utils::println("sound/", found3.size());
+  //  for (const auto ptr : found3) {
+  //    utils::println(ptr->id);
+  //    ptr->loading(nullptr);
+  //  }
+  //}
+
+  //utils::time_log l("prng");
+  //auto state = utils::xoroshiro128starstar::init(123);
+  //const size_t ret = utils::dice_accumulator(3, 20, state); // 3d20
+  //utils::println("ret", ret);
 
   return 0;
 }

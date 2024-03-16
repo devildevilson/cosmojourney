@@ -27,7 +27,7 @@ namespace devils_engine {
     class system {
     public:
       struct type {
-        using resource_producer = std::function<resource_interface *(utils::block_allocator &)>;
+        using resource_producer = std::function<resource_interface *(utils::block_allocator &, const std::string_view &)>;
 
         std::string name;
         std::string ext;
@@ -35,7 +35,7 @@ namespace devils_engine {
         std::array<std::string_view, 16> exts;
         resource_interface* type_list;
         utils::block_allocator allocator;
-        resource_producer create;
+        resource_producer createf;
 
         type(
           std::string name,
@@ -46,6 +46,9 @@ namespace devils_engine {
           const size_t allocator_align,
           resource_producer create
         ) noexcept;
+
+        resource_interface *create();
+        void destroy(resource_interface * ptr);
       };
 
       system() noexcept = default;
@@ -56,8 +59,12 @@ namespace devils_engine {
       template <typename T>
       void register_type(std::string name, std::string ext) {
         const auto type_name = utils::type_name<T>();
-        auto type = types_pool.create(std::move(name), std::move(ext), type_name, sizeof(T) * 100, sizeof(T), alignof(T), [](utils::block_allocator &allocator) -> resource_interface * {
-          return allocator.create<T>();
+        auto type = types_pool.create(std::move(name), std::move(ext), type_name, sizeof(T) * 100, sizeof(T), alignof(T), [](utils::block_allocator &allocator, const std::string_view& name) -> resource_interface * {
+          auto ptr = allocator.create<T>();
+          ptr->loading_type_id = utils::type_id<T>();
+          ptr->loading_type = utils::type_name<T>();
+          ptr->type = name;
+          return ptr;
         });
         
         //types.insert(std::make_pair(types->name, type));
@@ -67,8 +74,8 @@ namespace devils_engine {
       std::string_view root() const;
       void set_root(std::string root);
 
-      // не указывает расширение файла!
-      // поиск по отсортированному массиву поди O(logN)
+      // не указывать расширение файла!
+      // поиск по отсортированному массиву поди O(logN + N)
       std::span<resource_interface * const> find(const std::string_view &filter) const;
 
       // наверное все удалим и заново прочитаем дерево файлов (логично)

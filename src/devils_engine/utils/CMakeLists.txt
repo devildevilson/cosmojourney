@@ -28,6 +28,7 @@ set(SRC_LIST
   stack_allocator.cpp
   bits.cpp
   bitstream.cpp
+  prng.cpp
 )
 
 set(HDR_LIST
@@ -41,6 +42,8 @@ set(HDR_LIST
   string.h
   flat_hash_map.hpp
   safe_handle.h
+  prng.h
+  dice.h
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})

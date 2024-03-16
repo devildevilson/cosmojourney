@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <cassert>
 namespace fs = std::filesystem;
 
 namespace devils_engine {
@@ -21,13 +22,21 @@ namespace devils_engine {
       container_type(container_type),
       type_list(nullptr),
       allocator(allocator_size, block_size, allocator_align),
-      create(std::move(create))
+      createf(std::move(create))
     {}
+
+    resource_interface *system::type::create() { 
+      return createf(allocator, name);
+    }
+
+    void system::type::destroy(resource_interface *ptr) { 
+      allocator.destroy(ptr);
+    }
 
     system::system(std::string root) noexcept : root_path(std::move(root)) {}
     system::~system() noexcept { 
       clear();
-      for (auto [name, ptr] : types) {
+      for (auto & [name, ptr] : types) {
         types_pool.destroy(ptr);
       }
     }
@@ -35,7 +44,13 @@ namespace devils_engine {
     std::string_view system::root() const { return root_path; }
     void system::set_root(std::string root) { root_path = std::move(root); }
 
+    static bool lazy_compare(const std::string_view &a, const std::string_view &b) {
+      return a.substr(0, b.size()) == b;
+    }
+
     std::span<resource_interface * const> system::find(const std::string_view &filter) const {
+      if (filter == "") return std::span(resources);
+
       const auto itr = std::lower_bound(resources.begin(), resources.end(), filter, [] (const resource_interface* const res, const std::string_view &value) {
         std::less<std::string_view> l;
         return l(res->id.substr(0, value.size()), value);
@@ -43,12 +58,14 @@ namespace devils_engine {
 
       auto start = resources.begin();
       auto end = itr;
-      for (; start != end && (*start)->id.substr(0, filter.size()) != filter; ++start) {}
-      for (; end != resources.end() && (*end)->id.substr(0, filter.size()) == filter; ++end) {}
+      // (*start)->id.substr(0, filter.size()) != filter
+      // (*end)->id.substr(0, filter.size()) == filter
+      for (; start != end && !lazy_compare((*start)->id, filter); ++start) {}
+      for (; end != resources.end() && lazy_compare((*end)->id, filter); ++end) {}
       return std::span(start, end);
     }
 
-    void parse_path(
+    static void parse_path(
       const std::string &path, 
       const std::string_view &root_path,
       std::string_view &module_name,
@@ -78,24 +95,24 @@ namespace devils_engine {
       const char forwslash = '/';
       std::replace(path.begin(), path.end(), backslash, forwslash);
       for (auto itr = path.begin() + 1, prev = path.begin(); itr != path.end(); prev = itr, ++itr) {
-        if (*itr == backslash && *prev == backslash) itr = path.erase(itr);
+        if (*itr == forwslash && *prev == forwslash) itr = path.erase(itr);
       }
     }
 
+    // эта функция будет состоять из двух этапов:
+    // 1) в рутовой папке мы ищем все файлы и папки
+    // 2) файлы и папки это модули на основе которых мы построим дерево ресурсов
     void system::parse_file_tree() {
       clear();
 
       for (const auto &entry : fs::recursive_directory_iterator(root_path)) {
         if (!entry.is_regular_file()) continue;
         std::string entry_path = entry.path().generic_string();
-        // если позикс система то не нужно ничего делать
-#ifdef _WIN32
-        make_forward_slash(entry_path);
-#endif
-
-        const std::string_view full_path = entry_path;
-        //const size_t root_index = entry_path.find(root_path);
-        //if (root_index == 0) entry_path = entry_path.substr(root_path.size()+1); // + '/'
+        // generic_string уже сразу переводит строку в стандартный формат 
+        // и значит скорее всего можно ожидать что и вся строка будет UTF-8 ?
+//#ifdef _WIN32
+//        make_forward_slash(entry_path);
+//#endif
 
         std::string_view module_name, file_name, ext, id;
         parse_path(entry_path, root_path, module_name, file_name, ext, id);
@@ -105,10 +122,8 @@ namespace devils_engine {
 
         if (t == nullptr) continue;
 
-        auto res = t->create(t->allocator);
+        auto res = t->create();
         res->set_path(entry_path, root_path);
-        res->loading_type = t->container_type;
-        res->type = t->name;
         // нам еще нужно найти ранее загруженные вещи
         // среди них нужно найти совпадающие id
         // и добавить их в список сопроводительных файлов
@@ -130,7 +145,9 @@ namespace devils_engine {
 
     void system::clear() {
       for (auto ptr : resources) {
-        ptr->~resource_interface();
+        const auto itr = types.find(ptr->type);
+        assert(itr != types.end());
+        itr->second->destroy(ptr);
       }
       resources.clear();
     }
@@ -145,8 +162,6 @@ namespace devils_engine {
           const auto itr = types.find(cur_id);
           if (itr != types.end()) {
             auto found_t = itr->second;
-            //const auto f = std::find(found_t->exts.begin(), found_t->exts.end(), ext);
-            //if (f != found_t->exts.end()) t = *itr;
             const size_t ext_index = found_t->ext.find(extencion);
             if (ext_index != std::string::npos) t = itr->second;
           }

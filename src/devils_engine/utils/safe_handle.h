@@ -14,6 +14,11 @@ namespace devils_engine {
 
       handle_t() noexcept : ptr(nullptr) {}
       handle_t(T* ptr) noexcept : ptr(ptr) {}
+      ~handle_t() noexcept = default;
+      handle_t(const handle_t& copy) noexcept = default;
+      handle_t(handle_t&& move) noexcept = default;
+      handle_t& operator=(const handle_t& copy) noexcept = default;
+      handle_t& operator=(handle_t&& move) noexcept = default;
       bool valid() const { return ptr != nullptr; };
       T* get() const { return ptr; }
       T* operator->() { return ptr; }
@@ -30,6 +35,10 @@ namespace devils_engine {
       safe_handle_t(T* ptr) noexcept : type(utils::type_id<T>()), handle(ptr) {}
 
       ~safe_handle_t() noexcept = default;
+      safe_handle_t(const safe_handle_t& copy) noexcept = default;
+      safe_handle_t(safe_handle_t&& move) noexcept = default;
+      safe_handle_t & operator=(const safe_handle_t& copy) noexcept = default;
+      safe_handle_t & operator=(safe_handle_t &&move) noexcept = default;
 
       template <typename T>
       bool is() const { return type == utils::type_id<T>(); }
@@ -40,6 +49,18 @@ namespace devils_engine {
       T* get() const {
         utils_assertf(is<T>(), "Handle type is not '{}' ({} != {})", utils::type_name<T>(), type, utils::type_id<T>());
         return reinterpret_cast<T*>(handle);
+      }
+
+      template <typename T>
+      void set(T* ptr) {
+        if (ptr == nullptr) {
+          type = utils::type_id<void>();
+          handle = ptr;
+          return;
+        }
+
+        type = utils::type_id<T>();
+        handle = ptr;
       }
 
       template <typename T>
