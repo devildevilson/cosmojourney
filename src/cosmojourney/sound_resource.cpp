@@ -28,7 +28,10 @@ namespace cosmojourney {
 #undef X
   }
 
-  sound_resource::sound_resource() noexcept : resource_base<sound_resource_table>(this) {}
+  sound_resource::sound_resource() noexcept : 
+    resource_base<sound_resource_table>(this) {
+    utils::println("res ptr", this);
+  }
 
   // тут по идее должен передаваться демиурговский стейт
   // там у нас например такие вещи как загруженные в память модули
@@ -62,5 +65,7 @@ namespace cosmojourney {
     file_memory.shrink_to_fit();
     set_flag(demiurg::resource_flags::underlying_owner_of_raw_memory, true);
     duration = res->duration();
+
+    utils::info("Load {}", id);
   }
 }

@@ -39,6 +39,8 @@ set(HDR_LIST
   type_traits.h
   core.h
   string.h
+  flat_hash_map.hpp
+  safe_handle.h
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})

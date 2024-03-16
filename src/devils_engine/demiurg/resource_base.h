@@ -26,8 +26,8 @@ namespace sml = boost::sml;
 namespace devils_engine {
   namespace demiurg {
     // events
-    struct loading {};
-    struct unloading {};
+    struct loading { void* ptr; };
+    struct unloading { void* ptr; };
 
     // states
 #define X(name) struct name {};
@@ -70,7 +70,7 @@ namespace devils_engine {
       std::string path;
       std::string_view id;
       std::string_view ext;
-      std::string_view module;
+      std::string_view module_name;
       std::string_view type;
       std::string_view loading_type;
 
@@ -84,6 +84,8 @@ namespace devils_engine {
 
       inline resource_interface() noexcept : replacing_order(0), raw_size(0), width(0), height(0), duration(0) {}
       virtual ~resource_interface() noexcept = default;
+
+      void set_path(std::string path, const std::string_view &root);
 
       template <typename T>
       bool flag(const T &index) const {
@@ -104,8 +106,8 @@ namespace devils_engine {
       // и достаточно определить их в resource_base
       // и все, все конкретные функции можно уже определить в дочернем классе
 
-      virtual void loading(void* userptr) {}
-      virtual void unloading(void* userptr) {}
+      virtual void loading(void* userptr) = 0;
+      virtual void unloading(void* userptr) = 0;
 
 #define X(name) virtual void name(void* userptr) {}
       DEMIURG_ACTIONS_LIST
@@ -116,11 +118,16 @@ namespace devils_engine {
       std::bitset<64> flags;
     };
 
+    template <typename T>
+    struct inj { T* ptr; };
+
     template <typename Table>
     class resource_base : public resource_interface {
     public:
+      inline resource_base() noexcept : sm{inj{static_cast<resource_interface*>(this)}} {}
+
       template <typename T>
-      inline resource_base(T* ptr) noexcept : sm{ptr} {}
+      resource_base(T* ptr) noexcept : sm{inj{ptr}} {}
 
       template <typename T>
       bool is(T&& arg) const {
@@ -134,16 +141,24 @@ namespace devils_engine {
       }
 
       void loading(void* userptr) override {
-        process_event(demiurg::loading{});
+        process_event(demiurg::loading{userptr});
       }
 
       void unloading(void* userptr) override {
-        process_event(demiurg::unloading{});
+        process_event(demiurg::unloading{userptr});
       }
 
     protected:
       sml::sm<Table> sm;
     };
+
+    void parse_path(
+      const std::string& path, 
+      std::string_view& module_name,
+      std::string_view& file_name,
+      std::string_view& ext,
+      std::string_view& id
+    );
   }
 }
 

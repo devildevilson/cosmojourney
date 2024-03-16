@@ -21,19 +21,23 @@ namespace cosmojourney {
   // толку с этого особенно никакого нет
   struct sound_resource_table {
       auto operator()() const {
-#define X(name) const std::function<void(sound_resource* res, void* ptr)> name = &sound_actions_detail::name;
+//#define X(name) const std::function<void(sound_resource* res, void* ptr)> name = &sound_actions_detail::name;
+//        DEMIURG_ACTIONS_LIST
+//#undef X
+
+#define X(name) const auto l##name = [](demiurg::inj<sound_resource> i, const auto& event){ sound_actions_detail::name(i.ptr, event.ptr); };
         DEMIURG_ACTIONS_LIST
 #undef X
 
       using namespace sml;
       return make_transition_table(
-        *state<demiurg::unload> + event<demiurg::loading> / load_to_memory = state<demiurg::memory_load>,
-         state<demiurg::memory_load> + event<demiurg::unloading> / unload = state<demiurg::unload>
+        *state<demiurg::unload> + event<demiurg::loading> / lload_to_memory = state<demiurg::memory_load>,
+         state<demiurg::memory_load> + event<demiurg::unloading> / lunload = state<demiurg::unload>
       );
     }
   };
 
-  class sound_resource : demiurg::resource_base<sound_resource_table> {
+  class sound_resource final : public demiurg::resource_base<sound_resource_table> {
   public:
     sound_resource() noexcept;
     ~sound_resource() noexcept = default;

@@ -45,7 +45,7 @@ include_directories(
   include/sml/include
   include/qc-hash/
   src/devils_engine/
-  src/cosmojorney/
+  src/cosmojourney/
 )
 
 link_directories(libs)

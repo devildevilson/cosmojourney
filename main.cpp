@@ -17,6 +17,7 @@
 #include "utils/bitstream.h"
 #include "utils/string.h"
 #include "demiurg/system.h"
+#include "sound_resource.h"
 
 using namespace devils_engine;
 
@@ -292,7 +293,39 @@ int main(int argc, char const *argv[]) {
   //utils::println();
 
   demiurg::system sys("folder1");
+  sys.register_type<cosmojourney::sound_resource>("sound", "ogg,flac,mp3,wav");
   sys.parse_file_tree();
+
+  {
+    utils::time_log l("sound/ferambie");
+    const auto found1 = sys.find("sound/ferambie");
+    utils::println();
+    utils::println("sound/ferambie", found1.size());
+    for (const auto ptr : found1) {
+      utils::println(ptr->id);
+    }
+  }
+
+  {
+    utils::time_log l("sound/s");
+    const auto found2 = sys.find("sound/s");
+    utils::println();
+    utils::println("sound/s", found2.size());
+    for (const auto ptr : found2) {
+      utils::println(ptr->id);
+    }
+  }
+
+  {
+    utils::time_log l("sound/");
+    const auto found3 = sys.find("sound/");
+    utils::println();
+    utils::println("sound/", found3.size());
+    for (const auto ptr : found3) {
+      utils::println(ptr->id);
+      ptr->loading(nullptr);
+    }
+  }
 
   return 0;
 }
