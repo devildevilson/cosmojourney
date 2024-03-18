@@ -23,7 +23,7 @@ namespace cosmojourney {
   }*/
 
   namespace sound_actions_detail {
-#define X(name) void name(sound_resource* res, void* ptr) { res->name(ptr); }
+#define X(name) void name(sound_resource* res, const utils::safe_handle_t &handle) { res->name(handle); }
     DEMIURG_ACTIONS_LIST
 #undef X
   }
@@ -36,13 +36,13 @@ namespace cosmojourney {
 
   // тут по идее должен передаваться демиурговский стейт
   // там у нас например такие вещи как загруженные в память модули
-  void sound_resource::unload(void*) {
+  void sound_resource::unload(const utils::safe_handle_t&) {
     // здесь че делаем? полностью выгружаем саунд рез
     res.reset(nullptr);
     raw_size = 0;
   }
 
-  void sound_resource::load_to_memory(void*) {
+  void sound_resource::load_to_memory(const utils::safe_handle_t& handle) {
     // тут мы должны понять что перед нами:
     // зип архив или просто файл?
     // пытаемся вгрузить это дело с диска
@@ -59,6 +59,7 @@ namespace cosmojourney {
       utils::error("Sound format '{}' is not supported, path: {}", ext, path);
     }
 
+    // тут наверное все таки будт обращение в систему демиурга чтобы файлик получить
     demiurg::load_file(path, file_memory, std::ios::binary);
     raw_size = file_memory.size();
     res = std::make_unique<sound::system::resource>(path, sound_type, std::move(file_memory));

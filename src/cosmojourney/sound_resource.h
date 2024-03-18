@@ -13,7 +13,7 @@ namespace cosmojourney {
   class sound_resource;
 
   namespace sound_actions_detail {
-#define X(name) void name(sound_resource* res, void* ptr);
+#define X(name) void name(sound_resource* res, const utils::safe_handle_t &handle);
   DEMIURG_ACTIONS_LIST
 #undef X
   }  // namespace sound_actions_detail
@@ -25,7 +25,7 @@ namespace cosmojourney {
 //        DEMIURG_ACTIONS_LIST
 //#undef X
 
-#define X(name) const auto l##name = [](demiurg::inj<sound_resource> i, const auto& event){ sound_actions_detail::name(i.ptr, event.ptr); };
+#define X(name) const auto l##name = [](demiurg::inj<sound_resource> i, const auto& event){ sound_actions_detail::name(i.ptr, event.handle); };
         DEMIURG_ACTIONS_LIST
 #undef X
 
@@ -42,8 +42,8 @@ namespace cosmojourney {
     sound_resource() noexcept;
     ~sound_resource() noexcept = default;
 
-    void unload(void* userptr) override;
-    void load_to_memory(void* userptr) override;
+    void unload(const utils::safe_handle_t& handle) override;
+    void load_to_memory(const utils::safe_handle_t& handle) override;
 
   private:
     std::unique_ptr<sound::system::resource> res;

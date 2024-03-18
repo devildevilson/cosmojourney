@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1...3.25)
 
-set(DEVILS_LIBRARY_NAME devils_sound)
+set(DEVILS_LIBRARY_NAME devils_demiurg)
 
 project(
   ${DEVILS_LIBRARY_NAME}
@@ -31,42 +31,21 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   endif()
 
   include_directories(
-    include/dr_libs/
     include/spdlog/include/
-    include/vorbis/include/
-    include/stb/
-    include/glm/
-    include/openal-soft/include
+    include/sml/include
+    include/qc-hash/
     src/devils_engine/
   )
 endif()
 
-if (WIN32)
-  set(OPENAL_LIBRARY_NAME OpenAL32)
-else()
-  set(OPENAL_LIBRARY_NAME openal)
-endif()
-
 set(SRC_LIST
-  al_helper.cpp
-  mp3_decoder.cpp
-  flac_decoder.cpp
-  wav_decoder.cpp
-  ogg_decoder.cpp
-  pcm_decoder.cpp
   system.cpp
 )
 
 set(HDR_LIST
-  al_helper.h
-  mp3_decoder.h
-  flac_decoder.h
-  wav_decoder.h
-  ogg_decoder.h
-  pcm_decoder.h
-  decoder.h
+  resource_base.h
   system.h
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
-target_link_libraries(${DEVILS_LIBRARY_NAME} ${OPENAL_LIBRARY_NAME}) # openal
+target_link_libraries(${DEVILS_LIBRARY_NAME})

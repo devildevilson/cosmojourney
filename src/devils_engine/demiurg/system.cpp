@@ -11,7 +11,6 @@ namespace devils_engine {
     system::type::type(
       std::string name,
       std::string ext,
-      const std::string_view &container_type,
       const size_t allocator_size,
       const size_t block_size,
       const size_t allocator_align,
@@ -19,17 +18,21 @@ namespace devils_engine {
     ) noexcept : 
       name(std::move(name)),
       ext(std::move(ext)),
-      container_type(container_type),
       type_list(nullptr),
       allocator(allocator_size, block_size, allocator_align),
       createf(std::move(create))
     {}
 
     resource_interface *system::type::create() { 
-      return createf(allocator, name);
+      auto ptr = createf(allocator);
+      ptr->type = name;
+      if (type_list == nullptr) type_list = ptr;
+      else type_list->exemplary_radd(ptr);
+      return ptr;
     }
 
-    void system::type::destroy(resource_interface *ptr) { 
+    void system::type::destroy(resource_interface *ptr) {
+      if (type_list == ptr) type_list = type_list->exemplary_next(type_list);
       allocator.destroy(ptr);
     }
 
@@ -48,13 +51,20 @@ namespace devils_engine {
       return a.substr(0, b.size()) == b;
     }
 
-    std::span<resource_interface * const> system::find(const std::string_view &filter) const {
+    view<> system::find(const std::string_view &filter) const {
+      const auto span = raw_find(filter);
+      return view<>(span.begin(), span.end());
+    }
+
+    std::span<resource_interface * const> system::raw_find(const std::string_view &filter) const {
       if (filter == "") return std::span(resources);
 
       const auto itr = std::lower_bound(resources.begin(), resources.end(), filter, [] (const resource_interface* const res, const std::string_view &value) {
         std::less<std::string_view> l;
         return l(res->id.substr(0, value.size()), value);
       });
+
+      if (itr == resources.end()) return std::span<resource_interface *const>();
 
       auto start = resources.begin();
       auto end = itr;
@@ -105,6 +115,8 @@ namespace devils_engine {
     void system::parse_file_tree() {
       clear();
 
+      ska::flat_hash_map<std::string_view, resource_interface *> loaded;
+
       for (const auto &entry : fs::recursive_directory_iterator(root_path)) {
         if (!entry.is_regular_file()) continue;
         std::string entry_path = entry.path().generic_string();
@@ -124,13 +136,44 @@ namespace devils_engine {
 
         auto res = t->create();
         res->set_path(entry_path, root_path);
-        // нам еще нужно найти ранее загруженные вещи
-        // среди них нужно найти совпадающие id
-        // и добавить их в список сопроводительных файлов
-        // (типо совпадает название, но различается расширение)
-        // (например x.obj и x.mtl)
-        // + нужно найти одинаковые id но разные модули
-        resources.push_back(res);
+        all_resources.push_back(res);
+
+        // куда то девается replacement
+
+        // проверим загружали ли мы уже вещи
+        auto itr = loaded.find(res->id);
+        if (itr == loaded.end()) {
+          //itr = loaded.insert({ res->id, res }).first;
+          loaded[res->id] = res;
+          resources.push_back(res);
+        } else {
+          auto other_ptr = itr->second;
+          for (; other_ptr != nullptr &&
+                 other_ptr->module_name != res->module_name;
+               other_ptr = other_ptr->replacement_next(itr->second)) {}
+
+          if (other_ptr != nullptr) {
+            // модули совпали, найдем у кого меньший индекс среди расширений
+            const size_t other_place = t->ext.find(other_ptr->ext);
+            const size_t res_place = t->ext.find(res->ext);
+            if (res_place < other_place) {
+              //utils::ring::list_remove<list_type::replacement>(other_ptr);
+              // нужно найти его в списке ресурсов и заменить на другой указатель
+              res->supplementary_radd(other_ptr);
+              if (other_ptr == itr->second) {
+                auto itr = std::find(resources.begin(), resources.end(), other_ptr);
+                (*itr) = res;
+              }
+            } else {
+              other_ptr->supplementary_radd(res);
+            }
+          } else {
+            // новый ресурс по модулю
+            // тут теперь нужно определить у кого меньший индекс 
+            // примерно так же как и в случае с расширениями
+            itr->second->replacement_radd(res);
+          }
+        }
       }
 
       std::sort(resources.begin(), resources.end(), [] (auto a, auto b) {
@@ -139,18 +182,22 @@ namespace devils_engine {
       });
 
       for (const auto ptr : resources) {
-        utils::println(ptr->id);
+        utils::println(ptr->module_name, ptr->id, ptr->ext);
       }
     }
 
     void system::clear() {
-      for (auto ptr : resources) {
+      for (auto ptr : all_resources) {
         const auto itr = types.find(ptr->type);
         assert(itr != types.end());
         itr->second->destroy(ptr);
       }
       resources.clear();
+      all_resources.clear();
     }
+
+    size_t system::resources_count() const noexcept { return resources.size(); }
+    size_t system::all_resources_count() const noexcept { return all_resources.size(); }
 
     system::type * system::find_proper_type(const std::string_view &id, const std::string_view &extencion) const {
       type *t = nullptr;
@@ -181,6 +228,43 @@ namespace devils_engine {
       std::string_view file_name;
       parse_path(this->path, root, module_name, file_name, ext, id);
     }
+
+    resource_interface *resource_interface::replacement_next(const resource_interface *ptr) const {
+      return utils::ring::list_next<list_type::replacement>(this, ptr);
+    }
+
+    resource_interface *resource_interface::supplementary_next(const resource_interface *ptr) const {
+      return utils::ring::list_next<list_type::supplementary>(this, ptr);
+    }
+
+    resource_interface *resource_interface::exemplary_next(const resource_interface *ptr) const {
+      return utils::ring::list_next<list_type::exemplary>(this, ptr);
+    }
+
+    void resource_interface::replacement_add(resource_interface *ptr) {
+      utils::ring::list_add<list_type::replacement>(this, ptr);
+    }
+
+    void resource_interface::supplementary_add(resource_interface *ptr) {
+      utils::ring::list_add<list_type::supplementary>(this, ptr);
+    }
+
+    void resource_interface::exemplary_add(resource_interface *ptr) {
+      utils::ring::list_add<list_type::exemplary>(this, ptr);
+    }
+
+    void resource_interface::replacement_radd(resource_interface *ptr) {
+      utils::ring::list_radd<list_type::replacement>(this, ptr);
+    }
+
+    void resource_interface::supplementary_radd(resource_interface *ptr) {
+      utils::ring::list_radd<list_type::supplementary>(this, ptr);
+    }
+
+    void resource_interface::exemplary_radd(resource_interface *ptr) {
+      utils::ring::list_radd<list_type::exemplary>(this, ptr);
+    }
+
 
     void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type) {
       std::ifstream file(file_name, type);

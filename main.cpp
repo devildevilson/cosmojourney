@@ -294,7 +294,7 @@ int main(int argc, char const *argv[]) {
   //utils::println();
 
   demiurg::system sys("folder1");
-  sys.register_type<cosmojourney::sound_resource>("sound", "ogg,flac,mp3,wav");
+  sys.register_type<cosmojourney::sound_resource>("sound", "mp3,ogg,flac,wav");
   // в первый раз оказалось дольше
   {
     utils::time_log l("parse_file_tree");
@@ -326,16 +326,25 @@ int main(int argc, char const *argv[]) {
   //  }
   //}
 
-  //{
-  //  utils::time_log l("sound/");
-  //  const auto found3 = sys.find("sound/");
-  //  utils::println();
-  //  utils::println("sound/", found3.size());
-  //  for (const auto ptr : found3) {
-  //    utils::println(ptr->id);
-  //    ptr->loading(nullptr);
-  //  }
-  //}
+  {
+    utils::time_log l("sound/");
+    const auto found3 = sys.find("sound/");
+    utils::println();
+    utils::println("sound/", found3.size());
+    for (const auto ptr : found3) {
+      //utils::println(ptr->id);
+      //ptr->loading(utils::safe_handle_t());
+      for (auto rep = ptr; rep != nullptr; rep = rep->replacement_next(ptr)) {
+        for (auto sup = rep; sup != nullptr; sup = sup->supplementary_next(rep)) {
+          utils::println(sup->module_name, sup->id, sup->ext);
+        }
+      }
+    }
+  }
+
+  // приведение работает вот так
+  //utils::safe_handle_t handle;
+  //auto abc = (size_t *)handle;
 
   //utils::time_log l("prng");
   //auto state = utils::xoroshiro128starstar::init(123);

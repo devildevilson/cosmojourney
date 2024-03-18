@@ -3,11 +3,12 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <utils/list.h>
 #include <string>
 #include <string_view>
 #include <vector>
 #include <bitset>
+#include <utils/list.h>
+#include <utils/safe_handle.h>
 #include <boost/sml.hpp>
 namespace sml = boost::sml;
 
@@ -26,8 +27,8 @@ namespace sml = boost::sml;
 namespace devils_engine {
   namespace demiurg {
     // events
-    struct loading { void* ptr; };
-    struct unloading { void* ptr; };
+    struct loading { utils::safe_handle_t handle; };
+    struct unloading { utils::safe_handle_t handle; };
 
     // states
 #define X(name) struct name {};
@@ -54,14 +55,20 @@ namespace devils_engine {
       };
     }
 
+    namespace list_type {
+      enum values {
+        replacement,
+        supplementary,
+        exemplary,
+        count
+      };
+    }
+
     // как бы мы хотели передать ресурс в другое место?
     class resource_interface : 
-      public utils::ring::list<resource_interface, 1>,
-      public utils::ring::list<resource_interface, 2>
-      // возможно имеет смысл составить список ресурсов по типу, но при этом у нас есть вью
-      // но во вью будут вообще все записи, а тут достаточно положить только основные ресурсы 
-      // (то есть главный ресурс среди соседей по названию + текущий ресурс по замене)
-      //public utils::ring::list<resource_interface, utils::list_type::type>
+      public utils::ring::list<resource_interface, list_type::replacement>,
+      public utils::ring::list<resource_interface, list_type::supplementary>,
+      public utils::ring::list<resource_interface, list_type::exemplary>
     {
     public:
       // если мы хотим использовать ключевое слово replace где то в пути
@@ -95,6 +102,18 @@ namespace devils_engine {
 
       void set_path(std::string path, const std::string_view &root);
 
+      resource_interface* replacement_next(const resource_interface* ptr) const;
+      resource_interface* supplementary_next(const resource_interface* ptr) const;
+      resource_interface* exemplary_next(const resource_interface* ptr) const;
+
+      void replacement_add(resource_interface* ptr);
+      void supplementary_add(resource_interface* ptr);
+      void exemplary_add(resource_interface* ptr);
+
+      void replacement_radd(resource_interface* ptr);
+      void supplementary_radd(resource_interface* ptr);
+      void exemplary_radd(resource_interface* ptr);
+
       template <typename T>
       bool flag(const T &index) const {
         return flags.test(static_cast<size_t>(index));
@@ -114,10 +133,10 @@ namespace devils_engine {
       // и достаточно определить их в resource_base
       // и все, все конкретные функции можно уже определить в дочернем классе
 
-      virtual void loading(void* userptr) = 0;
-      virtual void unloading(void* userptr) = 0;
+      virtual void loading(const utils::safe_handle_t &handle) = 0;
+      virtual void unloading(const utils::safe_handle_t &handle) = 0;
 
-#define X(name) virtual void name(void* userptr) {}
+#define X(name) virtual void name(const utils::safe_handle_t &handle) {}
       DEMIURG_ACTIONS_LIST
 #undef X
 
@@ -148,12 +167,12 @@ namespace devils_engine {
         sm.process_event(std::forward<Args>(arg)...);
       }
 
-      void loading(void* userptr) override {
-        process_event(demiurg::loading{userptr});
+      void loading(const utils::safe_handle_t &handle) override {
+        process_event(demiurg::loading{handle});
       }
 
-      void unloading(void* userptr) override {
-        process_event(demiurg::unloading{userptr});
+      void unloading(const utils::safe_handle_t& handle) override {
+        process_event(demiurg::unloading{handle});
       }
 
     protected:

@@ -7,34 +7,30 @@ project(
 )
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-  # Let's ensure -std=c++xx instead of -std=g++xx
   set(CMAKE_CXX_EXTENSIONS OFF)
 
-  # Let's nicely support folders in IDEs
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
   set(CMAKE_CXX_STANDARD 20)
 
   if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	if(MSVC)
+	  if(MSVC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR /Wall /permissive-")
     else()
-	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra")
+	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra")
     endif()
   endif()
 
   if (CMAKE_BUILD_TYPE STREQUAL "Release")
-	if(MSVC)
+	  if(MSVC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /permissive-")
     else()
-	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
     endif()
   endif()
 
 endif()
 
-# If you set any CMAKE_ variables, that can go here.
-# (But usually don't do this, except maybe for C++ standard)
 include_directories(
   include/dr_libs/
   include/spdlog/include/
@@ -52,22 +48,12 @@ link_directories(libs)
 
 # Find packages go here.
 
-# You should usually split this into folders, but this is a simple example
-
-# This is a "default" library, and will match the *** variable setting.
-# Other common choices are STATIC, SHARED, and MODULE
-# Including header files here helps IDEs but is not required.
-# Output libname matches target name, with the usual extensions on your system
-#add_library(MyLibExample simple_lib.cpp simple_lib.hpp)
-
 # Link each target with other targets or add options, etc.
 add_subdirectory(src/devils_engine/utils/)
 add_subdirectory(src/devils_engine/sound/)
+add_subdirectory(src/devils_engine/demiurg/)
 #add_subdirectory(src/devils_engine/interface/)
 
-# Adding something we can run - Output name matches target name
-add_executable(${PROJECT_NAME} main.cpp "src/devils_engine/demiurg/system.h" "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/devils_engine/demiurg/resource_base.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/demiurg/system.cpp")
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp")
 
-# Make sure you link your targets with this command. It can also link libraries and
-# even flags, so linking a target that does not exist will not give a configure-time error. sui
-target_link_libraries(${PROJECT_NAME} devils_utils devils_sound) #sui 
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg) #sui 

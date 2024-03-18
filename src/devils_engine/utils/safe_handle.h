@@ -19,20 +19,21 @@ namespace devils_engine {
       handle_t(handle_t&& move) noexcept = default;
       handle_t& operator=(const handle_t& copy) noexcept = default;
       handle_t& operator=(handle_t&& move) noexcept = default;
-      bool valid() const { return ptr != nullptr; };
-      T* get() const { return ptr; }
-      T* operator->() { return ptr; }
-      const T* operator->() const { return ptr; }
+      bool valid() const noexcept { return ptr != nullptr; };
+      T* get() const noexcept { return ptr; }
+      T* operator->() noexcept { return ptr; }
+      const T* operator->() const noexcept { return ptr; }
+      operator T*() const noexcept { return get(); }
     };
 
     struct safe_handle_t {
       size_t type;
-      void* handle;
+      void* ptr;
 
-      inline safe_handle_t() noexcept : type(utils::type_id<void>()), handle(nullptr) {}
+      inline safe_handle_t() noexcept : type(utils::type_id<void>()), ptr(nullptr) {}
 
       template <typename T>
-      safe_handle_t(T* ptr) noexcept : type(utils::type_id<T>()), handle(ptr) {}
+      safe_handle_t(T* ptr) noexcept : type(utils::type_id<T>()), ptr(ptr) {}
 
       ~safe_handle_t() noexcept = default;
       safe_handle_t(const safe_handle_t& copy) noexcept = default;
@@ -41,26 +42,26 @@ namespace devils_engine {
       safe_handle_t & operator=(safe_handle_t &&move) noexcept = default;
 
       template <typename T>
-      bool is() const { return type == utils::type_id<T>(); }
+      bool is() const noexcept { return type == utils::type_id<T>(); }
 
-      inline bool valid() const { return !is<void>(); }
+      inline bool valid() const noexcept { return !is<void>(); }
 
       template <typename T>
       T* get() const {
         utils_assertf(is<T>(), "Handle type is not '{}' ({} != {})", utils::type_name<T>(), type, utils::type_id<T>());
-        return reinterpret_cast<T*>(handle);
+        return reinterpret_cast<T*>(ptr);
       }
 
       template <typename T>
-      void set(T* ptr) {
+      void set(T* ptr) noexcept {
         if (ptr == nullptr) {
-          type = utils::type_id<void>();
-          handle = ptr;
+          this->type = utils::type_id<void>();
+          this->ptr = ptr;
           return;
         }
 
-        type = utils::type_id<T>();
-        handle = ptr;
+        this->type = utils::type_id<T>();
+        this->ptr = ptr;
       }
 
       template <typename T>
