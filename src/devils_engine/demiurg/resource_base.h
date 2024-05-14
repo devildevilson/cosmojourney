@@ -114,6 +114,10 @@ namespace devils_engine {
       void supplementary_radd(resource_interface* ptr);
       void exemplary_radd(resource_interface* ptr);
 
+      void replacement_remove();
+      void supplementary_remove();
+      void exemplary_remove();
+
       template <typename T>
       bool flag(const T &index) const {
         return flags.test(static_cast<size_t>(index));

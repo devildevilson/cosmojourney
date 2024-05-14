@@ -19,6 +19,10 @@ namespace cosmojourney {
   }  // namespace sound_actions_detail
 
   // толку с этого особенно никакого нет
+  // я думал что получиться определить таблицу в cpp файле
+  // но так не сработало, для чего я в принципе делал эти вещи?
+  // хотел чтобы у каждого ресурса была своя стейтмашина и можно было легко понять что к чему
+  // 
   struct sound_resource_table {
       auto operator()() const {
 //#define X(name) const std::function<void(sound_resource* res, void* ptr)> name = &sound_actions_detail::name;

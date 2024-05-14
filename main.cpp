@@ -294,7 +294,7 @@ int main(int argc, char const *argv[]) {
   //utils::println();
 
   demiurg::system sys("folder1");
-  sys.register_type<cosmojourney::sound_resource>("sound", "mp3,ogg,flac,wav");
+  sys.register_type<cosmojourney::sound_resource>("sound", "ogg,mp3,flac,wav");
   // в первый раз оказалось дольше
   {
     utils::time_log l("parse_file_tree");
@@ -332,8 +332,6 @@ int main(int argc, char const *argv[]) {
     utils::println();
     utils::println("sound/", found3.size());
     for (const auto ptr : found3) {
-      //utils::println(ptr->id);
-      //ptr->loading(utils::safe_handle_t());
       for (auto rep = ptr; rep != nullptr; rep = rep->replacement_next(ptr)) {
         for (auto sup = rep; sup != nullptr; sup = sup->supplementary_next(rep)) {
           utils::println(sup->module_name, sup->id, sup->ext);

@@ -44,7 +44,7 @@ set(HDR_LIST
   safe_handle.h
   prng.h
   dice.h
-)
+ )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(${DEVILS_LIBRARY_NAME})

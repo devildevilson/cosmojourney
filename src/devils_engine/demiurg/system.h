@@ -106,12 +106,14 @@ namespace devils_engine {
       view<> find(const std::string_view &filter) const;
       // так работать это дело не будет, нужно отдельный контейнер делать
       template <typename T>
-      void find(const std::string_view &filter, std::vector<T* const> &arr) const {
+      size_t find(const std::string_view &filter, std::vector<T* const> &arr) const {
         const auto v = find(filter);
         for (size_t i = 0; i < std::min(v.size(), arr.capacity() - arr.size()); ++i) {
           if (v[i]->loading_type_id != utils::type_id<T>()) continue;
           arr.push_back(static_cast<T *const>(v[i]));
         }
+
+        return v.size();
       }
 
       // наверное все удалим и заново прочитаем дерево файлов (логично)

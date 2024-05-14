@@ -135,12 +135,14 @@ namespace devils_engine {
     
       template <size_t t, typename T>
       void list_add(T* cur, T* obj) noexcept {
+        if (obj == nullptr) return;
         list<T, t>* l = cur;
         l->add(obj);
       }
       
       template <size_t t, typename T>
       void list_radd(T* cur, T* obj) noexcept {
+        if (obj == nullptr) return;
         list<T, t>* l = cur;
         l->radd(obj);
       }
