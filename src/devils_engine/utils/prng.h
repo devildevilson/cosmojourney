@@ -247,7 +247,7 @@ namespace devils_engine {
       static uint32_t value(state &s);
     };
 
-#ifndef _MSC_VER
+#ifndef _WIN32
     // по идее 128 версия медленее чем 64, но имеет больший период
     struct pcg_rxs_m_xs128unique {
       using uint128_t = __uint128_t;
@@ -324,7 +324,7 @@ namespace devils_engine {
       static state next(state s);
       static uint64_t value(const state &s);
     };
-#endif  // !_MSC_VER
+#endif  // !_WIN32
   }  // namespace utils
 }  // namespace devils_engine
 

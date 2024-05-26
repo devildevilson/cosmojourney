@@ -482,7 +482,7 @@ namespace devils_engine {
       return s.Q[s.i] = m - x;
     }
 
-#ifndef _MSC_VER
+#ifndef _WIN32
 
     #define PCG_128BIT_CONSTANT(high,low) ((((__uint128_t)high) << 64) + low)
     static inline __uint128_t pcg_output_rxs_m_xs_128_128(__uint128_t state) {
@@ -602,6 +602,6 @@ namespace devils_engine {
       return s.s[2];
     }
 
-#endif  // !_MSC_VER
+#endif  // !_WIN32
   }
 }

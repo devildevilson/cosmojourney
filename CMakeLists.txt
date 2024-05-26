@@ -40,6 +40,8 @@ include_directories(
   include/openal-soft/include
   include/sml/include
   include/qc-hash/
+  include/reflect/
+  include/glaze/include/
   src/devils_engine/
   src/cosmojourney/
 )

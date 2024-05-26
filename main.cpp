@@ -19,6 +19,7 @@
 #include "demiurg/system.h"
 #include "sound_resource.h"
 #include "utils/dice.h"
+#include "utils/named_serializer.h"
 
 using namespace devils_engine;
 
@@ -104,6 +105,26 @@ void parse_table_line(
   assert(count < max_actions);
   for (size_t i = 0; i < count; ++i) action_list[i] = utils::string::trim(action_list[i]);
 }
+
+struct def {
+  double g;
+  double h;
+  double i;
+};
+
+struct abc {
+  int a;
+  float b;
+  double c;
+  std::string d;
+  std::string_view e;
+  //const char* f;
+  struct def def;
+  std::vector<int> vector;
+  std::array<int, 2> arr;
+  std::unordered_map<std::string_view, int> map;
+};
+//BOOST_DESCRIBE_STRUCT(abc, (), (a, b, c, d, e, f))
 
 int main(int argc, char const *argv[]) {
   //const size_t test_count = 100000;
@@ -293,18 +314,18 @@ int main(int argc, char const *argv[]) {
   //utils::print(" =", final_state);
   //utils::println();
 
-  demiurg::system sys("folder1");
-  sys.register_type<cosmojourney::sound_resource>("sound", "mp3,ogg,flac,wav");
-  // в первый раз оказалось дольше
-  {
-    utils::time_log l("parse_file_tree");
-    sys.parse_file_tree();
-  }
+  //demiurg::system sys("folder1");
+  //sys.register_type<cosmojourney::sound_resource>("sound", "mp3,ogg,flac,wav");
+  //// в первый раз оказалось дольше
+  //{
+  //  utils::time_log l("parse_file_tree");
+  //  sys.parse_file_tree();
+  //}
 
-  {
-    utils::time_log l("parse_file_tree");
-    sys.parse_file_tree();
-  }
+  //{
+  //  utils::time_log l("parse_file_tree");
+  //  sys.parse_file_tree();
+  //}
 
   //{
   //  utils::time_log l("sound/ferambie");
@@ -326,21 +347,21 @@ int main(int argc, char const *argv[]) {
   //  }
   //}
 
-  {
-    utils::time_log l("sound/");
-    const auto found3 = sys.find("sound/");
-    utils::println();
-    utils::println("sound/", found3.size());
-    for (const auto ptr : found3) {
-      //utils::println(ptr->id);
-      //ptr->loading(utils::safe_handle_t());
-      for (auto rep = ptr; rep != nullptr; rep = rep->replacement_next(ptr)) {
-        for (auto sup = rep; sup != nullptr; sup = sup->supplementary_next(rep)) {
-          utils::println(sup->module_name, sup->id, sup->ext);
-        }
-      }
-    }
-  }
+  //{
+  //  utils::time_log l("sound/");
+  //  const auto found3 = sys.find("sound/");
+  //  utils::println();
+  //  utils::println("sound/", found3.size());
+  //  for (const auto ptr : found3) {
+  //    //utils::println(ptr->id);
+  //    //ptr->loading(utils::safe_handle_t());
+  //    for (auto rep = ptr; rep != nullptr; rep = rep->replacement_next(ptr)) {
+  //      for (auto sup = rep; sup != nullptr; sup = sup->supplementary_next(rep)) {
+  //        utils::println(sup->module_name, sup->id, sup->ext);
+  //      }
+  //    }
+  //  }
+  //}
 
   // приведение работает вот так
   //utils::safe_handle_t handle;
@@ -350,6 +371,18 @@ int main(int argc, char const *argv[]) {
   //auto state = utils::xoroshiro128starstar::init(123);
   //const size_t ret = utils::dice_accumulator(3, 20, state); // 3d20
   //utils::println("ret", ret);
+
+  
+  // glaze не работает с const char* !!!
+  // ну и скорее всего вообще ни с какими указателями
+  abc s{ 1, 0.5f, 0.24, "string", "view", 
+  //"char*", 
+  def{ 3.14, 5, 12 }, {1, 2, 3}, {4,5}, { { "ab", 45 }, { "de", 64 } } };
+
+  std::string c;
+  c.reserve(10000);
+  utils::to_json(s, c);
+  utils::println(c);
 
   return 0;
 }

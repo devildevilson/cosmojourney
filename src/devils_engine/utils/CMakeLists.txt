@@ -44,6 +44,8 @@ set(HDR_LIST
   safe_handle.h
   prng.h
   dice.h
+  
+  named_serializer.h
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})

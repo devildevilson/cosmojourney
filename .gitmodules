@@ -19,3 +19,9 @@
 [submodule "include/qc-hash"]
 	path = include/qc-hash
 	url = https://github.com/Daskie/qc-hash.git
+[submodule "include/reflect"]
+	path = include/reflect
+	url = https://github.com/boost-ext/reflect.git
+[submodule "include/glaze"]
+	path = include/glaze
+	url = https://github.com/stephenberry/glaze.git
