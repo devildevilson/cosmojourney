@@ -64,6 +64,20 @@ namespace devils_engine {
         // это индексы поэтому +1
         return input.substr(right, left - right + 1);
       }
+
+      constexpr bool is_digit(const char c) { return c <= '9' && c >= '0'; }
+      constexpr size_t stoi_impl(const std::string_view::iterator &beg, const std::string_view::iterator &end, size_t value = 0) {
+        if (beg == end) return value;
+        if (!is_digit(*beg)) return value;
+        return stoi_impl(beg + 1, end, size_t(*beg - '0') + value * 10);
+      }
+
+      constexpr size_t stoi(const std::string_view &str) {
+         return stoi_impl(str.begin(), str.end());
+      }
+
+      static_assert(stoi("10") == 10);
+      static_assert(stoi("346346363") == 346346363);
     }
   }
 }

@@ -120,6 +120,7 @@ namespace devils_engine {
       for (const auto &entry : fs::recursive_directory_iterator(root_path)) {
         if (!entry.is_regular_file()) continue;
         std::string entry_path = entry.path().generic_string();
+        //utils::println(entry_path);
         // generic_string уже сразу переводит строку в стандартный формат 
         // и значит скорее всего можно ожидать что и вся строка будет UTF-8 ?
 //#ifdef _WIN32
@@ -138,12 +139,9 @@ namespace devils_engine {
         res->set_path(entry_path, root_path);
         all_resources.push_back(res);
 
-        // куда то девается replacement
-
         // проверим загружали ли мы уже вещи
         auto itr = loaded.find(res->id);
         if (itr == loaded.end()) {
-          //itr = loaded.insert({ res->id, res }).first;
           loaded[res->id] = res;
           resources.push_back(res);
         } else {
@@ -152,18 +150,26 @@ namespace devils_engine {
                  other_ptr->module_name != res->module_name;
                other_ptr = other_ptr->replacement_next(itr->second)) {}
 
+          // тут мы реплейсмент меняем и с ним уходит сапплиментари
+          utils::println("res", res->module_name, res->id, "other_ptr", other_ptr != nullptr);
           if (other_ptr != nullptr) {
             // модули совпали, найдем у кого меньший индекс среди расширений
             const size_t other_place = t->ext.find(other_ptr->ext);
             const size_t res_place = t->ext.find(res->ext);
             if (res_place < other_place) {
-              //utils::ring::list_remove<list_type::replacement>(other_ptr);
-              // нужно найти его в списке ресурсов и заменить на другой указатель
-              res->supplementary_radd(other_ptr);
               if (other_ptr == itr->second) {
-                auto itr = std::find(resources.begin(), resources.end(), other_ptr);
-                (*itr) = res;
+                auto arr_itr = std::find(resources.begin(), resources.end(), other_ptr);
+                (*arr_itr) = res;
               }
+
+              auto old_repl = other_ptr->replacement_next(other_ptr);
+              other_ptr->replacement_remove();
+              res->replacement_radd(old_repl);
+
+              res->supplementary_radd(other_ptr);
+
+              // забыл поменять указатель в хеш мапе
+              itr->second = res;
             } else {
               other_ptr->supplementary_radd(res);
             }
@@ -265,6 +271,17 @@ namespace devils_engine {
       utils::ring::list_radd<list_type::exemplary>(this, ptr);
     }
 
+    void resource_interface::replacement_remove() {
+      utils::ring::list_remove<list_type::replacement>(this);
+    }
+
+    void resource_interface::supplementary_remove() {
+      utils::ring::list_remove<list_type::supplementary>(this);
+    }
+
+    void resource_interface::exemplary_remove() {
+      utils::ring::list_remove<list_type::exemplary>(this);
+    }
 
     void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type) {
       std::ifstream file(file_name, type);

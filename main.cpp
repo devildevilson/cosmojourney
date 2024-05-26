@@ -347,21 +347,21 @@ int main(int argc, char const *argv[]) {
   //  }
   //}
 
-  //{
-  //  utils::time_log l("sound/");
-  //  const auto found3 = sys.find("sound/");
-  //  utils::println();
-  //  utils::println("sound/", found3.size());
-  //  for (const auto ptr : found3) {
-  //    //utils::println(ptr->id);
-  //    //ptr->loading(utils::safe_handle_t());
-  //    for (auto rep = ptr; rep != nullptr; rep = rep->replacement_next(ptr)) {
-  //      for (auto sup = rep; sup != nullptr; sup = sup->supplementary_next(rep)) {
-  //        utils::println(sup->module_name, sup->id, sup->ext);
-  //      }
-  //    }
-  //  }
-  //}
+  {
+    utils::time_log l("sound/");
+    const auto found3 = sys.find("sound/");
+    utils::println();
+    utils::println("sound/", found3.size());
+    for (const auto ptr : found3) {
+      //utils::println(ptr->id);
+      //ptr->loading(utils::safe_handle_t());
+      for (auto rep = ptr; rep != nullptr; rep = rep->replacement_next(ptr)) {
+        for (auto sup = rep; sup != nullptr; sup = sup->supplementary_next(rep)) {
+          utils::println(sup->module_name, sup->id, sup->ext);
+        }
+      }
+    }
+  }
 
   // приведение работает вот так
   //utils::safe_handle_t handle;
