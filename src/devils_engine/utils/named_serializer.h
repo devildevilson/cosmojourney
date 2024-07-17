@@ -7,11 +7,6 @@
 #include <reflect>
 #include <vector>
 #include <array>
-#include <unordered_map>
-#include <map>
-#include <set>
-#include <unordered_set>
-#include <list>
 #include <format>
 #include <glaze/glaze.hpp>
 #include "utils/core.h"
@@ -23,38 +18,6 @@
 
 namespace devils_engine {
 namespace utils {
-
-template <typename Container>
-struct is_container : std::false_type {};
-template <typename... Ts>
-struct is_container<std::array<Ts...>> : std::true_type {};
-template <typename... Ts>
-struct is_container<std::span<Ts...>> : std::true_type {};
-template <typename T, size_t N>
-struct is_container<std::array<T, N>> : std::true_type {};
-template <typename T, size_t N>
-struct is_container<std::span<T, N>> : std::true_type {};
-template <typename... Ts>
-struct is_container<std::vector<Ts...>> : std::true_type {};
-template <typename... Ts>
-struct is_container<std::list<Ts...>> : std::true_type {};
-template <typename... Ts>
-struct is_container<std::unordered_set<Ts...>> : std::true_type {};
-template <typename... Ts>
-struct is_container<std::set<Ts...>> : std::true_type {};
-
-template <typename... Ts>
-constexpr bool is_container_v = is_container<Ts...>::value;
-
-template <typename Container>
-struct is_map : std::false_type {};
-template <typename... Ts>
-struct is_map<std::unordered_map<Ts...> > : std::true_type {};
-template <typename... Ts>
-struct is_map<std::map<Ts...> > : std::true_type {};
-
-template <typename... Ts>
-constexpr bool is_map_v = is_map<Ts...>::value;
 
 //template <typename T>
 //bool to_json(const T &x, std::string &c);

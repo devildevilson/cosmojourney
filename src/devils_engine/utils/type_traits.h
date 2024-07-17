@@ -4,6 +4,15 @@
 #include <type_traits>
 #include <functional>
 #include <string_view>
+#include <string>
+#include <vector>
+#include <array>
+#include <unordered_map>
+#include <map>
+#include <unordered_set>
+#include <set>
+#include <span>
+#include <list>
 
 namespace devils_engine {
   namespace utils {
@@ -31,6 +40,7 @@ namespace devils_engine {
         using result_type = R;
         using argument_types = std::tuple<Args..., void>;
         using arguments_tuple_t = std::tuple<Args...>;
+        static constexpr bool is_function = true;
         static constexpr function_class class_e = function_class::type;
         static constexpr size_t argument_count = std::tuple_size_v<argument_types> - 1;
       };
@@ -42,6 +52,7 @@ namespace devils_engine {
         using result_type = R;
         using argument_types = std::tuple<Args..., void>;
         using arguments_tuple_t = std::tuple<Args...>;
+        static constexpr bool is_function = true;
         static constexpr function_class class_e = function_class::pointer;
         static constexpr size_t argument_count = std::tuple_size_v<argument_types> - 1;
       };
@@ -52,6 +63,7 @@ namespace devils_engine {
         using result_type = R;
         using argument_types = std::tuple<Args..., void>;
         using arguments_tuple_t = std::tuple<Args...>;
+        static constexpr bool is_function = true;
         static constexpr function_class class_e = function_class::pointer_noexcept;
         static constexpr size_t argument_count = std::tuple_size_v<argument_types> - 1;
       };
@@ -63,6 +75,7 @@ namespace devils_engine {
         using result_type = R;
         using argument_types = std::tuple<Args..., void>;
         using arguments_tuple_t = std::tuple<Args...>;
+        static constexpr bool is_function = true;
         static constexpr function_class class_e = function_class::std_function;
         static constexpr size_t argument_count = std::tuple_size_v<argument_types> - 1;
       };
@@ -74,6 +87,7 @@ namespace devils_engine {
         using result_type = R;
         using argument_types = std::tuple<Args..., void>;
         using arguments_tuple_t = std::tuple<Args...>;
+        static constexpr bool is_function = true;
         static constexpr function_class class_e = function_class::member;
         static constexpr size_t argument_count = std::tuple_size_v<argument_types> - 1;
       };
@@ -85,6 +99,7 @@ namespace devils_engine {
         using result_type = R;
         using argument_types = std::tuple<Args..., void>;
         using arguments_tuple_t = std::tuple<Args...>;
+        static constexpr bool is_function = true;
         static constexpr function_class class_e = function_class::member_noexcept;
         static constexpr size_t argument_count = std::tuple_size_v<argument_types> - 1;
       };
@@ -96,6 +111,7 @@ namespace devils_engine {
         using result_type = R;
         using argument_types = std::tuple<Args..., void>;
         using arguments_tuple_t = std::tuple<Args...>;
+        static constexpr bool is_function = true;
         static constexpr function_class class_e = function_class::member_const;
         static constexpr size_t argument_count = std::tuple_size_v<argument_types> - 1;
       };
@@ -107,6 +123,7 @@ namespace devils_engine {
         using result_type = R;
         using argument_types = std::tuple<Args..., void>;
         using arguments_tuple_t = std::tuple<Args...>;
+        static constexpr bool is_function = true;
         static constexpr function_class class_e = function_class::member_const_noexcept;
         static constexpr size_t argument_count = std::tuple_size_v<argument_types> - 1;
       };
@@ -217,6 +234,38 @@ namespace devils_engine {
 
     template<typename T>
     using function_member_of = typename detail::function_traits<T>::member_of;
+
+    template <typename Container>
+    struct is_container : std::false_type {};
+    template <typename... Ts>
+    struct is_container<std::array<Ts...>> : std::true_type {};
+    template <typename... Ts>
+    struct is_container<std::span<Ts...>> : std::true_type {};
+    template <typename T, size_t N>
+    struct is_container<std::array<T, N>> : std::true_type {};
+    template <typename T, size_t N>
+    struct is_container<std::span<T, N>> : std::true_type {};
+    template <typename... Ts>
+    struct is_container<std::vector<Ts...>> : std::true_type {};
+    template <typename... Ts>
+    struct is_container<std::list<Ts...>> : std::true_type {};
+    template <typename... Ts>
+    struct is_container<std::unordered_set<Ts...>> : std::true_type {};
+    template <typename... Ts>
+    struct is_container<std::set<Ts...>> : std::true_type {};
+
+    template <typename... Ts>
+    constexpr bool is_container_v = is_container<Ts...>::value;
+
+    template <typename Container>
+    struct is_map : std::false_type {};
+    template <typename... Ts>
+    struct is_map<std::unordered_map<Ts...>> : std::true_type {};
+    template <typename... Ts>
+    struct is_map<std::map<Ts...>> : std::true_type {};
+
+    template <typename... Ts>
+    constexpr bool is_map_v = is_map<Ts...>::value;
 
     template <typename T>
     constexpr std::string_view type_name() { return detail::get_type_name<T>(); }

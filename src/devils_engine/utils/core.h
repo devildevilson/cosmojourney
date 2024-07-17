@@ -8,7 +8,9 @@
 #include <chrono>
 #include <iostream>
 #include <source_location>
+#include <reflect>
 #include "spdlog/spdlog.h"
+#include "type_traits.h"
 
 namespace devils_engine {
   namespace utils {
@@ -99,6 +101,105 @@ namespace devils_engine {
       return (size + alignment - 1) / alignment * alignment;
     }
 
+    template <class CharT, class Traits, typename T, size_t level = 1>
+    std::basic_ostream<CharT, Traits> &print_part(std::basic_ostream<CharT, Traits> &os, const T &obj);
+
+    template <class CharT, class Traits, typename T, size_t level>
+    std::basic_ostream<CharT, Traits> &print_value(std::basic_ostream<CharT, Traits> &os, const T &val) {
+      using mem_type = std::remove_cvref_t<T>;
+      if constexpr (std::is_same_v<mem_type, bool>) {
+        os << val ? "true" : "false";
+      } else if constexpr (std::is_arithmetic_v<mem_type>) {
+        os << val;
+      } else if constexpr (std::is_same_v<mem_type, const char *> ||
+                           std::is_same_v<mem_type, std::string> ||
+                           std::is_same_v<mem_type, std::string_view>) {
+        os << "\"" << val << "\"";
+      } else if constexpr (std::is_pointer_v<mem_type>) {
+        os << val;
+      } else if constexpr (utils::is_container_v<mem_type>) {
+        os << '[';
+        if (!val.empty()) {
+          os << ' ';
+          if (val.size() > 3) {
+            os << "size: " << val.size() << " ";
+          } else {
+            auto itr = val.begin();
+            auto itr_next = ++val.begin();
+            while (itr_next != val.end()) {
+              print_value<CharT, Traits, decltype(*itr), level>(os, *itr);
+              os << ", ";
+              ++itr;
+              ++itr_next;
+            }
+
+            print_value<CharT, Traits, decltype(*itr), level>(os, *itr);
+            os << ' ';
+          }
+        }
+        os << ']';
+      } else if constexpr (utils::is_map_v<mem_type>) {
+        os << '{';
+        if (!val.empty()) {
+          os << ' ';
+          if (val.size() > 3) {
+            os << "size: " << val.size() << " ";
+          } else {
+            auto itr = val.begin();
+            auto itr_next = ++val.begin();
+            while (itr_next != val.end()) {
+              const auto &[key, el] = *itr;
+              os << key;
+              os << " = ";
+              print_value<CharT, Traits, decltype(el), level>(os, el);
+              os << ", ";
+              ++itr;
+              ++itr_next;
+            }
+
+            const auto &[key, el] = *itr;
+            os << key;
+            os << " = ";
+            print_value<CharT, Traits, decltype(el), level>(os, el);
+            os << ' ';
+          }
+        }
+        os << '}';
+      } else if constexpr (std::is_function_v<mem_type>) {
+        os << "(function)";
+      } else {
+        print_part<CharT, Traits, decltype(val), level + 1>(os, val);
+        //os << '\n';
+      }
+
+      return os;
+    }
+
+    template <class CharT, class Traits, typename T, size_t level>
+    std::basic_ostream<CharT, Traits>& print_part(std::basic_ostream<CharT, Traits> &os, const T &obj) {
+      os << "{\n";
+
+      reflect::for_each(
+        [&](auto I) {
+          using value_type = decltype(reflect::get<I>(obj));
+          using mem_type = std::remove_cvref_t<value_type>;
+          const auto type_name = std::is_same_v<std::string, mem_type> ? std::string_view("std::string") : (std::is_same_v<std::string_view, mem_type> ? std::string_view("std::string_view") : utils::type_name<mem_type>());
+          const std::string_view name = reflect::member_name<I>(obj);
+          const auto &val = reflect::get<I>(obj);
+          for (size_t i = 0; i < level; ++i) { os << "  "; }
+          //os << type_name << ' ';
+          os << name << " = ";
+          print_value<CharT, Traits, value_type, level>(os, val);
+          os << ",\n";
+        }, obj
+      );
+
+      for (size_t i = 0; i < level-1; ++i) { os << "  "; }
+      os << '}';
+
+      return os;
+    }
+
     inline void print_detail() {}
 
     template <typename Arg, typename... Args>
@@ -176,6 +277,15 @@ namespace devils_engine {
     static_assert(count_significant(3) == 2);
     static_assert(count_significant(4) == 3);
   }
-}
+    
+    // poor man's struct log
+    template <class CharT, class Traits, typename T>
+    std::basic_ostream<CharT, Traits> &operator<<(std::basic_ostream<CharT, Traits> &os, const T &obj) {
+      using mem_type = std::remove_cvref_t<T>;
+      const auto type_name = utils::type_name<mem_type>();
+      os << type_name << " ";
+      return utils::print_part(os, obj);
+    }
+  }
 
 #endif

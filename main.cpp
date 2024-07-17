@@ -121,6 +121,7 @@ struct abc {
   //const char* f;
   struct def def;
   std::vector<int> vector;
+  std::vector<std::string> vector_s;
   std::array<int, 2> arr;
   std::unordered_map<std::string_view, int> map;
 };
@@ -347,21 +348,21 @@ int main(int argc, char const *argv[]) {
   //  }
   //}
 
-  {
-    utils::time_log l("sound/");
-    const auto found3 = sys.find("sound/");
-    utils::println();
-    utils::println("sound/", found3.size());
-    for (const auto ptr : found3) {
-      //utils::println(ptr->id);
-      //ptr->loading(utils::safe_handle_t());
-      for (auto rep = ptr; rep != nullptr; rep = rep->replacement_next(ptr)) {
-        for (auto sup = rep; sup != nullptr; sup = sup->supplementary_next(rep)) {
-          utils::println(sup->module_name, sup->id, sup->ext);
-        }
-      }
-    }
-  }
+  //{
+  //  utils::time_log l("sound/");
+  //  const auto found3 = sys.find("sound/");
+  //  utils::println();
+  //  utils::println("sound/", found3.size());
+  //  for (const auto ptr : found3) {
+  //    //utils::println(ptr->id);
+  //    //ptr->loading(utils::safe_handle_t());
+  //    for (auto rep = ptr; rep != nullptr; rep = rep->replacement_next(ptr)) {
+  //      for (auto sup = rep; sup != nullptr; sup = sup->supplementary_next(rep)) {
+  //        utils::println(sup->module_name, sup->id, sup->ext);
+  //      }
+  //    }
+  //  }
+  //}
 
   // приведение работает вот так
   //utils::safe_handle_t handle;
@@ -377,12 +378,17 @@ int main(int argc, char const *argv[]) {
   // ну и скорее всего вообще ни с какими указателями
   abc s{ 1, 0.5f, 0.24, "string", "view", 
   //"char*", 
-  def{ 3.14, 5, 12 }, {1, 2, 3}, {4,5}, { { "ab", 45 }, { "de", 64 } } };
+  def{ 3.14, 5, 12 }, {1, 2, 3}, {"abc", "def", "asfaf"}, {4,5}, { { "ab", 45 }, { "de", 64 } } };
 
   std::string c;
   c.reserve(10000);
   utils::to_json(s, c);
   utils::println(c);
+  c.clear();
+  utils::to_lua(s, c);
+  utils::println(c);
+
+  utils::println(s);
 
   return 0;
 }
