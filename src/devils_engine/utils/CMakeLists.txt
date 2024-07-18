@@ -29,6 +29,7 @@ set(SRC_LIST
   bits.cpp
   bitstream.cpp
   prng.cpp
+  fileio.cpp
 )
 
 set(HDR_LIST
@@ -46,6 +47,7 @@ set(HDR_LIST
   dice.h
   
   named_serializer.h
+  fileio.h
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})

@@ -25,3 +25,9 @@
 [submodule "include/glaze"]
 	path = include/glaze
 	url = https://github.com/stephenberry/glaze.git
+[submodule "include/llfio"]
+	path = include/llfio
+	url = https://github.com/ned14/llfio.git
+[submodule "include/alpaca"]
+	path = include/alpaca
+	url = https://github.com/p-ranav/alpaca.git
