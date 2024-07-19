@@ -31,3 +31,9 @@
 [submodule "include/alpaca"]
 	path = include/alpaca
 	url = https://github.com/p-ranav/alpaca.git
+[submodule "include/dds_image"]
+	path = include/dds_image
+	url = https://github.com/spnda/dds_image.git
+[submodule "include/tiny_ktx"]
+	path = include/tiny_ktx
+	url = https://github.com/DeanoC/tiny_ktx.git
