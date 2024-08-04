@@ -278,14 +278,14 @@ namespace devils_engine {
     static_assert(count_significant(4) == 3);
   }
     
-    // poor man's struct log
-    template <class CharT, class Traits, typename T>
-    std::basic_ostream<CharT, Traits> &operator<<(std::basic_ostream<CharT, Traits> &os, const T &obj) {
-      using mem_type = std::remove_cvref_t<T>;
+    // poor man's struct log, needs polishing
+    /*template <class chart, class traits, typename t>
+    std::basic_ostream<chart, traits> &operator<<(std::basic_ostream<chart, traits> &os, const t &obj) {
+      using mem_type = std::remove_cvref_t<t>;
       const auto type_name = utils::type_name<mem_type>();
       os << type_name << " ";
       return utils::print_part(os, obj);
-    }
+    }*/
   }
 
 #endif

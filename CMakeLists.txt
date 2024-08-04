@@ -42,6 +42,7 @@ include_directories(
   include/qc-hash/
   include/reflect/
   include/glaze/include/
+  include/alpaca/include/
   src/devils_engine/
   src/cosmojourney/
 )

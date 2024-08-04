@@ -16,9 +16,24 @@ namespace sml = boost::sml;
   X(unload) \
   X(memory_load) \
 
+#define DEMIURG_STATES_LIST2 \
+  X(cold)                  \
+  X(warm)                  \
+  X(hot)                   \
+
 #define DEMIURG_ACTIONS_LIST \
   X(unload) \
   X(load_to_memory) \
+
+// по сути действия будет только 2, загрузить/выгрузить
+// загрузка переводит на стейт ниже в DEMIURG_STATES_LIST2, выгрузка на стейт выше
+// при этом должны ли ресурсы следить за свои состоянием?
+// или состояние можно сделать тут?
+#define DEMIURG_ACTIONS_LIST2 \
+  X(load_warm)                \
+  X(load_hot)                 \
+  X(unload_warm)              \
+  X(unload_cold)              \
 
 #define DEMIURG_RESOURCE_FLAGS_LIST \
   X(underlying_owner_of_raw_memory) \
@@ -179,8 +194,31 @@ namespace devils_engine {
         process_event(demiurg::unloading{handle});
       }
 
+      // скорее всего это все что нужно
+      // handle нужно будет менять в зависимости от стейта
+      void load2(const utils::safe_handle_t& handle) {
+        switch (state) {
+          case 0: load_cold(handle); break;
+          case 1: load_warm(handle); break;
+          case 3: break;
+        }
+
+        state = std::max(state + 1, 2);
+      }
+
+      void unload2(const utils::safe_handle_t& handle) {
+        switch (state) {
+          case 0: break;
+          case 1: unload_warm(handle); break;
+          case 2: unload_hot(handle);  break;
+        }
+
+        state = std::min(state - 1, 0);
+      }
+
     protected:
-      sml::sm<Table> sm;
+      sml::sm<Table> sm; // ненужен
+      int32_t state;
     };
 
     void parse_path(

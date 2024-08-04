@@ -50,5 +50,16 @@ set(HDR_LIST
   fileio.h
 )
 
+include_directories(
+  include/spdlog/include/
+  include/stb/
+  include/glm/
+  include/sml/include
+  include/qc-hash/
+  include/reflect/
+  include/glaze/include/
+  include/alpaca/include/
+)
+
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(${DEVILS_LIBRARY_NAME})

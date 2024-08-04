@@ -18,7 +18,7 @@ enum class type {
   count
 };
 
-template <typename BYTE_TYPE = char>
+template <typename BYTE_TYPE = uint8_t>
 std::vector<BYTE_TYPE> read(const std::string &path, const enum type type = type::binary);
 std::string read(const std::string &path, const enum type type = type::text);
 void write(const std::span<char> &bytes, const std::string &path, const enum type type = type::binary);
