@@ -2,6 +2,7 @@
 #include <utils/core.h>
 #include <fstream>
 #include <demiurg/system.h>
+#include "demiurg/module_interface.h"
 
 //void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type = std::ios::binary) {
 //  std::ifstream file(file_name, type);
@@ -22,31 +23,32 @@ namespace cosmojourney {
     );
   }*/
 
-  namespace sound_actions_detail {
+  /*namespace sound_actions_detail {
 #define X(name) void name(sound_resource* res, const utils::safe_handle_t &handle) { res->name(handle); }
     DEMIURG_ACTIONS_LIST
 #undef X
-  }
+  }*/
 
-  sound_resource::sound_resource() noexcept : 
-    resource_base<sound_resource_table>(this) {
+  sound_resource::sound_resource() noexcept //: 
+  //  resource_base<sound_resource_table>(this) 
+  {
     set_flag(demiurg::resource_flags::binary, true);
+    set_flag(demiurg::resource_flags::warm_and_hot_same, true);
+    set_flag(demiurg::resource_flags::underlying_owner_of_raw_memory, true);
     //utils::println("res ptr", this);
   }
 
   // тут по идее должен передаваться демиурговский стейт
   // там у нас например такие вещи как загруженные в память модули
-  void sound_resource::unload(const utils::safe_handle_t&) {
+  void sound_resource::unload_warm(const utils::safe_handle_t&) {
     // здесь че делаем? полностью выгружаем саунд рез
     res.reset(nullptr);
     raw_size = 0;
   }
 
-  void sound_resource::load_to_memory(const utils::safe_handle_t& handle) {
-    // тут мы должны понять что перед нами:
-    // зип архив или просто файл?
-    // пытаемся вгрузить это дело с диска
-    // для некоторых типов ресурсов закончим на этом, для других можно здесь прям все сделать
+  void sound_resource::unload_hot(const utils::safe_handle_t&) {}
+
+  void sound_resource::load_cold(const utils::safe_handle_t& handle) {
     auto sound_type = sound::system::resource::type::undefined;
     for (size_t i = 0; i < static_cast<size_t>(sound::system::resource::type::undefined); ++i) {
       if (ext == sound::system::resource::type_to_string(i)) {
@@ -59,15 +61,18 @@ namespace cosmojourney {
       utils::error("Sound format '{}' is not supported, path: {}", ext, path);
     }
 
-    // тут наверное все таки будт обращение в систему демиурга чтобы файлик получить
-    demiurg::load_file(path, file_memory, std::ios::binary);
+    // тут наверное все таки будт обращение в систему демиурга чтобы файлик получить (нет будет модуль)
+    //demiurg::load_file(path, file_memory, std::ios::binary);
+    module->load_binary(path, file_memory); // как то нужно подгрузить зип модуль а потом его выгрузить
     raw_size = file_memory.size();
     res = std::make_unique<sound::system::resource>(path, sound_type, std::move(file_memory));
     file_memory.clear();
     file_memory.shrink_to_fit();
-    set_flag(demiurg::resource_flags::underlying_owner_of_raw_memory, true);
+    //set_flag(demiurg::resource_flags::underlying_owner_of_raw_memory, true);
     duration = res->duration();
 
     utils::info("Load {}", id);
   }
+
+  void sound_resource::load_warm(const utils::safe_handle_t&) {}
 }

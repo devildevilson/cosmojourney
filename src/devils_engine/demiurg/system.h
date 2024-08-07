@@ -55,6 +55,16 @@ namespace devils_engine {
       reverse_iterator rend() const noexcept { return reverse_iterator(super::rend()); }
     };
 
+    struct module_data {
+      std::string path;
+      std::string_view name;
+      std::string hash; // как считать хеш для папок?
+      size_t workshop_id;
+      // метка времени создания? 
+      resource_interface* thumbnail;
+      resource_interface* description; // да его поди сразу загрузить нужно
+    };
+
     class system {
     public:
       struct type {
@@ -80,7 +90,7 @@ namespace devils_engine {
         void destroy(resource_interface * ptr);
       };
 
-      system() noexcept = default;
+      system() noexcept;
       system(std::string root) noexcept;
       ~system() noexcept;
 
@@ -97,6 +107,8 @@ namespace devils_engine {
         //types.insert(std::make_pair(types->name, type));
         types[type->name] = type;
       }
+
+      system::type* find_type(const std::string_view &id, const std::string_view &extension) const;
 
       std::string_view root() const;
       void set_root(std::string root);
@@ -119,23 +131,46 @@ namespace devils_engine {
       // наверное все удалим и заново прочитаем дерево файлов (логично)
       void parse_file_tree();
 
+      // при входе в саму игру грузим модули с конфига
+      void load_modules();
+
+      // можно ли вызвать несколько раз? можно, но при этом несколько раз создадим thumbnail, хотя его поди можно найти где нибудь
+      // прочитаем файлики на диске, и видимо придется предварительно подгрузить архивы и выгрузить оттуда картинки и описание
+      std::vector<module_data> get_modules();
+
+      // во первых сохраним в конфиг последнюю настройку модулей
+      // во вторых было бы неплохо настройку сохранить под разными профилями
+      void save_list(std::string name, std::vector<module_data> data);
+      std::vector<module_data> load_list(std::string name);
+      std::vector<std::string> available_lists();
+
       void clear();
 
       size_t resources_count() const noexcept;
       size_t all_resources_count() const noexcept;
     private:
       std::string root_path;
+      std::string current_modules_list;
 
       utils::memory_pool<type, sizeof(type)*100> types_pool;
       //qc::hash::RawMap<std::string_view, type *, qc::hash::FastHash<std::string_view>> types;
       ska::flat_hash_map<std::string_view, type*> types;
       std::vector<resource_interface *> resources;
       std::vector<resource_interface *> all_resources;
+      // это загруженные модули, ни в коем случае нельзя их трогать во время игры
+      // список получаем из конфига
+      std::vector<std::unique_ptr<module_interface>> modules;
 
       // здесь еще будет отдельный список модулей + список списков модулей
+      // наверное список получим и отдадим его вовне, что должно быть в списке?
+      // полный путь + время создания + название + (возможно) id воркшопа + хеш + ресурс картинки + ресурс с описанием
+      // получаем на вход список модулей в определенном порядке, по ним создаем конфиг на диск
+      // затем при загрузке считываем конфиг
 
-      system::type *find_proper_type(const std::string_view &id, const std::string_view &extencion) const;
+      system::type *find_proper_type(const std::string_view &id, const std::string_view &extension) const;
       std::span<resource_interface * const> raw_find(const std::string_view &filter) const;
+
+      // тут у нас будет по крайней мере два типа модулей: найденные модули на диске и текущие загруженные модули + структура для сохранения выбранных модулей
     };
 
     void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type);

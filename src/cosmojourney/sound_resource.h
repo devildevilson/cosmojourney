@@ -12,42 +12,44 @@ using namespace devils_engine;
 namespace cosmojourney {
   class sound_resource;
 
-  namespace sound_actions_detail {
-#define X(name) void name(sound_resource* res, const utils::safe_handle_t &handle);
-  DEMIURG_ACTIONS_LIST
-#undef X
-  }  // namespace sound_actions_detail
-
-  // толку с этого особенно никакого нет
-  // я думал что получиться определить таблицу в cpp файле
-  // но так не сработало, для чего я в принципе делал эти вещи?
-  // хотел чтобы у каждого ресурса была своя стейтмашина и можно было легко понять что к чему
-  // 
-  struct sound_resource_table {
-      auto operator()() const {
-//#define X(name) const std::function<void(sound_resource* res, void* ptr)> name = &sound_actions_detail::name;
+//  namespace sound_actions_detail {
+//#define X(name) void name(sound_resource* res, const utils::safe_handle_t &handle);
+//  DEMIURG_ACTIONS_LIST
+//#undef X
+//  }  // namespace sound_actions_detail
+//
+//  // толку с этого особенно никакого нет
+//  // я думал что получиться определить таблицу в cpp файле
+//  // но так не сработало, для чего я в принципе делал эти вещи?
+//  // хотел чтобы у каждого ресурса была своя стейтмашина и можно было легко понять что к чему
+//  // 
+//  struct sound_resource_table {
+//      auto operator()() const {
+////#define X(name) const std::function<void(sound_resource* res, void* ptr)> name = &sound_actions_detail::name;
+////        DEMIURG_ACTIONS_LIST
+////#undef X
+//
+//#define X(name) const auto l##name = [](demiurg::inj<sound_resource> i, const auto& event){ sound_actions_detail::name(i.ptr, event.handle); };
 //        DEMIURG_ACTIONS_LIST
 //#undef X
+//
+//      using namespace sml;
+//      return make_transition_table(
+//        *state<demiurg::unload> + event<demiurg::loading> / lload_to_memory = state<demiurg::memory_load>,
+//         state<demiurg::memory_load> + event<demiurg::unloading> / lunload = state<demiurg::unload>
+//      );
+//    }
+//  };
 
-#define X(name) const auto l##name = [](demiurg::inj<sound_resource> i, const auto& event){ sound_actions_detail::name(i.ptr, event.handle); };
-        DEMIURG_ACTIONS_LIST
-#undef X
-
-      using namespace sml;
-      return make_transition_table(
-        *state<demiurg::unload> + event<demiurg::loading> / lload_to_memory = state<demiurg::memory_load>,
-         state<demiurg::memory_load> + event<demiurg::unloading> / lunload = state<demiurg::unload>
-      );
-    }
-  };
-
-  class sound_resource final : public demiurg::resource_base<sound_resource_table> {
+  class sound_resource final : //public demiurg::resource_base<sound_resource_table> 
+    public demiurg::resource_interface
+  {
   public:
     sound_resource() noexcept;
     ~sound_resource() noexcept = default;
 
-    void unload(const utils::safe_handle_t& handle) override;
-    void load_to_memory(const utils::safe_handle_t& handle) override;
+    //void unload(const utils::safe_handle_t& handle) override;
+    //void load_to_memory(const utils::safe_handle_t& handle) override;
 
     // как то нужно собственно сам ресурс передавать из места к месту
     // но хотя это все равно будет через тот или иной прокси
@@ -57,6 +59,11 @@ namespace cosmojourney {
     // в конфигах наверное мы будем через require получать объект с ресурсом
     // нам может пригодиться для интерфейса вся информация о ресурсе
     // в том числе также мы сделаем подгрузку скриптов
+     
+    void load_cold(const utils::safe_handle_t& handle) override;
+    void load_warm(const utils::safe_handle_t& handle) override;
+    void unload_warm(const utils::safe_handle_t& handle) override;
+    void unload_hot(const utils::safe_handle_t& handle) override;
   private:
     std::unique_ptr<sound::system::resource> res;
   };
@@ -102,5 +109,34 @@ namespace cosmojourney {
 // это близкие предметы на который основной фокус: персонажи и противники
 // например НПС в геншине используют 1024... даже несколько 1024 текстурок
 // диффуз (1024), карта света (1024) + шедов (256х20)
+// возможно надо заиметь какую то внешнюю систему которая увеличит или уменьшит бюджеты
+// и посчитает заодно сколько чего нам доступно
+// если брать 32 и делить постоянно на пополам, то:
+// 16*1 1024   = 16  * 1024*1024*4 = 67108864 (64мб)
+// 2*16 512    = 32  * 512*512*4   = 33554432 (32мб) 
+// 1*64 256    = 64  * 256*256*4   = 16777216 (16мб)
+// .5*256 128  = 128 * 128*128*4   =  8388608 ( 8мб)
+// и еще остается 8мб либо все займем 128, либо сделаем 512 64 картинок
+// всего картинок либо 363 либо 752
+// мне нужна система которая примет на вход наверное бюджеты
+// и выдаст обратно список размеров, который в свою очередь скушает система картинок
+// остается открытый вопрос по форматам: самые необходимые форматы это
+// РГБА32 и БЦ7, все картинки так или иначе будут сведены к этим форматам
+// могут ли быть специальные форматы? вообще да, явно могут пригодиться форматы типа R8
+// да еще BCn формат плохо работает с нормалями (в общем наверное со всем кроме цвета)
+// нормали как будто лучше хранить в формате R16G16, вообще по форматам как будто 
+// любое решение плохое и лучше вообще создать для каждой текстурки свой VkImage 
+// и просто биндить регион памяти по ходу дела
+// как будто в ПБР есть 3 текстурки - цвет, нормаль, метал/шероховатость/тени
+// все они по 3 компонента (кажется)
+// в общем чем дальше тем сложнее что то придумать адекватное
+// я бы предположил что текстурные массивы это конечно интересно, но видимо самый нормальный способ это
+// пул памяти по типу меморипула который есть у меня - то есть мы заранее создаем большой объект
+// и делим его на несколько частей, где одна часть это условно 3 картинки связанные между собой
+// 9мб без мипуровней 1024 rgb
+// ну наверное все равно можно оставить изначальную идею о текстурных массивах
+// только в общем случае понять какой формат превалирует и возможно создать несколько менеджеров текстурок
+// один чист для BC7 а другой ргб24 или ргба32
+// 
 
 #endif

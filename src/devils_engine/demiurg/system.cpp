@@ -36,13 +36,17 @@ namespace devils_engine {
       allocator.destroy(ptr);
     }
 
-    system::system(std::string root) noexcept : root_path(std::move(root)) {}
+    // по умолчанию что можно в путь положить?
+    system::system() noexcept : root_path(), current_modules_list("default") {}
+    system::system(std::string root) noexcept : root_path(std::move(root)), current_modules_list("default") {}
     system::~system() noexcept { 
       clear();
       for (auto & [name, ptr] : types) {
         types_pool.destroy(ptr);
       }
     }
+
+    system::type* system::find_type(const std::string_view &id, const std::string_view &extension) const { return find_proper_type(id, extension); }
 
     std::string_view system::root() const { return root_path; }
     void system::set_root(std::string root) { root_path = std::move(root); }
@@ -112,6 +116,7 @@ namespace devils_engine {
     // эта функция будет состоять из двух этапов:
     // 1) в рутовой папке мы ищем все файлы и папки
     // 2) файлы и папки это модули на основе которых мы построим дерево ресурсов
+    // теперь нужно сделать загрузку через модули
     void system::parse_file_tree() {
       clear();
 
@@ -233,6 +238,13 @@ namespace devils_engine {
       this->path = std::move(path);
       std::string_view file_name;
       parse_path(this->path, root, module_name, file_name, ext, id);
+    }
+
+    void resource_interface::set(std::string path, const std::string_view &module_name, const std::string_view &id, const std::string_view &ext) {
+      this->path = std::move(path);
+      this->module_name = module_name;
+      this->id = id;
+      this->ext = ext;
     }
 
     resource_interface *resource_interface::replacement_next(const resource_interface *ptr) const {
