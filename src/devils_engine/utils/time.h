@@ -49,7 +49,7 @@ namespace utils {
     uint32_t minute;
     uint32_t second;
     // день недели, блен сильно зависит какой был день недели в самом начале, но при этом можно от этого вывести какой сейчас день недели
-    //uint32_t week_day;
+    uint32_t week_day;
 
     date();
 
@@ -69,19 +69,24 @@ namespace utils {
     };
 
     date_system() noexcept;
-    void init(std::vector<month> months, const uint32_t hours_in_day = 24, const uint32_t minutes_in_hour = 60, const uint32_t seconds_in_minute = 60, const uint32_t days_in_week = 7) noexcept;
+    void init(std::vector<month> months, std::vector<std::string> week, const uint32_t hours_in_day = 24, const uint32_t minutes_in_hour = 60, const uint32_t seconds_in_minute = 60) noexcept;
     void set_start_date(const date &d) noexcept;
 
     bool is_valid(const date &d) const;
     timestamp_t cast(const date &d) const;
     date cast(const timestamp_t &t) const;
-    timestamp_t add(const timestamp_t cur, const int32_t years, const int32_t months, const int32_t days) const;
+    timestamp_t add(const timestamp_t cur, int32_t years, int32_t months, int32_t days) const;
 
     date initial_date() const;
-    // при вычитании и сложении мне нужны конкретные месяцы, причем со стартовым и конечным днем
-    // короче с датами вообще не нужно так работать, чисто метки времени использовать и все
-    date add(const date &a, const timestamp_t &t) const;
-    date sub(const date &a, const timestamp_t &t) const;
+    std::string_view month_str(const uint32_t index) const;
+    std::string_view month_str(const date &d) const;
+    std::string_view week_day_str(const uint32_t index) const;
+    std::string_view week_day_str(const date &d) const;
+    bool is_leap_year(const int32_t year) const;
+    bool is_leap_year(const date &d) const;
+
+    size_t date_count_days(const date &d) const;
+    size_t week_number(const date &d) const;
   private:
     size_t year_days(const int32_t year) const;
     size_t day_seconds() const;
@@ -92,13 +97,12 @@ namespace utils {
     uint32_t hours_in_day;
     uint32_t minutes_in_hour;
     uint32_t seconds_in_minute;
-    uint32_t days_in_week; 
   };
 
   class game_date {
   public:
     static const date_system & get();
-    void init(std::vector<date_system::month> months, const uint32_t hours_in_day = 24, const uint32_t minutes_in_hour = 60, const uint32_t seconds_in_minute = 60, const uint32_t days_in_week = 7);
+    void init(std::vector<date_system::month> months, std::vector<std::string> week, const uint32_t hours_in_day = 24, const uint32_t minutes_in_hour = 60, const uint32_t seconds_in_minute = 60);
     void set_start_date(const date &d);
   private:
     static date_system s;

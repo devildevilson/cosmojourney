@@ -10,7 +10,7 @@ namespace utils {
     utils::info("{} took {} mcs ({:.3} seconds)", str, mcs, double(mcs)/1000000.0);
   }
 
-  date::date() : year(0), month(0), day(0), hour(0), minute(0), second(0) {}
+  date::date() : year(0), month(0), day(0), hour(0), minute(0), second(0), week_day(0) {}
 
   static const std::vector<date_system::month> default_months({
     date_system::month{ "january", 31, 0 },
@@ -27,13 +27,18 @@ namespace utils {
     date_system::month{ "december", 31, 0 }
   });
 
-  date_system::date_system() noexcept : months(default_months), hours_in_day(24), minutes_in_hour(60), seconds_in_minute(60), days_in_week(7) {}
-  void date_system::init(std::vector<month> months, const uint32_t hours_in_day, const uint32_t minutes_in_hour, const uint32_t seconds_in_minute, const uint32_t days_in_week) noexcept {
+  static const std::vector<std::string> default_week({
+    "monday",
+
+  });
+
+  date_system::date_system() noexcept : months(default_months), week(default_week), hours_in_day(24), minutes_in_hour(60), seconds_in_minute(60), days_in_week(7) {}
+  void date_system::init(std::vector<month> months, std::vector<std::string> week, const uint32_t hours_in_day, const uint32_t minutes_in_hour, const uint32_t seconds_in_minute) noexcept {
     this->months = std::move(months);
+    this->week = std::move(week);
     this->hours_in_day = hours_in_day;
     this->minutes_in_hour = minutes_in_hour;
     this->seconds_in_minute = seconds_in_minute;
-    this->days_in_week = days_in_week;
   }
 
   void date_system::set_start_date(const date &d) noexcept {
@@ -143,11 +148,13 @@ namespace utils {
       const uint32_t remain_days = month_days - d.day;
       if (add_days <= remain_days) {
         d.day += add_days;
+        d.week_day = (d.week_day + add_days) % week.size();
         add_days = 0;
       } else {
         d.day = 0;
         d.month += 1;
         add_days -= remain_days;
+        d.week_day = (d.week_day + remain_days) % week.size();
       }
     }
 
@@ -163,12 +170,15 @@ namespace utils {
   // чутка долго получается, как быстрее? сразу пачками прибавлять/вычитать
   // там увы не очень очевидно как сделать для двух знаков
   // прям супер тяжелая функция
-  timestamp_t date_system::add(const timestamp_t cur, const int32_t years, int32_t months, int32_t days) const {
+  timestamp_t date_system::add(const timestamp_t cur, int32_t years, int32_t months, int32_t days) const {
     auto cur_date = cast(cur);
 
     while (days != 0) {
-      days = sign(days) * int32_t(std::abs(days) - 1);
-      cur_date.day += sign(days);
+      const auto s = sign(days);
+      days = s * int32_t(std::abs(days) - 1);
+      cur_date.day += s;
+      if (s > 0) { cur_date.week_day = (cur_date.week_day + 1) % week.size(); }
+      else { cur_date.week_day = cur_date.week_day != 0 ? cur_date.week_day - 1 : week.size() - 1; }
 
       const auto &m = this->months[cur_date.month];
       const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && (cur_date.year % std::abs(m.leap_day) == 0));
@@ -195,8 +205,14 @@ namespace utils {
     }
 
     while (months != 0) {
+      const auto &m = this->months[cur_date.month];
+      const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && (cur_date.year % std::abs(m.leap_day) == 0));
+
       months = sign(months) * int32_t(std::abs(months) - 1);
       cur_date.month += sign(months);
+      if (sign(months) > 0) cur_date.week_day = (cur_date.week_day + month_days) % week.size();
+      else cur_date.week_day = (int64_t(int32_t(cur_date.week_day) - int32_t(month_days)) % int64_t(week.size()));
+
       if (cur_date.month == UINT32_MAX) {
         cur_date.month = this->months.size()-1;
         cur_date.year -= 1;
@@ -208,9 +224,50 @@ namespace utils {
       }
     }
 
-    cur_date.year += years;
+    while (years != 0) {
+      const size_t days = year_days(cur_date.year);
+
+      years = sign(years) * int32_t(std::abs(years) - 1);
+      cur_date.year += sign(years);
+
+      if (sign(months) > 0) cur_date.week_day = (cur_date.week_day + days) % week.size();
+      else cur_date.week_day = (int64_t(int32_t(cur_date.week_day) - int32_t(days)) % int64_t(week.size()));
+    }
 
     return cast(cur_date);
+  }
+
+  date date_system::initial_date() const { return start_date; }
+  std::string_view date_system::month_str(const uint32_t index) const { return index < months.size() ? months[index].name : ""; }
+  std::string_view date_system::week_day_str(const uint32_t index) const { return index < week.size() ? week[index] : ""; }
+  std::string_view date_system::month_str(const date &d) const { return month_str(d.month); }
+  std::string_view date_system::week_day_str(const date &d) const { return week_day_str(d.week_day); }
+  bool date_system::is_leap_year(const int32_t year) const {
+    for (const auto &m : months) {
+      const uint32_t leap_day = sign(m.leap_day) * int32_t(m.leap_day != 0 && (year % std::abs(m.leap_day) == 0));
+      if (leap_day != 0) return true;
+    }
+
+    return false;
+  }
+
+  bool date_system::is_leap_year(const date &d) const { return is_leap_year(d.year); }
+
+  size_t date_system::date_count_days(const date &d) const {
+    size_t count = 0;
+    for (uint32_t i = 0; i < d.month+1; ++i) {
+      const auto &m = this->months[i];
+      const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && (d.year % std::abs(m.leap_day) == 0));
+
+      count += month_days;
+    }
+
+    count += d.day+1;
+    return count;
+  }
+  
+  size_t date_system::week_number(const date &d) const {
+    return date_count_days(d) / week.size();
   }
 
   size_t date_system::year_days(const int32_t year) const {
@@ -228,8 +285,8 @@ namespace utils {
   }
 
   const date_system &game_date::get() { return s; }
-  void game_date::init(std::vector<date_system::month> months, const uint32_t hours_in_day, const uint32_t minutes_in_hour, const uint32_t seconds_in_minute, const uint32_t days_in_week) {
-    s.init(months, hours_in_day, minutes_in_hour, seconds_in_minute, days_in_week);
+  void game_date::init(std::vector<date_system::month> months, std::vector<std::string> week, const uint32_t hours_in_day, const uint32_t minutes_in_hour, const uint32_t seconds_in_minute) {
+    s.init(std::move(months), std::move(week), hours_in_day, minutes_in_hour, seconds_in_minute);
   }
 
   void game_date::set_start_date(const date &d) { s.set_start_date(d); }
