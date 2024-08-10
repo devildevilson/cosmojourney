@@ -30,7 +30,7 @@ set(SRC_LIST
   bitstream.cpp
   prng.cpp
   fileio.cpp
-)
+ "time.cpp")
 
 set(HDR_LIST
   block_allocator.h
@@ -48,7 +48,7 @@ set(HDR_LIST
   
   named_serializer.h
   fileio.h
-)
+ "time.h")
 
 include_directories(
   include/spdlog/include/

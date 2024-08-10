@@ -33,14 +33,6 @@ namespace devils_engine {
       throw std::runtime_error("Assertion failed");
     }
 
-    time_log::time_log(std::string str) noexcept : str(std::move(str)), tp(std::chrono::steady_clock::now()) {}
-    time_log::~time_log() noexcept {
-      const auto dur = std::chrono::steady_clock::now() - tp;
-      const size_t mcs = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
-      //println(str, "took", mcs, "mcs");
-      info("{} took {} mcs ({:.3} seconds)", str, mcs, double(mcs)/1000000.0);
-    }
-
     tracer::tracer(std::source_location loc) noexcept : l(std::move(loc)) {
       spdlog::log(spdlog::level::trace, "in  {}:{} `{}`", make_sane_file_name(l.file_name()), l.line(), l.function_name());
     }

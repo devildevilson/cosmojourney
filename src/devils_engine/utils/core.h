@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <string_view>
 #include <stdexcept>
-#include <chrono>
 #include <iostream>
 #include <source_location>
 #include <reflect>
@@ -221,20 +220,6 @@ namespace devils_engine {
       print(std::forward<Args>(args)...);
       std::cout << "\n";
     }
-
-    class time_log {
-    public:
-      std::string str;
-      std::chrono::steady_clock::time_point tp;
-
-      time_log(std::string str) noexcept;
-      ~time_log() noexcept;
-
-      time_log(const time_log &copy) noexcept = delete;
-      time_log(time_log &&move) noexcept = delete;
-      time_log & operator=(const time_log &copy) noexcept = delete;
-      time_log & operator=(time_log &&move) noexcept = delete;
-    };
 
     class tracer {
     public:
