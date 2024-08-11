@@ -3,36 +3,74 @@
 
 namespace devils_engine {
 namespace utils {
-  time_log::time_log(std::string str) noexcept : str(std::move(str)), tp(std::chrono::steady_clock::now()) {}
+  time_log::time_log(const std::string_view &str) noexcept : str(str), tp(std::chrono::steady_clock::now()) {}
   time_log::~time_log() noexcept {
     const auto dur = std::chrono::steady_clock::now() - tp;
     const size_t mcs = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
     utils::info("{} took {} mcs ({:.3} seconds)", str, mcs, double(mcs)/1000000.0);
   }
 
-  date::date() : year(0), month(0), day(0), hour(0), minute(0), second(0), week_day(0) {}
+  unix_timestamp_t timestamp() noexcept {
+    const auto p1 = std::chrono::system_clock::now();
+    return std::chrono::duration_cast<std::chrono::seconds>(p1.time_since_epoch()).count();
+  }
+
+  size_t format_UTC(const char *format, char* buffer, const size_t max_size) noexcept {
+    const auto p1 = std::chrono::system_clock::now();
+    const auto t = std::chrono::system_clock::to_time_t(p1);
+    return std::strftime(buffer, max_size, format, std::gmtime(&t));
+  }
+
+  size_t format_localtime(const char *format, char* buffer, const size_t max_size) noexcept {
+    const auto p1 = std::chrono::system_clock::now();
+    const auto t = std::chrono::system_clock::to_time_t(p1);
+    return std::strftime(buffer, max_size, format, std::localtime(&t));
+  }
+
+  // надеюсь что это портабельно, хоспаде
+  size_t format_UTC(const unix_timestamp_t ts, const char *format, char* buffer, const size_t max_size) noexcept {
+    const auto t = std::time_t(ts);
+    return std::strftime(buffer, max_size, format, std::gmtime(&t));
+  }
+
+  size_t format_localtime(const unix_timestamp_t ts, const char *format, char* buffer, const size_t max_size) noexcept {
+    const auto t = std::time_t(ts);
+    return std::strftime(buffer, max_size, format, std::localtime(&t));
+  }
+
+  date::date() noexcept : year(0), month(0), day(0), hour(0), minute(0), second(0), week_day(0) {}
+  date::date(const int32_t year, const uint32_t month, const uint32_t day, const uint32_t hour, const uint32_t minute, const uint32_t second, const uint32_t week_day) noexcept 
+    : year(year), month(month), day(day), hour(hour), minute(minute), second(second), week_day(week_day)
+  {}
+
+  date::date(const int32_t year, const uint32_t month, const uint32_t day, const uint32_t week_day) noexcept 
+    : date(year, month, day, 0, 0, 0, week_day)
+  {}
+
+  date::date(const int32_t year, const uint32_t week_day) noexcept 
+    : date(year, 0, 0, week_day)
+  {}
 
   static const std::vector<date_system::month> default_months({
     date_system::month{ "january", 31, 0 },
     date_system::month{ "february", 28, 4 },
     date_system::month{ "march", 31, 0 },
-    date_system::month{ "april", 31, 0 },
+    date_system::month{ "april", 30, 0 },
     date_system::month{ "may", 31, 0 },
-    date_system::month{ "june", 31, 0 },
+    date_system::month{ "june", 30, 0 },
     date_system::month{ "july", 31, 0 },
     date_system::month{ "august", 31, 0 },
-    date_system::month{ "september", 31, 0 },
+    date_system::month{ "september", 30, 0 },
     date_system::month{ "october", 31, 0 },
-    date_system::month{ "november", 31, 0 },
+    date_system::month{ "november", 30, 0 },
     date_system::month{ "december", 31, 0 }
   });
 
   static const std::vector<std::string> default_week({
-    "monday",
-
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
   });
 
-  date_system::date_system() noexcept : months(default_months), week(default_week), hours_in_day(24), minutes_in_hour(60), seconds_in_minute(60), days_in_week(7) {}
+  date_system::date_system() noexcept : months(default_months), week(default_week), hours_in_day(24), minutes_in_hour(60), seconds_in_minute(60) {}
   void date_system::init(std::vector<month> months, std::vector<std::string> week, const uint32_t hours_in_day, const uint32_t minutes_in_hour, const uint32_t seconds_in_minute) noexcept {
     this->months = std::move(months);
     this->week = std::move(week);
@@ -45,8 +83,6 @@ namespace utils {
     this->start_date = d;
   }
 
-  //timestamp_t date_system::cast(const date &d) const {}
-
   static int32_t sign(const double a) {
     return a >= 0 ? 1 : -1;
   }
@@ -56,52 +92,72 @@ namespace utils {
     if (d.year < start_date.year) return false;
     if (d.month >= months.size()) return false;
     const auto &m = months[d.month];
-    const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(d.year % std::abs(m.leap_day) == 0);
+    const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && d.year % std::abs(m.leap_day) == 0);
     if (d.day >= month_days) return false;
     if (d.hour >= hours_in_day) return false;
     if (d.minute >= minutes_in_hour) return false;
     if (d.second >= seconds_in_minute) return false;
+    // если стартовая дата будет НЕ первое января то все сломается
     return true;
   }
 
+  // каст надо переписать полностью, я так понимаю сначала нужно 
+  // 1) добавить дни до 1 января следующего года
+  // 2) пройтись по годам до дейт год -1
+  // 3) пройтись по месяцам до месяца -1
+  // 4) добавить остаток дней
   timestamp_t date_system::cast(const date &d) const {
-    // все таки будет очень удобно сделать каст из даты в таймстамп
-    // как? нужно узнать количество дней до даты
     if (!is_valid(d)) return SIZE_MAX;
 
     auto cur = start_date;
+    size_t seconds = 0;
     size_t days = 0;
-    while (cur.year <= d.year || cur.month <= d.month || cur.day < d.day) {
-      if (cur.month >= months.size()) {
+    // если СТАРТОВАЯ ДАТА не стандартная
+    if (cur.month == 0 && cur.day == 0 && cur.hour == 0 && cur.minute == 0 && cur.second == 0) {
+      // 1 января
+    } else {
+      seconds += seconds_in_minute - cur.second;
+      cur.second = 0;
+      cur.minute += 1;
+
+      seconds += (minutes_in_hour - cur.minute) * seconds_in_minute;
+      cur.minute = 0;
+      cur.hour += 1;
+
+      seconds += (hours_in_day - cur.hour) * minutes_in_hour * seconds_in_minute;
+      cur.hour = 0;
+      cur.day += 1;
+      days += 1;
+
+      if (cur.year < d.year) {
+        days += days_to_next_year(cur);
+
+        cur.day = 0;
         cur.month = 0;
         cur.year += 1;
       }
-
-      const auto &m = months[cur.month];
-      const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && (cur.year % std::abs(m.leap_day) == 0));
-      if (cur.year == d.year || cur.month == d.month) {
-        days += size_t(d.day) - cur.day;
-        cur.day = d.day;
-      } else {
-        const uint32_t remain_days = month_days - cur.day;
-        cur.day = 0;
-        days += remain_days;
-        cur.month += 1;
-      }
     }
 
-    const size_t seconds_in_day = day_seconds();
-    const size_t prev_day_seconds = size_t(cur.hour) * minutes_in_hour * seconds_in_minute + size_t(cur.minute) * seconds_in_minute + cur.second;
-    const size_t cur_day_seconds = size_t(d.hour) * minutes_in_hour * seconds_in_minute + size_t(d.minute) * seconds_in_minute + d.second;
-    size_t seconds_part = 0;
-    if (prev_day_seconds > cur_day_seconds) {
-      days -= 1;
-      seconds_part = seconds_in_day - (prev_day_seconds - cur_day_seconds);
-    } else {
-      seconds_part = cur_day_seconds - prev_day_seconds;
+    // если год не отличается то что? чист добираем дни и секунды
+
+    while (cur.year < d.year) {
+      const size_t days_in_year = year_days(cur.year);
+      days += days_in_year;
+      cur.year += 1;
     }
+
+    while (cur.month < d.month) {
+      const uint32_t cur_month_days = month_days(cur.year, cur.month);
+      days += cur_month_days;
+      cur.month += 1;
+    }
+
+    days += d.day;
+
+    seconds += current_day_seconds(d);
     
-    const timestamp_t t = (days * hours_in_day * minutes_in_hour * seconds_in_minute + seconds_part) * app_clock::resolution();
+    const timestamp_t t = (days * day_seconds() + seconds) * app_clock::resolution();
+    //utils::info("date_to_t s {} add_days {}", (days * day_seconds() + seconds), days);
     return t;
   }
 
@@ -109,14 +165,44 @@ namespace utils {
     auto d = start_date;
     const size_t seconds_in_day = day_seconds();
     // начнем с того что посчитаем всего секунд
-    const size_t stamp_seconds = double(t) / double(app_clock::resolution());
+    size_t stamp_seconds = double(t) / double(app_clock::resolution());
+    size_t add_days = double(stamp_seconds) / double(seconds_in_day);
+    //utils::info("t_to_date s {} add_days {}", stamp_seconds, add_days);
+
+    // тут тоже нужно привести стартовую дату к 1 января и начала прибавить года, месяцы, дни и проч
+    // если СТАРТОВАЯ ДАТА не стандартная
+    if (d.month == 0 && d.day == 0 && d.hour == 0 && d.minute == 0 && d.second == 0) {
+      // 1 января
+    } else {
+      stamp_seconds -= seconds_in_minute - d.second;
+      d.second = 0;
+      d.minute += 1;
+
+      stamp_seconds -= (minutes_in_hour - d.minute) * seconds_in_minute;
+      d.minute = 0;
+      d.hour += 1;
+
+      stamp_seconds -= (hours_in_day - d.hour) * minutes_in_hour * seconds_in_minute;
+      d.hour = 0;
+      d.day += 1;
+      add_days -= 1;
+
+      const size_t to_next = days_to_next_year(d);
+      if (add_days >= to_next) {
+        add_days -= days_to_next_year(d);
+
+        d.day = 0;
+        d.month = 0;
+        d.year += 1;
+      }
+    }
+
     // теперь нужно прибавить секунды к стартовой дате
     const size_t seconds_part = stamp_seconds % seconds_in_day;
     const size_t add_seconds = seconds_part % seconds_in_minute;
     const size_t minutes_part = seconds_part / minutes_in_hour;
     size_t add_minutes = minutes_part % minutes_in_hour;
     size_t hours_part = minutes_part / hours_in_day;
-    size_t add_days = double(stamp_seconds) / double(seconds_in_day);
 
     d.second += add_seconds;
     if (d.second >= seconds_in_minute) {
@@ -136,33 +222,24 @@ namespace utils {
       add_days += 1;
     }
 
-    // прибавляем дни
-    while (add_days != 0) {
-      if (d.month >= months.size()) {
-        d.month = 0;
-        d.year += 1;
-      }
-
-      const auto &m = months[d.month];
-      const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && (d.year % std::abs(m.leap_day) == 0));
-      const uint32_t remain_days = month_days - d.day;
-      if (add_days <= remain_days) {
-        d.day += add_days;
-        d.week_day = (d.week_day + add_days) % week.size();
-        add_days = 0;
-      } else {
-        d.day = 0;
-        d.month += 1;
-        add_days -= remain_days;
-        d.week_day = (d.week_day + remain_days) % week.size();
-      }
-    }
-
-    // этого по идее не может быть
-    if (d.month >= months.size()) {
-      d.month = 0;
+    size_t cur_year_days = year_days(d.year);
+    while (add_days >= cur_year_days) {
+      add_days -= cur_year_days;
       d.year += 1;
+      d.week_day = (d.week_day + cur_year_days) % week.size();
+      cur_year_days = year_days(d.year);
     }
+
+    size_t cur_month_days = month_days(d.year, d.month);
+    while (add_days >= cur_month_days) {
+      add_days -= cur_month_days;
+      d.month += 1;
+      d.week_day = (d.week_day + cur_month_days) % week.size();
+      cur_month_days = month_days(d.year, d.month);
+    }
+
+    d.day = add_days;
+    d.week_day = (d.week_day + add_days) % week.size();
 
     return d;
   }
@@ -173,73 +250,59 @@ namespace utils {
   timestamp_t date_system::add(const timestamp_t cur, int32_t years, int32_t months, int32_t days) const {
     auto cur_date = cast(cur);
 
-    while (days != 0) {
-      const auto s = sign(days);
-      days = s * int32_t(std::abs(days) - 1);
-      cur_date.day += s;
-      if (s > 0) { cur_date.week_day = (cur_date.week_day + 1) % week.size(); }
-      else { cur_date.week_day = cur_date.week_day != 0 ? cur_date.week_day - 1 : week.size() - 1; }
-
-      const auto &m = this->months[cur_date.month];
-      const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && (cur_date.year % std::abs(m.leap_day) == 0));
-
-      if (cur_date.day == UINT32_MAX) {
-        cur_date.day = month_days-1;
-        cur_date.month -= 1;
-      }
-
-      if (cur_date.day >= month_days) {
-        cur_date.day = 0;
-        cur_date.month += 1;
-      }
-
-      if (cur_date.month == UINT32_MAX) {
-        cur_date.month = this->months.size()-1;
-        cur_date.year -= 1;
-      }
-
-      if (cur_date.month >= this->months.size()) {
-        cur_date.month = 0;
-        cur_date.year += 1;
-      }
-    }
+    cur_date.year += years;
 
     while (months != 0) {
-      const auto &m = this->months[cur_date.month];
-      const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && (cur_date.year % std::abs(m.leap_day) == 0));
-
-      months = sign(months) * int32_t(std::abs(months) - 1);
-      cur_date.month += sign(months);
-      if (sign(months) > 0) cur_date.week_day = (cur_date.week_day + month_days) % week.size();
-      else cur_date.week_day = (int64_t(int32_t(cur_date.week_day) - int32_t(month_days)) % int64_t(week.size()));
-
-      if (cur_date.month == UINT32_MAX) {
-        cur_date.month = this->months.size()-1;
-        cur_date.year -= 1;
-      }
-
-      if (cur_date.month >= this->months.size()) {
-        cur_date.month = 0;
-        cur_date.year += 1;
+      const auto s = sign(months);
+      if (months >= this->months.size()) {
+        months = s * (std::abs(months) - this->months.size());
+        cur_date.year += s;
+      } else {
+        if (s > 0) {
+          cur_date.year += uint32_t(cur_date.month + months > this->months.size());
+          cur_date.month = (cur_date.month + months) % this->months.size();
+        } else {
+          cur_date.year -= int32_t(int32_t(cur_date.month) - std::abs(months) < 0);
+          cur_date.month = (int32_t(cur_date.month) - std::abs(months)) % this->months.size();
+        }
+        months = 0;
       }
     }
 
-    while (years != 0) {
-      const size_t days = year_days(cur_date.year);
+    if (days != 0 && cur_date.day != 0) {
+      const auto s = sign(days);
+      const int32_t abs_days = std::abs(days);
+      const uint32_t cur_month_days = month_days(cur_date.year, cur_date.month);
+      const int32_t days_part = s > 0 ? cur_month_days - cur_date.day : cur_date.day;
+      days = s * (abs_days - std::min(days_part, abs_days));
+      cur_date.day += s * std::min(days_part, abs_days);
+    }
 
-      years = sign(years) * int32_t(std::abs(years) - 1);
-      cur_date.year += sign(years);
+    while (days != 0) {
+      const auto s = sign(days);
+      const int32_t abs_days = std::abs(days);
+      
+      // берем предыдущий месяц М
+      const int32_t m_year = s > 0 ? cur_date.year : (cur_date.month != 0 ? cur_date.year : cur_date.year - 1);
+      const int32_t m_month = s > 0 ? cur_date.month : (cur_date.month != 0 ? cur_date.month - 1 : this->months.size()-1);
 
-      if (sign(months) > 0) cur_date.week_day = (cur_date.week_day + days) % week.size();
-      else cur_date.week_day = (int64_t(int32_t(cur_date.week_day) - int32_t(days)) % int64_t(week.size()));
+      cur_date.year = m_year;
+      cur_date.month = m_month;
+
+      const uint32_t m_month_days = month_days(m_year, m_month);
+      if (abs_days >= m_month_days) days = s * (abs_days - m_month_days);
+      else {
+        days = 0;
+        cur_date.day = s > 0 ? cur_date.day + abs_days : m_month_days - abs_days;
+      }
     }
 
     return cast(cur_date);
   }
 
   date date_system::initial_date() const { return start_date; }
-  std::string_view date_system::month_str(const uint32_t index) const { return index < months.size() ? months[index].name : ""; }
-  std::string_view date_system::week_day_str(const uint32_t index) const { return index < week.size() ? week[index] : ""; }
+  std::string_view date_system::month_str(const uint32_t index) const { return index < months.size() ? std::string_view(months[index].name) : std::string_view(); }
+  std::string_view date_system::week_day_str(const uint32_t index) const { return index < week.size() ? std::string_view(week[index]) : std::string_view(); }
   std::string_view date_system::month_str(const date &d) const { return month_str(d.month); }
   std::string_view date_system::week_day_str(const date &d) const { return week_day_str(d.week_day); }
   bool date_system::is_leap_year(const int32_t year) const {
@@ -256,10 +319,7 @@ namespace utils {
   size_t date_system::date_count_days(const date &d) const {
     size_t count = 0;
     for (uint32_t i = 0; i < d.month+1; ++i) {
-      const auto &m = this->months[i];
-      const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && (d.year % std::abs(m.leap_day) == 0));
-
-      count += month_days;
+      count += month_days(d.year, i);
     }
 
     count += d.day+1;
@@ -270,21 +330,45 @@ namespace utils {
     return date_count_days(d) / week.size();
   }
 
-  size_t date_system::year_days(const int32_t year) const {
+  size_t date_system::days_to_next_year(const date &d) const {
     size_t days = 0;
-    for (const auto &m : months) {
-      const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && (year % std::abs(m.leap_day) == 0));
-      days += month_days;
+    auto cur = d;
+    for (uint32_t i = cur.month; i < months.size(); ++i) {
+      const uint32_t cur_month_days = month_days(cur.year, i);
+
+      days += cur_month_days - cur.day;
+      cur.day = 0;
     }
 
     return days;
+  }
+
+  size_t date_system::year_days(const int32_t year) const {
+    size_t days = 0;
+    for (uint32_t i = 0; i < months.size(); ++i) {
+      days += month_days(year, i);
+    }
+
+    return days;
+  }
+
+  size_t date_system::month_days(const int32_t year, const uint32_t month) const {
+    if (month >= months.size()) return SIZE_MAX;
+    const auto &m = this->months[month];
+    const uint32_t month_days = m.days + sign(m.leap_day) * int32_t(m.leap_day != 0 && (year % std::abs(m.leap_day) == 0));
+    return month_days;
   }
 
   size_t date_system::day_seconds() const {
     return size_t(hours_in_day) * size_t(minutes_in_hour) * size_t(seconds_in_minute);
   }
 
+  size_t date_system::current_day_seconds(const date &d) const {
+    return size_t(d.hour) * size_t(minutes_in_hour) * size_t(seconds_in_minute) + size_t(d.minute) * size_t(seconds_in_minute) + size_t(d.second);
+  }
+
   const date_system &game_date::get() { return s; }
+  //const date_system &game_date::operator()() { return s; }
   void game_date::init(std::vector<date_system::month> months, std::vector<std::string> week, const uint32_t hours_in_day, const uint32_t minutes_in_hour, const uint32_t seconds_in_minute) {
     s.init(std::move(months), std::move(week), hours_in_day, minutes_in_hour, seconds_in_minute);
   }

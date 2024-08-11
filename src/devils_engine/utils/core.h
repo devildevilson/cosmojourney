@@ -11,6 +11,8 @@
 #include "spdlog/spdlog.h"
 #include "type_traits.h"
 
+// сюда нужно пихнуть стактрейс
+
 namespace devils_engine {
   namespace utils {
 #   ifdef _MSC_VER
@@ -28,12 +30,12 @@ namespace devils_engine {
     }
 
     template <typename... Args>
-    void info(const fmt::format_string<Args...> &format, Args&&... args) {
+    constexpr void info(const fmt::format_string<Args...> &format, Args&&... args) {
       spdlog::info(format, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void warn(const fmt::format_string<Args...> &format, Args&&... args) {
+    constexpr void warn(const fmt::format_string<Args...> &format, Args&&... args) {
       spdlog::warn(format, std::forward<Args>(args)...);
     }
 

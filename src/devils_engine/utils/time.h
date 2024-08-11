@@ -4,18 +4,20 @@
 #include <cstdint>
 #include <cstddef>
 #include <chrono>
+#include <ctime>
 #include <string>
 
 namespace devils_engine {
 namespace utils {
   using timestamp_t = size_t;
+  using unix_timestamp_t = size_t;
 
   class time_log {
   public:
-    std::string str;
+    std::string_view str;
     std::chrono::steady_clock::time_point tp;
 
-    time_log(std::string str) noexcept;
+    time_log(const std::string_view &str) noexcept;
     ~time_log() noexcept;
 
     time_log(const time_log &copy) noexcept = delete;
@@ -25,21 +27,29 @@ namespace utils {
   };
 
   // возвращаем unix timestamp (наверное будет приходить по локальному времени...)
-  constexpr timestamp_t timestamp() noexcept {
+  // unix timestamp это количество секунд !!! не путать с игровым стемпом
+  // нужен доступ к локалтайму
+  unix_timestamp_t timestamp() noexcept;
+
+  // как именно локалтайм брать я не понимаю
+  /*inline unix_timestamp_t localtime() noexcept {
     const auto p1 = std::chrono::system_clock::now();
+    const auto t = std::chrono::system_clock::to_time_t(p1);
+    std::put_time();
     return std::chrono::duration_cast<std::chrono::seconds>(p1.time_since_epoch()).count();
-  }
+  }*/
+
+  size_t format_UTC(const char *format, char* buffer, const size_t max_size) noexcept;
+  size_t format_localtime(const char *format, char* buffer, const size_t max_size) noexcept;
+  size_t format_UTC(const unix_timestamp_t ts, const char *format, char* buffer, const size_t max_size) noexcept;
+  size_t format_localtime(const unix_timestamp_t ts, const char *format, char* buffer, const size_t max_size) noexcept;
 
   template <typename F, typename... Args>
-  auto perf(std::string msg, F f, Args&&... args) {
-    time_log l(std::move(msg));
+  auto perf(const std::string_view &msg, F f, Args &&...args) {
+    time_log l(msg);
     return f(std::forward<Args>(args)...);
   }
 
-  // все значения будут начинаться с нуля
-  // в игровом понимании было бы неплохо указать некую стартовую дату
-  // и уметь соответствено приводить от одного к другому
-  // нужно уметь вычитать и складывать
   // при этом в игре у нас потенциально могут быть заданы иные правила для игрового дня
   struct date {
     int32_t year;
@@ -48,14 +58,12 @@ namespace utils {
     uint32_t hour;
     uint32_t minute;
     uint32_t second;
-    // день недели, блен сильно зависит какой был день недели в самом начале, но при этом можно от этого вывести какой сейчас день недели
     uint32_t week_day;
 
-    date();
-
-    // не можем так складывать и вычитать
-    //date &operator+=(const date &b) noexcept;
-    //date &operator-=(const date &b) noexcept;
+    date() noexcept;
+    date(const int32_t year, const uint32_t month, const uint32_t day, const uint32_t hour, const uint32_t minute, const uint32_t second, const uint32_t week_day)  noexcept;
+    date(const int32_t year, const uint32_t month, const uint32_t day, const uint32_t week_day = 0) noexcept;
+    date(const int32_t year, const uint32_t week_day = 0)  noexcept;
   };
 
   // наверное наиболее точным форматом будет указать количество секунд в году
@@ -87,10 +95,13 @@ namespace utils {
 
     size_t date_count_days(const date &d) const;
     size_t week_number(const date &d) const;
-  private:
-    size_t year_days(const int32_t year) const;
-    size_t day_seconds() const;
+    size_t days_to_next_year(const date &d) const;
 
+    size_t year_days(const int32_t year) const;
+    size_t month_days(const int32_t year, const uint32_t month) const;
+    size_t day_seconds() const;
+    size_t current_day_seconds(const date &d) const;
+  private:
     date start_date;
     std::vector<month> months;
     std::vector<std::string> week;
