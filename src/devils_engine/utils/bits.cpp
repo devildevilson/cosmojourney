@@ -5,49 +5,40 @@
 
 namespace devils_engine {
   namespace utils {
-    std::string hexdump(const uint8_t* buffer, const size_t length, const size_t line_size) {
-      std::string dump;
-      std::string _hex;
-      std::string _ascii;
-      _hex.reserve(line_size*2);
-      _ascii.reserve(line_size*2);
-      for (size_t i = 0; i < length; i += line_size) {
-        for (size_t j = i; j < i+line_size; j++) {
-          const size_t mask = 0xff;
-          const uint8_t first_half = buffer[j] & mask;
-          const uint8_t second_half = buffer[j] >> 4;
-          _hex.push_back(hexstr(second_half));
-          _hex.push_back(hexstr(first_half));
-          if (j%4 == 3) _hex.push_back(' ');
-          _ascii.push_back((buffer[j] >= ' ' && buffer[j] <= 'z') ? buffer[j] : '.');
-        }
+    size_t hexdump(const uint8_t* buffer, const size_t length, char* out, const size_t max_size) {
+      const uint8_t mask = 0xff;
 
-        dump = dump + _hex + "   " + _ascii + "\n";
-        _hex.clear();
-        _ascii.clear();
+      size_t count = 0;
+      for (size_t i = 0; i < length && count < max_size; ++i) {
+        for (size_t j = 0; j < sizeof(uint8_t) * 2 && count < max_size; ++j) {
+          const uint8_t byte_half = (buffer[j] >> 4 * j) & mask;
+          out[count] = hexstr(byte_half);
+          count += 1;
+        }
       }
-      return dump;
+
+      return count;
     }
     
-    std::string binstr(const uint8_t v) {
-      std::string s; 
+    size_t binstr(const uint8_t v, char* buffer, const size_t max_size) {
       uint8_t m = 128;
 
-      while (m > 0) {
-        s += (v & m) ? "1" : "0";
+      size_t count = 0;
+      while (m > 0 && count < max_size) {
+        buffer[count] = (v & m) ? '1' : '0';
+        count += 1;
         m >>= 1;
       }
 
-      return s;
+      return count;
     } 
 
-    std::string binstr(const std::span<uint8_t> &arr) {
-      std::string s;
-      size_t current = 0;
-      for (size_t i = 0; i < arr.size(); ++i) {
-        s += binstr(arr[i]); 
+    size_t binstr(const std::span<uint8_t> &arr, char* buffer, const size_t max_size) {
+      size_t count = 0;
+      for (size_t i = 0; i < arr.size() && count < max_size; ++i) {
+        count += binstr(arr[i], &buffer[count], max_size-count); 
       }
-      return s;
+      return count;
     }
 
     // uint8_t setbits(const uint8_t c, const size_t offset, const size_t numbits, const uint8_t v) {

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.1...3.25)
 project(
   cosmojourney
   VERSION 0.1
-  LANGUAGES CXX
+  LANGUAGES CXX C
 )
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
@@ -11,11 +11,11 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-  set(CMAKE_CXX_STANDARD 20)
+  set(CMAKE_CXX_STANDARD 23)
 
   if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	  if(MSVC)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR /Wall /permissive-")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR /Wall /permissive- /Zc:preprocessor")
     else()
 	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra")
     endif()
@@ -23,7 +23,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
   if (CMAKE_BUILD_TYPE STREQUAL "Release")
 	  if(MSVC)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /permissive-")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /permissive- /Zc:preprocessor")
     else()
 	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
     endif()

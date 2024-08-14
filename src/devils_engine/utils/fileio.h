@@ -1,5 +1,5 @@
-#ifndef DEVILS_ENGINE_FILEIO_H
-#define DEVILS_ENGINE_FILEIO_H
+#ifndef DEVILS_ENGINE_UTILS_FILEIO_H
+#define DEVILS_ENGINE_UTILS_FILEIO_H
 
 #include <cstdint>
 #include <cstddef>
@@ -23,9 +23,11 @@ std::vector<BYTE_TYPE> read(const std::string &path, const enum type type = type
 std::string read(const std::string &path, const enum type type = type::text);
 void write(const std::span<char> &bytes, const std::string &path, const enum type type = type::binary);
 void write(const std::span<uint8_t> &bytes, const std::string &path, const enum type type = type::binary);
-void write(const std::string_view &bytes, const std::string &path, const enum type type = type::text);
+void write(const std::string &bytes, const std::string &path, const enum type type = type::text);
 void write(const std::span<const char> &bytes, const std::string &path, const enum type type = type::binary);
 void write(const std::span<const uint8_t> &bytes, const std::string &path, const enum type type = type::binary);
+bool exists(const std::string &path) noexcept;
+size_t size(const std::string &path) noexcept;
 }
 }
 

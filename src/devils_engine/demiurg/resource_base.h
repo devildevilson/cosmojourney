@@ -7,10 +7,10 @@
 #include <string_view>
 #include <vector>
 #include <bitset>
-#include <utils/list.h>
-#include <utils/safe_handle.h>
-#include <boost/sml.hpp>
-namespace sml = boost::sml;
+#include "utils/list.h"
+#include "utils/safe_handle.h"
+//#include <boost/sml.hpp>
+//namespace sml = boost::sml;
 
 #define DEMIURG_STATES_LIST2 \
   X(unload) \
@@ -102,6 +102,7 @@ namespace devils_engine {
 
       const module_interface* module;
 
+      // наверное по итогу это не нужно
       std::vector<char> file_memory;
       std::string_view file_text;
 
@@ -115,11 +116,13 @@ namespace devils_engine {
 
       inline resource_interface() noexcept : 
         loading_type_id(0), 
+        module(nullptr),
         replacing_order(0),
         raw_size(0),
         width(0),
         height(0),
-        duration(0) 
+        duration(0),
+        _state(0)
       {}
       virtual ~resource_interface() noexcept = default;
 
@@ -168,102 +171,73 @@ namespace devils_engine {
       DEMIURG_ACTIONS_LIST
 #undef X
 
-      void load(const utils::safe_handle_t& handle) {
-        switch (_state) {
-          case state::cold: load_cold(handle); break;
-          case state::warm: load_warm(handle); break;
-          case state::hot : break;
-        }
+      void load(const utils::safe_handle_t& handle);
+      void unload(const utils::safe_handle_t& handle);
+      void force_unload(const utils::safe_handle_t& handle);
 
-        _state = std::max(_state + 1, 2);
-      }
-
-      void unload(const utils::safe_handle_t& handle) {
-        switch (_state) {
-          case state::cold: break;
-          case state::warm: if (!flag(resource_flags::force_unload_warm)) {unload_warm(handle);} break;
-          case state::hot : unload_hot(handle); break;
-        }
-
-        _state = std::min(_state - 1, 0);
-      }
-
-      void force_unload(const utils::safe_handle_t& handle) {
-        switch (_state) {
-          case state::cold: break;
-          case state::warm: unload_warm(handle); break;
-          case state::hot : unload_hot(handle);  break;
-        }
-
-        _state = std::min(_state - 1, 0);
-      }
-
-      enum state::values state() const { 
-        if (_state == state::warm && flag(resource_flags::warm_and_hot_same)) return state::hot; 
-        return static_cast<state::values>(_state);
-      }
+      enum state::values state() const;
     protected:
       // по любому будет много флагов у нас для файла, нужно битовое поле
       std::bitset<64> flags;
       int32_t _state;
     };
 
-    template <typename T>
-    struct inj { T* ptr; };
+    //template <typename T>
+    //struct inj { T* ptr; };
 
-    template <typename Table>
-    class resource_base : public resource_interface {
-    public:
-      inline resource_base() noexcept : sm{inj{static_cast<resource_interface*>(this)}} {}
+    //template <typename Table>
+    //class resource_base : public resource_interface {
+    //public:
+    //  inline resource_base() noexcept : sm{inj{static_cast<resource_interface*>(this)}} {}
 
-      template <typename T>
-      resource_base(T* ptr) noexcept : sm{inj{ptr}} {}
+    //  template <typename T>
+    //  resource_base(T* ptr) noexcept : sm{inj{ptr}} {}
 
-      template <typename T>
-      bool is(T&& arg) const {
-        return sm.is(std::forward<T>(arg));
-      }
+    //  template <typename T>
+    //  bool is(T&& arg) const {
+    //    return sm.is(std::forward<T>(arg));
+    //  }
   
-      // несколько аргументов?
-      template <typename... Args>
-      void process_event(Args&&... arg) {
-        sm.process_event(std::forward<Args>(arg)...);
-      }
+    //  // несколько аргументов?
+    //  template <typename... Args>
+    //  void process_event(Args&&... arg) {
+    //    sm.process_event(std::forward<Args>(arg)...);
+    //  }
 
-      void loading(const utils::safe_handle_t &handle) override {
-        process_event(demiurg::loading{handle});
-      }
+    //  void loading(const utils::safe_handle_t &handle) override {
+    //    process_event(demiurg::loading{handle});
+    //  }
 
-      void unloading(const utils::safe_handle_t& handle) override {
-        process_event(demiurg::unloading{handle});
-      }
+    //  void unloading(const utils::safe_handle_t& handle) override {
+    //    process_event(demiurg::unloading{handle});
+    //  }
 
-      // скорее всего это все что нужно
-      // handle нужно будет менять в зависимости от стейта
-      void load2(const utils::safe_handle_t& handle) {
-        switch (state) {
-          case 0: load_cold(handle); break;
-          case 1: load_warm(handle); break;
-          case 3: break;
-        }
+    //  // скорее всего это все что нужно
+    //  // handle нужно будет менять в зависимости от стейта
+    //  void load2(const utils::safe_handle_t& handle) {
+    //    switch (state) {
+    //      case 0: load_cold(handle); break;
+    //      case 1: load_warm(handle); break;
+    //      case 3: break;
+    //    }
 
-        state = std::max(state + 1, 2);
-      }
+    //    state = std::max(state + 1, 2);
+    //  }
 
-      void unload2(const utils::safe_handle_t& handle) {
-        switch (state) {
-          case 0: break;
-          case 1: unload_warm(handle); break;
-          case 2: unload_hot(handle);  break;
-        }
+    //  void unload2(const utils::safe_handle_t& handle) {
+    //    switch (state) {
+    //      case 0: break;
+    //      case 1: unload_warm(handle); break;
+    //      case 2: unload_hot(handle);  break;
+    //    }
 
-        state = std::min(state - 1, 0);
-      }
+    //    state = std::min(state - 1, 0);
+    //  }
 
-    protected:
-      sml::sm<Table> sm; // ненужен
-      int32_t state;
-    };
+    //protected:
+    //  sml::sm<Table> sm; // ненужен
+    //  int32_t state;
+    //};
 
     void parse_path(
       const std::string& path, 

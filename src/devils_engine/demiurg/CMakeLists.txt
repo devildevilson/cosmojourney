@@ -40,13 +40,17 @@ endif()
 
 set(SRC_LIST
   system.cpp
-  folder_module.cpp)
+  folder_module.cpp 
+  modules_listing.cpp
+)
 
 set(HDR_LIST
   resource_base.h
   system.h
   module_interface.h 
-  folder_module.h)
+  folder_module.h 
+  modules_listing.h
+)
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(${DEVILS_LIBRARY_NAME})

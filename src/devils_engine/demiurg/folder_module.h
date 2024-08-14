@@ -24,8 +24,9 @@ namespace demiurg {
     void load_binary(const std::string_view &path, std::vector<uint8_t> &mem) const override;
     void load_binary(const std::string_view &path, std::vector<char> &mem) const override;
     void load_text(const std::string_view &path, std::string &mem) const override;
+    std::vector<uint8_t> load_binary(const std::string_view &path) const override;
+    std::string load_text(const std::string_view &path) const override;
   private:
-    std::string _root;
     std::string_view module_name;
   };
 }

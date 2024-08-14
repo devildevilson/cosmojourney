@@ -1,5 +1,9 @@
 #include "fileio.h"
 
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
 namespace devils_engine {
 namespace file_io {
 template <>
@@ -41,10 +45,10 @@ void write(const std::span<uint8_t> &bytes, const std::string &path, const enum 
   file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
 
-void write(const std::string_view &bytes, const std::string &path, const enum type type) {
+void write(const std::string &bytes, const std::string &path, const enum type type) {
   const auto flags = type == type::binary ? std::ios::out | std::ios::binary | std::ios::trunc : std::ios::out | std::ios::trunc;
   std::ofstream file(path, flags);
-  file.write(bytes.data(), bytes.size());
+  file << bytes;
 }
 
 void write(const std::span<const char> &bytes, const std::string &path, const enum type type) {
@@ -57,6 +61,17 @@ void write(const std::span<const uint8_t> &bytes, const std::string &path, const
   const auto flags = type == type::binary ? std::ios::out | std::ios::binary | std::ios::trunc : std::ios::out | std::ios::trunc;
   std::ofstream file(path, flags);
   file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+}
+
+bool exists(const std::string &path) noexcept {
+  return fs::exists(path);
+}
+
+size_t size(const std::string &path) noexcept {
+  std::error_code ec;
+  const size_t size = fs::file_size(path, ec);
+  if (ec) return 0;
+  return size;
 }
 }
 }

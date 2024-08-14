@@ -33,10 +33,11 @@ namespace demiurg {
       id = full_path.substr(0, full_path.size() - ext_size);
     }
 
-  folder_module::folder_module(system* sys, std::string root) noexcept : module_interface(sys), _root(std::move(root)) 
+  folder_module::folder_module(system* sys, std::string root) noexcept : module_interface(sys, std::move(root))
   {
-      const size_t index = _root.rfind('/', _root.size()-1);
-      module_name = _root.substr(index);
+      if (_path[_path.size() - 1] != '/') _path += '/';
+      const size_t index = _path.rfind('/', _path.size()-1);
+      module_name = std::string_view(_path).substr(index);
       if (module_name.back() == '/') module_name = module_name.substr(0, module_name.size()-1);
   }
 
@@ -46,19 +47,19 @@ namespace demiurg {
   void folder_module::close() {}
   bool folder_module::is_openned() const { return true; }
   void folder_module::resources_list(std::vector<resource_interface*> &arr) const {
-    for (const auto &entry : fs::recursive_directory_iterator(_root)) {
+    for (const auto &entry : fs::recursive_directory_iterator(_path)) {
       if (!entry.is_regular_file()) continue;
       std::string entry_path = entry.path().generic_string();
 
       // module_name мы теперь знаем и тут он нам не нужен
       std::string_view file_name, ext, id;
-      parse_path(entry_path, _root, file_name, ext, id);
+      parse_path(entry_path, _path, file_name, ext, id);
       if (file_name == "." || file_name == "..") continue;
 
       auto t = sys->find_type(id, ext);
 
       if (t == nullptr) {
-        utils::warn("Could not find proper resource type for file '{}'", entry_path);
+        utils::warn("Could not find proper resource type for file '{}'. Skip", entry_path);
         continue;
       }
 
@@ -72,17 +73,31 @@ namespace demiurg {
     }
   }
 
+  // полный путь? тут как будто полный путь передать неполучится, придется собирать строку
+  // тут вообще не нужно передавать полный путь !!! ТОЛЬКО относительный
+  // когда делаем реквайр наверное будем указывать вот так
+  // local res = require("abc/def/asd")
+  // local res = require("module1:abc/def/asd")
+  // скорее всего реквайр просто закинет путь в поиск в демиурге и если какой то путь будет бредовый то не найдет ничего
+
   void folder_module::load_binary(const std::string_view &path, std::vector<uint8_t> &mem) const {
-    // полный путь? тут как будто полный путь передать неполучится, придетсся собирать строку
-    mem = file_io::read<uint8_t>(_root+std::string(path));
+    mem = file_io::read<uint8_t>(_path+std::string(path));
   }
   
   void folder_module::load_binary(const std::string_view &path, std::vector<char> &mem) const {
-    mem = file_io::read<char>(_root+std::string(path));
+    mem = file_io::read<char>(_path+std::string(path));
   }
   
   void folder_module::load_text(const std::string_view &path, std::string &mem) const {
-    mem = file_io::read(_root+std::string(path));
+    mem = file_io::read(_path+std::string(path));
+  }
+
+  std::vector<uint8_t> folder_module::load_binary(const std::string_view &path) const {
+    return file_io::read<uint8_t>(_path+std::string(path));
+  }
+  
+  std::string folder_module::load_text(const std::string_view &path) const {
+    return file_io::read(_path+std::string(path));
   }
 
 }

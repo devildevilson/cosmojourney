@@ -55,16 +55,6 @@ namespace devils_engine {
       reverse_iterator rend() const noexcept { return reverse_iterator(super::rend()); }
     };
 
-    struct module_data {
-      std::string path;
-      std::string_view name;
-      std::string hash; // как считать хеш для папок?
-      size_t workshop_id;
-      // метка времени создания? 
-      resource_interface* thumbnail;
-      resource_interface* description; // да его поди сразу загрузить нужно
-    };
-
     class system {
     public:
       struct type {
@@ -90,6 +80,12 @@ namespace devils_engine {
         void destroy(resource_interface * ptr);
       };
 
+      struct list_entry {
+        std::string path;
+        std::string hash;
+        std::string file_date;
+      };
+
       system() noexcept;
       system(std::string root) noexcept;
       ~system() noexcept;
@@ -112,6 +108,8 @@ namespace devils_engine {
 
       std::string_view root() const;
       void set_root(std::string root);
+      std::string_view modules_list() const;
+      void set_modules_list(std::string modules_list);
 
       // не указывать расширение файла!
       // поиск по отсортированному массиву поди O(logN + N)
@@ -131,18 +129,11 @@ namespace devils_engine {
       // наверное все удалим и заново прочитаем дерево файлов (логично)
       void parse_file_tree();
 
-      // при входе в саму игру грузим модули с конфига
-      void load_modules();
-
-      // можно ли вызвать несколько раз? можно, но при этом несколько раз создадим thumbnail, хотя его поди можно найти где нибудь
-      // прочитаем файлики на диске, и видимо придется предварительно подгрузить архивы и выгрузить оттуда картинки и описание
-      std::vector<module_data> get_modules();
-
-      // во первых сохраним в конфиг последнюю настройку модулей
-      // во вторых было бы неплохо настройку сохранить под разными профилями
-      void save_list(std::string name, std::vector<module_data> data);
-      std::vector<module_data> load_list(std::string name);
-      std::vector<std::string> available_lists();
+      // с конфигом работаем в другом месте, сюда просто передаем пачку путей
+      std::vector<list_entry> load_list(const std::string_view &list_name) const;
+      void load_modules(std::vector<list_entry> ms);
+      void load_default_modules();
+      void parse_resources();
 
       void clear();
 
@@ -150,7 +141,7 @@ namespace devils_engine {
       size_t all_resources_count() const noexcept;
     private:
       std::string root_path;
-      std::string current_modules_list;
+      std::string modules_list_name;
 
       utils::memory_pool<type, sizeof(type)*100> types_pool;
       //qc::hash::RawMap<std::string_view, type *, qc::hash::FastHash<std::string_view>> types;

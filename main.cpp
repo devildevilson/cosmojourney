@@ -17,9 +17,11 @@
 #include "utils/bitstream.h"
 #include "utils/string.h"
 #include "demiurg/system.h"
+#include "demiurg/modules_listing.h"
 #include "sound_resource.h"
 #include "utils/dice.h"
 #include "utils/named_serializer.h"
+#include "utils/time.h"
 
 using namespace devils_engine;
 
@@ -376,20 +378,59 @@ int main(int argc, char const *argv[]) {
   
   // glaze не работает с const char* !!!
   // ну и скорее всего вообще ни с какими указателями
-  abc s{ 1, 0.5f, 0.24, "string", "view", 
+  //abc s{ 1, 0.5f, 0.24, "string", "view", 
   //"char*", 
-  def{ 3.14, 5, 12 }, {1, 2, 3}, {"abc", "def", "asfaf"}, {4,5}, { { "ab", 45 }, { "de", 64 } } };
+  //def{ 3.14, 5, 12 }, {1, 2, 3}, {"abc", "def", "asfaf"}, {4,5}, { { "ab", 45 }, { "de", 64 } } };
 
-  std::string c;
-  std::vector<uint8_t> v;
-  c.reserve(10000);
-  utils::to_binary(s, v);
-  utils::println(v.size(), v.data());
+  //std::string c;
+  //std::vector<uint8_t> v;
+  //c.reserve(10000);
+  //utils::to_binary(s, v);
+  //utils::println(v.size(), v.data());
   //c.clear();
   //utils::to_lua(s, c);
   //utils::println(c);
 
   //utils::println(s);
+  
+  const std::string modules_root_path = "./folder1/";
+  demiurg::modules_listing ml(modules_root_path);
+  ml.reload();
+
+  std::vector<std::string> paths;
+  for (const auto &m : ml.entries()) {
+    utils::println(m->path, m->hash, m->file_date);
+    paths.push_back(m->path);
+  }
+
+  ml.save_list("list123", paths);
+
+  // так что теперь
+  demiurg::system s(modules_root_path);
+  s.set_modules_list("list123");
+  s.load_default_modules();
+
+  // можно сделать настройки, что в настройках у нас есть?
+  // по большому счету это структура + метод сериализации
+  // 
+
+  //const auto t = utils::timestamp();
+  //const auto ms = s.get_modules();
+  ////for (const auto &m : ms) {
+  ////  utils::println(m.path, m.hash, t, m.timestamp, m.file_date);
+  ////}
+
+  //// записывать можно только путь, хеш сумму и метку времени
+  //// а для интерфейса потребуется все данные
+  //// я бы даже сказал что нужно создать ряд структур для файлов + представление для них в листах
+  //// да как будто система примет в себя только лист с модулями
+  //// а какая то внешняя система будет отвечать за менеджмент листов 
+  //// звучит норм вообще то говоря
+  //s.save_list("new1", ms);
+  //const auto list = s.load_list("new1");
+  //for (const auto &m : list) {
+  //  utils::println(m.path, m.hash, m.file_date);
+  //}
 
   return 0;
 }

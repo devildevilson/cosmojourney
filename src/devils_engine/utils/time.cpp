@@ -15,6 +15,13 @@ namespace utils {
     return std::chrono::duration_cast<std::chrono::seconds>(p1.time_since_epoch()).count();
   }
 
+  unix_timestamp_t file_timestamp(const fs::directory_entry &e) noexcept {
+    if (!e.exists()) return 0;
+    const auto tp = e.last_write_time();
+    const auto tp2 = std::chrono::clock_cast<std::chrono::system_clock>(tp); 
+    return std::chrono::duration_cast<std::chrono::seconds>(tp2.time_since_epoch()).count();
+  }
+
   size_t format_UTC(const char *format, char* buffer, const size_t max_size) noexcept {
     const auto p1 = std::chrono::system_clock::now();
     const auto t = std::chrono::system_clock::to_time_t(p1);
@@ -36,6 +43,34 @@ namespace utils {
   size_t format_localtime(const unix_timestamp_t ts, const char *format, char* buffer, const size_t max_size) noexcept {
     const auto t = std::time_t(ts);
     return std::strftime(buffer, max_size, format, std::localtime(&t));
+  }
+
+  std::string format_UTC(const char *format) noexcept {
+    std::string cont(1000, '\0'); // блен такого рода контейнеры - это вечно какая то небыстрая история увы
+    const size_t count = format_UTC(format, cont.data(), cont.size());
+    cont.resize(count);
+    return cont;
+  }
+
+  std::string format_localtime(const char *format) noexcept {
+    std::string cont(1000, '\0');
+    const size_t count = format_localtime(format, cont.data(), cont.size());
+    cont.resize(count);
+    return cont;
+  }
+
+  std::string format_UTC(const unix_timestamp_t ts, const char *format) noexcept {
+    std::string cont(1000, '\0');
+    const size_t count = format_UTC(ts, format, cont.data(), cont.size());
+    cont.resize(count);
+    return cont;
+  }
+
+  std::string format_localtime(const unix_timestamp_t ts, const char *format) noexcept {
+    std::string cont(1000, '\0');
+    const size_t count = format_localtime(ts, format, cont.data(), cont.size());
+    cont.resize(count);
+    return cont;
   }
 
   date::date() noexcept : year(0), month(0), day(0), hour(0), minute(0), second(0), week_day(0) {}

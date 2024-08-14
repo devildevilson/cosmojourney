@@ -21,16 +21,34 @@ namespace devils_engine {
 namespace utils {
 
 template <typename T>
-size_t to_json(const T &x, std::string &c) {
+glz::write_error to_json(const T &x, std::string &c) {
   return glz::write_json(x, c);
+  // if (ec) {
+  //   utils::error("Could not write json for struct '{}' (err code: {})", utils::type_name<T>(), static_cast<size_t>(ec.ec));
+  // }
 }
 
+template <glz::opts O, typename T>
+glz::write_error to_json(const T &x, std::string &c) {
+  return glz::write<O>(x, c);
+  // if (ec) {
+  //   utils::error("Could not write json for struct '{}' (err code: {})", utils::type_name<T>(), static_cast<size_t>(ec.ec));
+  // }
+}
+
+ template <typename T>
+ std::string to_json(const T &x) {
+   return glz::write_json(x);
+ }
+
+ template <glz::opts O, typename T>
+ std::string to_json(const T &x) {
+   return glz::write<O>(x);
+ }
+
 template <typename T>
-void from_json(T &x, const std::string_view &c) {
-  const auto ec = glz::read_json(x, c);
-  if (ec) {
-    utils::error("Could not parse json for struct '{}' (msg: {})", utils::type_name<T>(), ec.message());
-  }
+auto from_json(T &x, const std::string &c) {
+  return glz::read_json(x, c);
 }
 
 template <alpaca::options O, typename T>
@@ -39,12 +57,18 @@ size_t to_binary(const T &x, std::vector<uint8_t> &c) {
 }
 
 template <alpaca::options O, typename T>
-void from_binary(T &x, const std::vector<uint8_t> &c) {
+std::vector<uint8_t> to_binary(const T &x) {
+  return alpaca::serialize<O>(x);
+}
+
+template <alpaca::options O, typename T>
+std::error_code from_binary(T &x, const std::vector<uint8_t> &c) {
   std::error_code ec;
-  x = alpaca::deserialize<O>(c, ec);
-  if (ec) {
-    utils::error("Could not parse binary for struct '{}' (msg: {})", utils::type_name<T>(), ec.message());
-  }
+  x = alpaca::deserialize<T, O>(c, ec);
+  //if (ec) {
+  //  utils::error("Could not parse binary for struct '{}' (msg: {})", utils::type_name<T>(), ec.message());
+  //}
+  return ec;
 }
 
 template <typename T>
@@ -53,12 +77,18 @@ size_t to_binary(const T &x, std::vector<uint8_t> &c) {
 }
 
 template <typename T>
-void from_binary(T &x, const std::vector<uint8_t> &c) {
+std::vector<uint8_t> to_binary(const T &x) {
+  return alpaca::serialize<alpaca::options::none>(x);
+}
+
+template <typename T>
+std::error_code from_binary(T &x, const std::vector<uint8_t> &c) {
   std::error_code ec;
-  x = alpaca::deserialize<alpaca::options::none>(c, ec);
-  if (ec) {
-    utils::error("Could not parse binary for struct '{}' (msg: {})", utils::type_name<T>(), ec.message());
-  }
+  x = alpaca::deserialize<T, alpaca::options::none>(c, ec);
+  //if (ec) {
+  //  utils::error("Could not parse binary for struct '{}' (msg: {})", utils::type_name<T>(), ec.message());
+  //}
+  return ec;
 }
 
 template <typename T>

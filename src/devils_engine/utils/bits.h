@@ -43,28 +43,29 @@ namespace devils_engine {
       return c;
     }
 
-    std::string binstr(const uint8_t v);
-    std::string hexdump(const uint8_t* buffer, const size_t length, const size_t line_size);
-    std::string binstr(const std::span<uint8_t> &arr);
+    size_t binstr(const uint8_t v, char* buffer, const size_t max_size);
+    size_t hexdump(const uint8_t* buffer, const size_t length, char* out, const size_t max_size);
+    size_t binstr(const std::span<uint8_t> &arr, char* buffer, const size_t max_size);
 
     template <typename T> 
-    std::string binstr(T v) {
-      std::string s;
-      s.reserve(sizeof(v) * 2+1);
-
+    size_t binstr(T v, char* buffer, const size_t max_size) {
+      
+      size_t count = 0;
       if constexpr (std::endian::native == std::endian::big) {
-        for (int64_t i = sizeof(v) - 1; i >= 0; --i) {
-          s += binstr(reinterpret_cast<const uint8_t*>(&v)[i]);
+        for (int64_t i = sizeof(v) - 1; i >= 0 && count < max_size; --i) {
+          const size_t size = binstr(reinterpret_cast<const uint8_t*>(&v)[i], &buffer[count], max_size-count);
+          count += size;
         }
       } else if constexpr (std::endian::native == std::endian::little) {
-        for (size_t i = 0; i < sizeof(v); ++i) {
-          s += binstr(reinterpret_cast<const uint8_t*>(&v)[i]);
+        for (size_t i = 0; i < sizeof(v) && count < max_size; ++i) {
+          const size_t size = binstr(reinterpret_cast<const uint8_t*>(&v)[i], &buffer[count], max_size-count);
+          count += size;
         }
       } else {
         assert(false && "Invalid endian");
       }
 
-      return s;
+      return count;
     }
 
     constexpr uint8_t setbits(const uint8_t c, const size_t offset, const size_t numbits, const uint8_t v) {

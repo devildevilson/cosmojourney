@@ -6,6 +6,9 @@
 #include <chrono>
 #include <ctime>
 #include <string>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace devils_engine {
 namespace utils {
@@ -30,6 +33,7 @@ namespace utils {
   // unix timestamp это количество секунд !!! не путать с игровым стемпом
   // нужен доступ к локалтайму
   unix_timestamp_t timestamp() noexcept;
+  unix_timestamp_t file_timestamp(const fs::directory_entry &e) noexcept;
 
   // как именно локалтайм брать я не понимаю
   /*inline unix_timestamp_t localtime() noexcept {
@@ -43,6 +47,11 @@ namespace utils {
   size_t format_localtime(const char *format, char* buffer, const size_t max_size) noexcept;
   size_t format_UTC(const unix_timestamp_t ts, const char *format, char* buffer, const size_t max_size) noexcept;
   size_t format_localtime(const unix_timestamp_t ts, const char *format, char* buffer, const size_t max_size) noexcept;
+
+  std::string format_UTC(const char *format) noexcept;
+  std::string format_localtime(const char *format) noexcept;
+  std::string format_UTC(const unix_timestamp_t ts, const char *format) noexcept;
+  std::string format_localtime(const unix_timestamp_t ts, const char *format) noexcept;
 
   template <typename F, typename... Args>
   auto perf(const std::string_view &msg, F f, Args &&...args) {

@@ -15,13 +15,10 @@ namespace demiurg {
   class module_interface {
   public:
     // нужен чтобы найти подходящий тип объекта
-    inline module_interface(system *sys) noexcept : sys(sys) {}
+    inline module_interface(system *sys, std::string path) noexcept : sys(sys), _path(std::move(path)) {}
     virtual ~module_interface() noexcept = default;
 
-    // модули создаются по файлам и папкам, 1 модуль - 1 файл/папка
-    // модули должны вернуть список ресурсов (???)
-    // и так же из них по пути будет загрузка данных файла
-    // наверное нужно добавить подготовку/очистку модуля
+    inline std::string_view path() const { return _path; }
 
     virtual void open() = 0;
     virtual void close() = 0;
@@ -32,45 +29,21 @@ namespace demiurg {
     virtual void load_binary(const std::string_view &path, std::vector<uint8_t> &mem) const = 0;
     virtual void load_text(const std::string_view &path, std::string &mem) const = 0;
 
+    virtual std::vector<uint8_t> load_binary(const std::string_view &path) const {
+      std::vector<uint8_t> mem;
+      load_binary(path, mem);
+      return mem;
+    }
+
+    virtual std::string load_text(const std::string_view &path) const {
+      std::string mem;
+      load_text(path, mem);
+      return mem;
+    }
   protected:
-    system *sys;
+    system *sys; // указать путь тут? имеет смысл
+    std::string _path; // если папка то обязательно нужно добавить '/' на конце
   };
-
-  //class folder_module : public module_interface {
-  //public:
-  //  folder_module(system* sys, std::string root) noexcept;
-  //  ~folder_module() noexcept = default;
-
-  //  void open() override;
-  //  void close() override;
-  //  bool is_openned() const override;
-  //  // просто пройдем все файлики в папке и добавим их в список
-  //  void resources_list(std::vector<resource_interface*> &arr) const override;
-  //  void load_binary(const std::string_view &path, std::vector<uint8_t> &mem) const override;
-  //  void load_binary(const std::string_view &path, std::vector<char> &mem) const override;
-  //  void load_text(const std::string_view &path, std::string &mem) const override;
-  //private:
-  //  std::string root;
-  //};
-
-  //class zip_archive_module : public module_interface {
-  //public:
-  //  zip_archive_module(system* sys, std::string path) noexcept;
-  //  ~zip_archive_module() noexcept = default;
-
-  //  void open() override;
-  //  void close() override;
-  //  bool is_openned() const override;
-  //  // откроем архив и выгрузим данные из него
-  //  void resources_list(std::vector<resource_interface*> &arr) const override;
-  //  void load_binary(const std::string_view &path, std::vector<uint8_t> &mem) const override;
-  //  void load_binary(const std::string_view &path, std::vector<char> &mem) const override;
-  //  void load_text(const std::string_view &path, std::string &mem) const override;
-  //private:
-  //  std::string path;
-  //};
-
-  // эти два типа модуля - наверное все что имеет смысл
 }
 }
 
