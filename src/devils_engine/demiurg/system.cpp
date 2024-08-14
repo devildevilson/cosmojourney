@@ -396,11 +396,21 @@ namespace devils_engine {
       parse_path(this->path, root, module_name, file_name, ext, id);
     }
 
+    static std::tuple<std::string_view, std::string_view, std::string_view> parse_path(const std::string_view &path) {
+      const size_t last_slash = path.rfind('/');
+      const size_t last_dot = path.rfind('.');
+      const auto ext = last_dot != std::string_view::npos ? path.substr(last_dot+1) : std::string_view();
+      const auto id = path.substr(0, last_dot);
+      const auto name = path.substr(last_slash+1).substr(0, last_dot);
+      return std::make_tuple(id, name, ext);
+    }
+
     void resource_interface::set(std::string path, const std::string_view &module_name, const std::string_view &id, const std::string_view &ext) {
       this->path = std::move(path);
       this->module_name = module_name;
-      this->id = id;
-      this->ext = ext;
+      const auto [ local_id, local_name, local_ext ] = parse_path(this->path);
+      this->id = local_id;
+      this->ext = local_ext;
     }
 
     resource_interface *resource_interface::replacement_next(const resource_interface *ptr) const {

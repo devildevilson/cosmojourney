@@ -9,29 +9,43 @@ namespace devils_engine {
 namespace demiurg {
 
   static void parse_path(
-      const std::string &path, 
-      const std::string_view &root_path,
-      std::string_view &file_name, 
-      std::string_view &ext,
-      std::string_view &id
-    ) {
-      std::string_view full_path = path;
-      utils_assertf(full_path.find(root_path) == 0, "Path to resource must have root folder part. Current path: {}", path);
-      full_path = full_path.substr(root_path.size()+1);
+    const std::string &path, 
+    const std::string_view &root_path,
+    std::string_view &file_name, 
+    std::string_view &ext,
+    std::string_view &id
+  ) {
+    std::string_view full_path = path;
+    utils_assertf(full_path.find(root_path) == 0, "Path to resource must have root folder part. Current path: {}", path);
+    full_path = full_path.substr(root_path.size()+1);
 
-      /*const size_t first_slash = full_path.find('/');
-      module_name = first_slash != std::string_view::npos ? full_path.substr(0, first_slash) : "";
-      const size_t last_slash_index = full_path.rfind('/');
-      file_name = last_slash_index != std::string_view::npos ? full_path.substr(last_slash_index) : full_path;*/
-      file_name = full_path;
-      if (file_name == "." || file_name == "..") return;
+    /*const size_t first_slash = full_path.find('/');
+    module_name = first_slash != std::string_view::npos ? full_path.substr(0, first_slash) : "";
+    const size_t last_slash_index = full_path.rfind('/');
+    file_name = last_slash_index != std::string_view::npos ? full_path.substr(last_slash_index) : full_path;*/
+    file_name = full_path;
+    if (file_name == "." || file_name == "..") return;
 
-      const size_t dot_index = file_name.rfind('.');
-      ext = dot_index != 0 && dot_index != std::string_view::npos ? file_name.substr(dot_index+1) : "";
-      //const size_t module_size = module_name == "" ? 0 : module_name.size()+1;
-      const size_t ext_size = ext == "" ? 0 : ext.size()+1;
-      id = full_path.substr(0, full_path.size() - ext_size);
-    }
+    const size_t dot_index = file_name.rfind('.');
+    ext = dot_index != 0 && dot_index != std::string_view::npos ? file_name.substr(dot_index+1) : "";
+    //const size_t module_size = module_name == "" ? 0 : module_name.size()+1;
+    const size_t ext_size = ext == "" ? 0 : ext.size()+1;
+    id = full_path.substr(0, full_path.size() - ext_size);
+  }
+
+  // тут бы желательно взять путь, убрать часть пути папки и парсить чисто остаток
+  static std::tuple<std::string_view, std::string_view, std::string_view> parse_path(const std::string_view &path) {
+    // раньше я брал file_name как оносительный путь от папки
+    // теперь наверное проще сделать по другому
+    const size_t last_slash = path.rfind('/');
+    const size_t last_dot = path.rfind('.');
+    // здесь не должна приходить папка, должно ли у файлов быть какое то разрешение в принципе?
+    // да именно по разрешению мы понимаем что к чему относится 
+    const auto ext = last_dot != std::string_view::npos ? path.substr(last_dot+1) : std::string_view();
+    const auto id = path.substr(0, last_dot);
+    const auto name = path.substr(last_slash+1).substr(0, last_dot);
+    return std::make_tuple(id, name, ext);
+  }
 
   folder_module::folder_module(system* sys, std::string root) noexcept : module_interface(sys, std::move(root))
   {
@@ -50,11 +64,13 @@ namespace demiurg {
     for (const auto &entry : fs::recursive_directory_iterator(_path)) {
       if (!entry.is_regular_file()) continue;
       std::string entry_path = entry.path().generic_string();
+      auto file_path = entry_path.substr(_path.size());
 
       // module_name мы теперь знаем и тут он нам не нужен
-      std::string_view file_name, ext, id;
-      parse_path(entry_path, _path, file_name, ext, id);
-      if (file_name == "." || file_name == "..") continue;
+      //std::string_view file_name, ext, id;
+      //parse_path(entry_path, _path, file_name, ext, id);
+      const auto [ id, name, ext ] = parse_path(file_path);
+      if (name == "." || name == "..") continue;
 
       auto t = sys->find_type(id, ext);
 
@@ -67,7 +83,8 @@ namespace demiurg {
       // указание пути тоже нужно переделывать
       // наверное просто самостоятельно положить данные какие нужны
       //res->set_path(entry_path, _root);
-      res->set(entry_path, module_name, id, ext);
+      // скорее всего тут нужно указать только путь а id и ext вывести из него на месте во избежание проблем
+      res->set(std::move(file_path), module_name, id, ext);
       res->module = this;
       arr.push_back(res);
     }
