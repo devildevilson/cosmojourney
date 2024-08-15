@@ -55,8 +55,9 @@ link_directories(libs)
 add_subdirectory(src/devils_engine/utils/)
 add_subdirectory(src/devils_engine/sound/)
 add_subdirectory(src/devils_engine/demiurg/)
+add_subdirectory(src/devils_engine/thread/)
 #add_subdirectory(src/devils_engine/interface/)
 
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp")
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/thread/pool.h" "src/devils_engine/thread/pool.cpp" "src/devils_engine/thread/atomic.h" )
 
-target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg) #sui 
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread) #sui 
