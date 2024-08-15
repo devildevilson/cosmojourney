@@ -34,6 +34,7 @@ public:
 
   void sync() {
     const T& ref = *this;
+    // запишем в хорошем формате
     const auto cont = utils::to_json<glz::opts{.prettify = true, .indentation_width = 2}>(ref);
     file_io::write(cont, path);
   }

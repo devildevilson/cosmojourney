@@ -64,31 +64,31 @@ void write(const std::span<const uint8_t> &bytes, const std::string &path, const
   file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
 
-void append(const std::span<char> &bytes, const std::string &path, const enum type type = type::binary) {
+void append(const std::span<char> &bytes, const std::string &path, const enum type type) {
   const auto flags = type == type::binary ? std::ios::out | std::ios::binary | std::ios::app : std::ios::out | std::ios::app;
   std::ofstream file(path, flags);
   file.write(bytes.data(), bytes.size());
 }
 
-void append(const std::span<uint8_t> &bytes, const std::string &path, const enum type type = type::binary) {
+void append(const std::span<uint8_t> &bytes, const std::string &path, const enum type type) {
   const auto flags = type == type::binary ? std::ios::out | std::ios::binary | std::ios::app : std::ios::out | std::ios::app;
   std::ofstream file(path, flags);
   file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
 
-void append(const std::string &bytes, const std::string &path, const enum type type = type::text) {
+void append(const std::string &bytes, const std::string &path, const enum type type) {
   const auto flags = type == type::binary ? std::ios::out | std::ios::binary | std::ios::app : std::ios::out | std::ios::app;
   std::ofstream file(path, flags);
   file << bytes;
 }
 
-void append(const std::span<const char> &bytes, const std::string &path, const enum type type = type::binary) {
+void append(const std::span<const char> &bytes, const std::string &path, const enum type type) {
   const auto flags = type == type::binary ? std::ios::out | std::ios::binary | std::ios::app : std::ios::out | std::ios::app;
   std::ofstream file(path, flags);
   file.write(bytes.data(), bytes.size());
 }
 
-void append(const std::span<const uint8_t> &bytes, const std::string &path, const enum type type = type::binary) {
+void append(const std::span<const uint8_t> &bytes, const std::string &path, const enum type type) {
   const auto flags = type == type::binary ? std::ios::out | std::ios::binary | std::ios::app : std::ios::out | std::ios::app;
   std::ofstream file(path, flags);
   file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
