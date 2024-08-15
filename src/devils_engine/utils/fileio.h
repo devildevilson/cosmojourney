@@ -8,7 +8,6 @@
 #include <string>
 #include <string_view>
 #include <span>
-#include "core.h"
 
 namespace devils_engine {
 namespace file_io {
@@ -26,6 +25,11 @@ void write(const std::span<uint8_t> &bytes, const std::string &path, const enum 
 void write(const std::string &bytes, const std::string &path, const enum type type = type::text);
 void write(const std::span<const char> &bytes, const std::string &path, const enum type type = type::binary);
 void write(const std::span<const uint8_t> &bytes, const std::string &path, const enum type type = type::binary);
+void append(const std::span<char> &bytes, const std::string &path, const enum type type = type::binary);
+void append(const std::span<uint8_t> &bytes, const std::string &path, const enum type type = type::binary);
+void append(const std::string &bytes, const std::string &path, const enum type type = type::text);
+void append(const std::span<const char> &bytes, const std::string &path, const enum type type = type::binary);
+void append(const std::span<const uint8_t> &bytes, const std::string &path, const enum type type = type::binary);
 bool exists(const std::string &path) noexcept;
 size_t size(const std::string &path) noexcept;
 }

@@ -1,5 +1,19 @@
 #include "core.h"
 
+#include <cstdlib>
+#include <filesystem>
+
+#include "utf/utf.hpp"
+
+#ifdef _WIN32
+#include <windows.h>    //GetModuleFileNameW
+#else
+#include <limits.h>
+#include <unistd.h>     //readlink
+#endif
+
+namespace fs = std::filesystem;
+
 namespace devils_engine {
   namespace utils {
     std::string_view make_sane_file_name(const std::string_view &str) {
@@ -39,6 +53,53 @@ namespace devils_engine {
 
     tracer::~tracer() noexcept {
       spdlog::log(spdlog::level::trace, "out {}:{} `{}`", make_sane_file_name(l.file_name()), l.line(), l.function_name());
+    }
+
+    std::string cast(const std::wstring &str) noexcept {
+      const size_t s = wcstombs(nullptr, str.c_str(), 0);
+      if (s == SIZE_MAX) return std::string();
+      std::string ret(s, '\0');
+      wcstombs(ret.data(), str.c_str(), ret.size());
+      return ret;
+    }
+
+    std::string cast(const std::u16string_view &str) noexcept { return utf::as_str8(str); }
+    std::string cast(const std::u32string_view &str) noexcept { return utf::as_str8(str); }
+
+    std::wstring cast(const std::string &str) noexcept {
+      const size_t s = mbstowcs(nullptr, str.c_str(), 0);
+      if (s == SIZE_MAX) return std::wstring();
+      std::wstring ret(s, '\0');
+      mbstowcs(ret.data(), str.c_str(), ret.size());
+      return ret;
+    }
+
+    template <>
+    std::u16string cast(const std::string_view &str) { return utf::as_u16(str); }
+
+    template <>
+    std::u32string cast(const std::string_view &str) { return utf::as_u32(str); }
+
+    std::string app_path() noexcept {
+#ifdef _WIN32
+      wchar_t path[MAX_PATH] = { 0 };
+      GetModuleFileNameW(NULL, path, MAX_PATH);
+      const size_t s = wcstombs(nullptr, path, 0);
+      if (s == SIZE_MAX) return std::string();
+      std::string ret(s, '\0');
+      wcstombs(ret.data(), path, ret.size());
+      return fs::path(ret).generic_string();
+#else
+      char result[PATH_MAX];
+      ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+      return std::string(result, (count > 0) ? count : 0);
+#endif
+    }
+
+    std::string project_folder() noexcept {
+      const auto str = app_path();
+      // по идее уберем название файла + уберем папку bin
+      return str.substr(0, str.rfind('/')+1);
     }
   }
 }

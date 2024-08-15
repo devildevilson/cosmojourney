@@ -263,7 +263,7 @@ namespace devils_engine {
         }
 
         const auto ftime = utils::file_timestamp(e);
-        const auto datetime = utils::format_localtime(ftime, "%Y-%m-%d %X");
+        const auto datetime = utils::format_localtime(ftime, utils::ISO_datetime_format);
 
         if (!e.is_directory()) {
           const auto cont = file_io::read<uint8_t>(entry.path);

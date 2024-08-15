@@ -33,6 +33,7 @@ set(SRC_LIST
   time.cpp
   sha256.c
   sha256cpp.cpp
+  ../utf/utf.cpp
 )
 
 set(HDR_LIST
@@ -53,6 +54,7 @@ set(HDR_LIST
   fileio.h
   time.h
   sha256.h
+  ../utf/utf.hpp
 )
 
 include_directories(

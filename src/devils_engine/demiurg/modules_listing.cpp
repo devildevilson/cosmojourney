@@ -158,7 +158,7 @@ void modules_listing::load_mod(const fs::directory_entry &entry) {
   const auto [ name, ext ] = get_name_ext(path);
 
   const auto ftime = utils::file_timestamp(entry);
-  const auto datetime = utils::format_localtime(ftime, "%Y-%m-%d %X");
+  const auto datetime = utils::format_localtime(ftime, utils::ISO_datetime_format);
 
   std::string hash;
   if (!entry.is_directory()) {

@@ -263,6 +263,18 @@ namespace devils_engine {
     static_assert(count_significant(2) == 2);
     static_assert(count_significant(3) == 2);
     static_assert(count_significant(4) == 3);
+
+    // пригодятся юникод строки
+    std::string cast(const std::wstring &str) noexcept;
+    std::string cast(const std::u16string_view &str) noexcept;
+    std::string cast(const std::u32string_view &str) noexcept;
+    std::wstring cast(const std::string &str) noexcept;
+    template <typename T>
+    T cast(const std::string_view &str) noexcept;
+
+    // windows, unix, macos
+    std::string app_path() noexcept;
+    std::string project_folder() noexcept;
   }
     
     // poor man's struct log, needs polishing

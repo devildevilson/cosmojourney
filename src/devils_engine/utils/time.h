@@ -43,6 +43,13 @@ namespace utils {
     return std::chrono::duration_cast<std::chrono::seconds>(p1.time_since_epoch()).count();
   }*/
 
+  constexpr char const *const ISO_date_format = "%F";
+  constexpr char const *const ISO_time_format = "%T";
+  constexpr char const *const ISO_offset_from_utc = "%z";
+  constexpr char const *const ISO_datetime_format = "%F %T";
+  constexpr char const *const ISO_datetime_filename_valid_format = "%F_%H-%M-%S";
+  constexpr char const *const ISO_full_datetime_format = "%F %T %z";
+
   size_t format_UTC(const char *format, char* buffer, const size_t max_size) noexcept;
   size_t format_localtime(const char *format, char* buffer, const size_t max_size) noexcept;
   size_t format_UTC(const unix_timestamp_t ts, const char *format, char* buffer, const size_t max_size) noexcept;
