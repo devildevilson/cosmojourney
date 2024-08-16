@@ -37,3 +37,6 @@
 [submodule "include/tiny_ktx"]
 	path = include/tiny_ktx
 	url = https://github.com/DeanoC/tiny_ktx.git
+[submodule "include/sol2"]
+	path = include/sol2
+	url = https://github.com/ThePhD/sol2.git

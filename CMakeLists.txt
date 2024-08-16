@@ -6,6 +6,10 @@ project(
   LANGUAGES CXX C
 )
 
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -14,18 +18,18 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_CXX_STANDARD 23)
 
   if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	  if(MSVC)
+	if(MSVC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR /Wall /permissive- /Zc:preprocessor")
     else()
-	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra")
+	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra")
     endif()
   endif()
 
   if (CMAKE_BUILD_TYPE STREQUAL "Release")
-	  if(MSVC)
+	if(MSVC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /permissive- /Zc:preprocessor")
     else()
-	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
     endif()
   endif()
 
@@ -48,6 +52,24 @@ include_directories(
 )
 
 link_directories(libs)
+link_directories(libs/lua54)
+link_directories(libs/glfw34)
+link_directories(libs/ktx)
+link_directories(libs/openal)
+
+if(MSVC)
+  set(DYN_LIBRARIES_LIST
+    libs/lua54/lua54.dll
+    libs/openal/OpenAL32.dll
+    libs/openal/soft_oal.dll
+    libs/glfw34/glfw3.dll
+    libs/ktx/ktx.dll
+  )
+else()
+  set(DYN_LIBRARIES_LIST
+
+  )
+endif()
 
 # Find packages go here.
 
@@ -58,6 +80,14 @@ add_subdirectory(src/devils_engine/demiurg/)
 add_subdirectory(src/devils_engine/thread/)
 #add_subdirectory(src/devils_engine/interface/)
 
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/thread/pool.h" "src/devils_engine/thread/pool.cpp" "src/devils_engine/thread/atomic.h" )
-
+# надо бы переназвать exe файл, и сверху еще папку проекта сделать
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp")
 target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread) #sui 
+
+foreach (library_path IN LISTS DYN_LIBRARIES_LIST)
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+    COMMAND "${CMAKE_COMMAND}" -E copy 
+        "${CMAKE_SOURCE_DIR}/${library_path}"
+        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/" 
+    COMMENT "Copy libs")
+endforeach()
