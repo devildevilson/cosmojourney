@@ -10,6 +10,10 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
+if (CMAKE_BUILD_TYPE STREQUAL "")
+  set(CMAKE_BUILD_TYPE Debug)
+endif()
+
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -19,17 +23,18 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
   if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	if(MSVC)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR /Wall /permissive- /Zc:preprocessor")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /Wall /permissive- /Zc:preprocessor")
     else()
-	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra")
+	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra -fno-rtti")
     endif()
   endif()
 
   if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_definitions(-D_NDEBUG)
 	if(MSVC)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /permissive- /Zc:preprocessor")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /O2 /permissive- /Zc:preprocessor")
     else()
-	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fno-rtti")
     endif()
   endif()
 
@@ -47,6 +52,9 @@ include_directories(
   include/reflect/
   include/glaze/include/
   include/alpaca/include/
+  include/sol2/include/
+  include/fmt/include/
+  libs/lua54/include/
   src/devils_engine/
   src/cosmojourney/
 )
@@ -81,8 +89,9 @@ add_subdirectory(src/devils_engine/thread/)
 #add_subdirectory(src/devils_engine/interface/)
 
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp")
-target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread) #sui 
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/bindings/generic.h" "src/devils_engine/bindings/env.h" "src/devils_engine/bindings/env.cpp" "src/devils_engine/bindings/lua_header.h" "src/devils_engine/bindings/shared.h")
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread lua54) #sui 
+target_compile_definitions(${PROJECT_NAME} PRIVATE "DEVILS_ENGINE_PROJECT_NAME=\"${PROJECT_NAME}\"")
 
 foreach (library_path IN LISTS DYN_LIBRARIES_LIST)
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 

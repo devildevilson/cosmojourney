@@ -462,10 +462,10 @@ namespace devils_engine {
     }
 
     void resource_interface::load(const utils::safe_handle_t& handle) {
-      switch (_state) {
+      switch (state()) {
         case state::cold: load_cold(handle); break;
         case state::warm: load_warm(handle); break;
-        case state::hot : break;
+        case state::hot : return; // не нужно увеличивать стейт
       }
 
       _state = std::max(_state + 1, 2);

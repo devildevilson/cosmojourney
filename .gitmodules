@@ -40,3 +40,6 @@
 [submodule "include/sol2"]
 	path = include/sol2
 	url = https://github.com/ThePhD/sol2.git
+[submodule "include/fmt"]
+	path = include/fmt
+	url = https://github.com/fmtlib/fmt.git

@@ -75,10 +75,10 @@ namespace devils_engine {
     }
 
     template <>
-    std::u16string cast(const std::string_view &str) { return utf::as_u16(str); }
+    std::u16string cast(const std::string_view &str) noexcept { return utf::as_u16(str); }
 
     template <>
-    std::u32string cast(const std::string_view &str) { return utf::as_u32(str); }
+    std::u32string cast(const std::string_view &str) noexcept { return utf::as_u32(str); }
 
     std::string app_path() noexcept {
 #ifdef _WIN32

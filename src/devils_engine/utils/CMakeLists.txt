@@ -34,6 +34,10 @@ set(SRC_LIST
   sha256.c
   sha256cpp.cpp
   ../utf/utf.cpp
+
+  #${CMAKE_SOURCE_DIR}/include/fmt/src/fmt.cc
+  #${CMAKE_SOURCE_DIR}/include/fmt/src/format.cc
+  #${CMAKE_SOURCE_DIR}/include/fmt/src/os.cc
 )
 
 set(HDR_LIST

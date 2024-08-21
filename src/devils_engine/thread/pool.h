@@ -9,6 +9,7 @@
 #include <memory>
 #include <queue>
 #include <thread>
+#include <cmath>
 
 namespace devils_engine {
 namespace thread {
@@ -23,6 +24,7 @@ public:
 
   template<class F, class... Args>
   void submit(F&& f, Args&&... args) {
+    // может ли сыграть то что неправильно муваю аргументы?
     task_t task = [f = std::move(f), largs = std::make_tuple(std::forward<Args>(args)...)] () mutable {
       return std::apply(std::move(f), std::move(largs));
     };
@@ -31,7 +33,7 @@ public:
   }
 
   template<class F, class... Args>
-  auto submit(F&& f, Args&&... args) -> std::future<typename std::invoke_result_t<F(Args...)>> {
+  auto submit_future(F&& f, Args&&... args) -> std::future<typename std::invoke_result_t<F(Args...)>> {
     using return_type = typename std::invoke_result_t<F(Args...)>;
       
     // тут лучше не придумали
@@ -42,8 +44,8 @@ public:
     );
 
     std::future<return_type> res = task->get_future();
-    task_t task = [local_task = std::move(task)]() { (*local_task)(); };
-    submitbase(std::move(task));
+    task_t rtask = [local_task = std::move(task)]() { (*local_task)(); };
+    submitbase(std::move(rtask));
 
     return res;
   }

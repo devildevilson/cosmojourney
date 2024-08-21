@@ -8,7 +8,9 @@
 #include <iostream>
 #include <source_location>
 #include <reflect>
-#include "spdlog/spdlog.h"
+//#include <fmt/base.h>
+//#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 #include "type_traits.h"
 
 // сюда нужно пихнуть стактрейс
@@ -20,6 +22,8 @@ namespace devils_engine {
 #   else
 #     define utils_pretty_function __PRETTY_FUNCTION__
 #   endif
+
+#   define DEVILS_ENGINE_EPSILON 0.000001
 
     std::string_view make_sane_file_name(const std::string_view &str);
 
@@ -205,7 +209,8 @@ namespace devils_engine {
 
     template <typename Arg, typename... Args>
     void print_detail(Arg&& arg, Args&&... args) {
-      std::cout << " " << arg;
+      //std::cout << " " << arg;
+      fmt::print(" {}", std::forward<Arg>(arg));
       print_detail(std::forward<Args>(args)...);
     }
 
@@ -213,14 +218,16 @@ namespace devils_engine {
 
     template <typename Arg, typename... Args>
     void print(Arg&& arg, Args&&... args) {
-      std::cout << arg;
+      //std::cout << arg;
+      fmt::print("{}", std::forward<Arg>(arg));
       print_detail(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void println(Args&&... args) {
       print(std::forward<Args>(args)...);
-      std::cout << "\n";
+      //std::cout << "\n";
+      fmt::print("\n");
     }
 
     class tracer {

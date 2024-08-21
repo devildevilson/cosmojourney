@@ -21,11 +21,11 @@ namespace devils_engine {
     
     const size_t mulberry32::state_size;
     mulberry32::state mulberry32::init(const uint32_t seed) {
-      return next({seed});
+      return next(mulberry32::state{{seed}});
     }
       
     mulberry32::state mulberry32::next(state s) {
-      return {s.s[0] + 0x6D2B79F5};
+      return mulberry32::state{ { s.s[0] + 0x6D2B79F5 } };
     }
       
     uint32_t mulberry32::value(const state &s) {
@@ -37,11 +37,11 @@ namespace devils_engine {
     
     const size_t splitmix64::state_size;
     splitmix64::state splitmix64::init(const uint64_t seed) {
-      return next({seed});
+      return next(splitmix64::state{ { seed } });
     }
       
     splitmix64::state splitmix64::next(state s) {
-      return {s.s[0] + 0x9e3779b97f4a7c15};
+      return splitmix64::state{ { s.s[0] + 0x9e3779b97f4a7c15 } };
     }
       
     uint64_t splitmix64::value(const state &s) {
@@ -54,10 +54,11 @@ namespace devils_engine {
     template <typename T>
     typename T::state typed_init(const uint64_t seed) {
       typename T::state new_state;
-      splitmix64::state splitmix_states[T::state_size];
-      splitmix_states[0] = splitmix64::next({seed});
-      for (size_t i = 1; i < T::state_size; ++i) splitmix_states[i] = splitmix64::next(splitmix_states[i-1]);
-      for (size_t i = 0; i < T::state_size; ++i) new_state.s[i] = splitmix64::value(splitmix_states[i]);
+      const size_t state_size = T::state_size;
+      splitmix64::state splitmix_states[state_size];
+      splitmix_states[0] = splitmix64::next(splitmix64::state{ { seed } });
+      for (size_t i = 1; i < state_size; ++i) splitmix_states[i] = splitmix64::next(splitmix_states[i-1]);
+      for (size_t i = 0; i < state_size; ++i) new_state.s[i] = splitmix64::value(splitmix_states[i]);
       return new_state;
     }
 
@@ -267,7 +268,7 @@ namespace devils_engine {
     typename T::state typed_init_with_p(const uint64_t seed) {
       typename T::state new_state;
       splitmix64::state splitmix_states[T::state_size];
-      splitmix_states[0] = splitmix64::next({seed});
+      splitmix_states[0] = splitmix64::next(splitmix64::state{ { seed } });
       for (size_t i = 1; i < T::state_size; ++i) splitmix_states[i] = splitmix64::next(splitmix_states[i-1]);
       for (size_t i = 0; i < T::state_size; ++i) new_state.s[i] = splitmix64::value(splitmix_states[i]);
       new_state.p = splitmix64::value(splitmix64::next(splitmix_states[T::state_size-1])) % T::state_size;
