@@ -100,7 +100,8 @@ namespace devils_engine {
       const auto str = app_path();
       // по идее уберем название файла + уберем папку bin
       const size_t first_slash = str.rfind('/');
-      return str.substr(0, first_slash).substr(0, str.rfind('/', str.size()-first_slash)+1);
+      const auto bin_dir = std::string_view(str).substr(0, first_slash);
+      return std::string(bin_dir.substr(0, bin_dir.rfind('/')+1));
     }
   }
 }

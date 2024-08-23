@@ -205,9 +205,9 @@ namespace devils_engine {
         return l(a->id, b->id);
       });
 
-      for (const auto ptr : resources) {
+      /*for (const auto ptr : resources) {
         utils::println(ptr->module_name, ptr->id, ptr->ext);
-      }
+      }*/
     }
 
     std::vector<system::list_entry> system::load_list(const std::string_view &list_name) const {
@@ -350,6 +350,15 @@ namespace devils_engine {
             itr->second->replacement_radd(res);
           }
         }
+      }
+
+      std::sort(resources.begin(), resources.end(), [] (auto a, auto b) {
+        std::less<std::string_view> l;
+        return l(a->id, b->id);
+      });
+
+      for (const auto ptr : resources) {
+        utils::println(ptr->module_name, ptr->id, ptr->ext);
       }
     }
 

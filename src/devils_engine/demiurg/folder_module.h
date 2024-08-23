@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <vector>
 #include <string>
-#include "demiurg/module_interface.h"
+#include "module_interface.h"
 
 namespace devils_engine {
 namespace demiurg {
@@ -21,11 +21,11 @@ namespace demiurg {
     bool is_openned() const override;
     // просто пройдем все файлики в папке и добавим их в список
     void resources_list(std::vector<resource_interface*> &arr) const override;
-    void load_binary(const std::string_view &path, std::vector<uint8_t> &mem) const override;
-    void load_binary(const std::string_view &path, std::vector<char> &mem) const override;
-    void load_text(const std::string_view &path, std::string &mem) const override;
-    std::vector<uint8_t> load_binary(const std::string_view &path) const override;
-    std::string load_text(const std::string_view &path) const override;
+    void load_binary(const std::string &path, std::vector<uint8_t> &mem) const override;
+    void load_binary(const std::string &path, std::vector<char> &mem) const override;
+    void load_text(const std::string &path, std::string &mem) const override;
+    std::vector<uint8_t> load_binary(const std::string &path) const override;
+    std::string load_text(const std::string &path) const override;
   private:
     std::string_view module_name;
   };

@@ -24,18 +24,20 @@ namespace demiurg {
     virtual void close() = 0;
     virtual bool is_openned() const = 0;
     virtual void resources_list(std::vector<resource_interface*> &arr) const = 0;
-    // может быть потребуется индекс
-    virtual void load_binary(const std::string_view &path, std::vector<char> &mem) const = 0;
-    virtual void load_binary(const std::string_view &path, std::vector<uint8_t> &mem) const = 0;
-    virtual void load_text(const std::string_view &path, std::string &mem) const = 0;
+    // может быть потребуется индекс, нет индекс не потребуется
+    // нужно заменить на обычный стринг, в минизипе нужно указать c_str
+    // в этой строке нужно отправлять относительный путь до файла, но с именем файла и расширением
+    virtual void load_binary(const std::string &path, std::vector<char> &mem) const = 0;
+    virtual void load_binary(const std::string &path, std::vector<uint8_t> &mem) const = 0;
+    virtual void load_text(const std::string &path, std::string &mem) const = 0;
 
-    virtual std::vector<uint8_t> load_binary(const std::string_view &path) const {
+    virtual std::vector<uint8_t> load_binary(const std::string &path) const {
       std::vector<uint8_t> mem;
       load_binary(path, mem);
       return mem;
     }
 
-    virtual std::string load_text(const std::string_view &path) const {
+    virtual std::string load_text(const std::string &path) const {
       std::string mem;
       load_text(path, mem);
       return mem;

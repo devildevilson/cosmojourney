@@ -86,6 +86,7 @@ namespace demiurg {
       // скорее всего тут нужно указать только путь а id и ext вывести из него на месте во избежание проблем
       res->set(std::move(file_path), module_name, id, ext);
       res->module = this;
+      res->raw_size = entry.file_size();
       arr.push_back(res);
     }
   }
@@ -96,25 +97,27 @@ namespace demiurg {
   // local res = require("abc/def/asd")
   // local res = require("module1:abc/def/asd")
   // скорее всего реквайр просто закинет путь в поиск в демиурге и если какой то путь будет бредовый то не найдет ничего
+  // так нам нужно еще сделать что то вроде require_list("abc/def/asd"), в нем указываем неполный путь
+  // require_list вернет массив объектов и должен автоматом преобразовать их в нужные юзертипы
 
-  void folder_module::load_binary(const std::string_view &path, std::vector<uint8_t> &mem) const {
-    mem = file_io::read<uint8_t>(_path+std::string(path));
+  void folder_module::load_binary(const std::string &path, std::vector<uint8_t> &mem) const {
+    mem = file_io::read<uint8_t>(_path+path);
   }
   
-  void folder_module::load_binary(const std::string_view &path, std::vector<char> &mem) const {
-    mem = file_io::read<char>(_path+std::string(path));
+  void folder_module::load_binary(const std::string &path, std::vector<char> &mem) const {
+    mem = file_io::read<char>(_path+path);
   }
   
-  void folder_module::load_text(const std::string_view &path, std::string &mem) const {
-    mem = file_io::read(_path+std::string(path));
+  void folder_module::load_text(const std::string &path, std::string &mem) const {
+    mem = file_io::read(_path+path);
   }
 
-  std::vector<uint8_t> folder_module::load_binary(const std::string_view &path) const {
-    return file_io::read<uint8_t>(_path+std::string(path));
+  std::vector<uint8_t> folder_module::load_binary(const std::string &path) const {
+    return file_io::read<uint8_t>(_path+path);
   }
   
-  std::string folder_module::load_text(const std::string_view &path) const {
-    return file_io::read(_path+std::string(path));
+  std::string folder_module::load_text(const std::string &path) const {
+    return file_io::read(_path+path);
   }
 
 }

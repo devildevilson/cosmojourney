@@ -5,7 +5,7 @@ set(DEVILS_LIBRARY_NAME devils_utils)
 project(
   ${DEVILS_LIBRARY_NAME}
   VERSION 0.1
-  LANGUAGES CXX)
+  LANGUAGES CXX C)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   # Let's ensure -std=c++xx instead of -std=g++xx
@@ -20,6 +20,8 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   include_directories(
     src/devils_engine/
   )
+
+  link_directories(libs)
 endif()
 
 set(SRC_LIST
@@ -38,6 +40,7 @@ set(SRC_LIST
   #${CMAKE_SOURCE_DIR}/include/fmt/src/fmt.cc
   #${CMAKE_SOURCE_DIR}/include/fmt/src/format.cc
   #${CMAKE_SOURCE_DIR}/include/fmt/src/os.cc
+  compression.cpp
 )
 
 set(HDR_LIST
@@ -59,6 +62,8 @@ set(HDR_LIST
   time.h
   sha256.h
   ../utf/utf.hpp
+  density_api.h
+  compression.h
 )
 
 include_directories(
@@ -73,4 +78,4 @@ include_directories(
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
-target_link_libraries(${DEVILS_LIBRARY_NAME})
+target_link_libraries(${DEVILS_LIBRARY_NAME} density minizip bzip2 lzma zlibstatic-ng zstd_static bcrypt ncrypt crypt32)

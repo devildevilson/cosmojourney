@@ -290,8 +290,14 @@ static sol::variadic_results perf(const sol::function &f, const sol::variadic_ar
   const size_t mcs = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
   sol_lua_check_error(s, res);
   sol::variadic_results final_res(res.begin(), res.end());
-  final_res.push_back(sol::make_object(s, mcs));
+  final_res.push_back(sol::make_object(s, int64_t(mcs)));
   return final_res;
+}
+
+static std::tuple<double, int64_t> dice(const double count, const double upper_bound, const int64_t state) {
+  auto s = utils::splitmix64::state{{s64_to_u64(state)}};
+  const auto res = utils::dice_accumulator(count, upper_bound, s);
+  return std::make_tuple(double(res), u64_to_s64(s.s[0]));
 }
 
 // версия игры
@@ -309,6 +315,7 @@ void basic_functions(sol::table t) {
   base.set_function("prng64", &prng64);
   base.set_function("prng64_2", &prng64_2);
   base.set_function("prng64_normalize", &prng64_normalize);
+  base.set_function("dice", &dice);
   base.set_function("prng32", &shared::prng);
   base.set_function("prng32_2", &shared::prng2);
   base.set_function("prng32_normalize", &shared::prng_normalize);
