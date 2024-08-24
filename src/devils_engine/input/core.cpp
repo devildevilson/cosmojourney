@@ -14,8 +14,10 @@
 
 #include "utils/core.h"
 
-#define GLFW_INCLUDE_VULKAN
+//#define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
+
+#include "key_names.h"
 
 namespace devils_engine {
 namespace input {
@@ -25,7 +27,7 @@ static_assert(alignof(icon_t) == alignof(GLFWimage));
 init::init(error_callback callback) {
   if (!glfwInit()) utils::error("Could not init GLFW");
   glfwSetErrorCallback(callback);
-  if (!glfwVulkanSupported()) utils::error("Vulkan is not supported by this system");
+  //if (!glfwVulkanSupported()) utils::error("Vulkan is not supported by this system");
 }
 init::~init() noexcept {
   glfwTerminate();
@@ -99,7 +101,7 @@ void destroy(GLFWwindow* w) { glfwDestroyWindow(w); }
 // glfwSetWindowMonitor
 void hide(GLFWwindow* w) { glfwHideWindow(w); }
 void show(GLFWwindow* w) { glfwShowWindow(w); }
-bool should_close(GLFWwindow* w) noexcept { glfwWindowShouldClose(w); }
+bool should_close(GLFWwindow* w) noexcept { return glfwWindowShouldClose(w); }
 std::tuple<float, float> window_content_scale(GLFWwindow* m) noexcept {
   float w = 0.0f, h = 0.0f;
   glfwGetWindowContentScale(m, &w, &h);
@@ -138,7 +140,7 @@ void set_window_callback(GLFWwindow* w, character_callback callback) {
   glfwSetCharCallback(w, callback);
 }
 
-void set_window_callback(GLFWwindow* w, cursor_position_callback callback) {
+void set_window_cursor_pos_callback(GLFWwindow* w, cursor_position_callback callback) {
   glfwSetCursorPosCallback(w, callback);
 }
 
@@ -161,7 +163,12 @@ void set_window_callback(GLFWwindow *w, drop_callback callback) {
 void poll_events() { glfwPollEvents(); }
 int32_t key_scancode(const int32_t key) { return glfwGetKeyScancode(key); }
 std::string_view key_name(const int32_t key, const int32_t scancode) {
-  return std::string_view(glfwGetKeyName(key, scancode));
+  auto str = glfwGetKeyName(key, scancode);
+  return std::string_view(str == nullptr ? "" : str);
+}
+
+std::string key_name_native(const int32_t key, const int32_t scancode) {
+  return get_key_name(scancode);
 }
 
 std::tuple<double, double> cursor_pos(GLFWwindow* m) {

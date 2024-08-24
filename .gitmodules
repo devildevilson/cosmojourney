@@ -43,3 +43,6 @@
 [submodule "include/fmt"]
 	path = include/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "include/parallel-hashmap"]
+	path = include/parallel-hashmap
+	url = https://github.com/greg7mdp/parallel-hashmap.git

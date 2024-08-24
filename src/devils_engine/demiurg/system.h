@@ -10,14 +10,16 @@
 #include <vector>
 #include <array>
 #include <span>
+#include <functional>
 #include <demiurg/resource_base.h>
 #include <utils/block_allocator.h>
 #include <utils/memory_pool.h>
 #include <utils/type_traits.h>
 // не работает со строками?
 //#include <qc-hash.hpp>
-#include <utils/flat_hash_map.hpp>
-#include <functional>
+// оказалось говном
+//#include <utils/flat_hash_map.hpp>
+#include <parallel_hashmap/phmap.h>
 
 //template <typename K, typename T>
 //using qc_hash_map = qc::hash::RawMap<K, T>;
@@ -145,7 +147,8 @@ namespace devils_engine {
 
       utils::memory_pool<type, sizeof(type)*100> types_pool;
       //qc::hash::RawMap<std::string_view, type *, qc::hash::FastHash<std::string_view>> types;
-      ska::flat_hash_map<std::string_view, type*> types;
+      //ska::flat_hash_map<std::string_view, type*> types;
+      phmap::flat_hash_map<std::string_view, type *> types;
       std::vector<resource_interface *> resources;
       std::vector<resource_interface *> all_resources;
       // это загруженные модули, ни в коем случае нельзя их трогать во время игры

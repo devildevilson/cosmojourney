@@ -133,7 +133,7 @@ namespace devils_engine {
     void system::parse_file_tree() {
       clear();
 
-      ska::flat_hash_map<std::string_view, resource_interface *> loaded;
+      phmap::flat_hash_map<std::string_view, resource_interface *> loaded;
 
       for (const auto &entry : fs::recursive_directory_iterator(root_path)) {
         if (!entry.is_regular_file()) continue;
@@ -301,7 +301,7 @@ namespace devils_engine {
       for (const auto &m : modules) { m->resources_list(all_resources); }
       for (const auto &m : modules) { m->close(); }
 
-      ska::flat_hash_map<std::string_view, resource_interface *> loaded;
+      phmap::flat_hash_map<std::string_view, resource_interface *> loaded;
       for (const auto &res : all_resources) {
         auto t = find_proper_type(res->id, res->ext);
         if (t == nullptr) {
