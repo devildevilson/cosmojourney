@@ -55,6 +55,8 @@ include_directories(
   include/sol2/include/
   include/fmt/include/
   libs/lua54/include/
+  libs/glfw34/include/
+  libs/ktx/include/
   src/devils_engine/
   src/cosmojourney/
 )
@@ -89,8 +91,8 @@ add_subdirectory(src/devils_engine/thread/)
 #add_subdirectory(src/devils_engine/interface/)
 
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/bindings/generic.h" "src/devils_engine/bindings/env.h" "src/devils_engine/bindings/env.cpp" "src/devils_engine/bindings/lua_header.h" "src/devils_engine/bindings/shared.h")
-target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread lua54) #sui 
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/bindings/generic.h" "src/devils_engine/bindings/env.h" "src/devils_engine/bindings/env.cpp" "src/devils_engine/bindings/lua_header.h" "src/devils_engine/bindings/shared.h" "src/devils_engine/input/core.h" "src/devils_engine/input/core.cpp" "src/devils_engine/input/events.h")
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread lua54 glfw3)
 target_compile_definitions(${PROJECT_NAME} PRIVATE "DEVILS_ENGINE_PROJECT_NAME=\"${PROJECT_NAME}\"")
 
 foreach (library_path IN LISTS DYN_LIBRARIES_LIST)

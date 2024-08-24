@@ -15,18 +15,18 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_CXX_STANDARD 20)
 
   if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	if(MSVC)
+	  if(MSVC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR /Wall /permissive-")
     else()
-	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra")
+	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra")
     endif()
   endif()
 
   if (CMAKE_BUILD_TYPE STREQUAL "Release")
-	if(MSVC)
+	  if(MSVC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /permissive-")
     else()
-	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
     endif()
   endif()
 
@@ -42,7 +42,8 @@ set(SRC_LIST
   system.cpp
   folder_module.cpp 
   modules_listing.cpp
- "zip_module.cpp")
+  zip_module.cpp
+)
 
 set(HDR_LIST
   resource_base.h
@@ -50,7 +51,9 @@ set(HDR_LIST
   module_interface.h 
   folder_module.h 
   modules_listing.h
- "settings.h" "dds_resource.h" "zip_module.h")
+  settings.h 
+  zip_module.h
+)
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
-target_link_libraries(${DEVILS_LIBRARY_NAME})
+target_link_libraries(${DEVILS_LIBRARY_NAME} devils_utils)
