@@ -29,6 +29,7 @@ set(SRC_LIST
 set(HDR_LIST
   pool.h
   atomic.h
+  lock.h
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})

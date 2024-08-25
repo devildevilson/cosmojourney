@@ -167,7 +167,7 @@ std::string_view key_name(const int32_t key, const int32_t scancode) {
   return std::string_view(str == nullptr ? "" : str);
 }
 
-std::string key_name_native(const int32_t key, const int32_t scancode) {
+std::string key_name_native(const int32_t, const int32_t scancode) {
   return get_key_name(scancode);
 }
 
