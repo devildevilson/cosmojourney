@@ -88,11 +88,12 @@ add_subdirectory(src/devils_engine/utils/)
 add_subdirectory(src/devils_engine/sound/)
 add_subdirectory(src/devils_engine/demiurg/)
 add_subdirectory(src/devils_engine/thread/)
+add_subdirectory(src/devils_engine/input/)
 #add_subdirectory(src/devils_engine/interface/)
 
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/bindings/generic.h" "src/devils_engine/bindings/env.h" "src/devils_engine/bindings/env.cpp" "src/devils_engine/bindings/lua_header.h" "src/devils_engine/bindings/shared.h" "src/devils_engine/input/core.h" "src/devils_engine/input/core.cpp" "src/devils_engine/input/events.h")
-target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread lua54 glfw3)
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/bindings/generic.h" "src/devils_engine/bindings/env.h" "src/devils_engine/bindings/env.cpp" "src/devils_engine/bindings/lua_header.h" "src/devils_engine/bindings/shared.h" "src/devils_engine/input/core.h" "src/devils_engine/input/core.cpp" "src/devils_engine/input/events.h" "src/devils_engine/painter/stage_buffer.h" "src/devils_engine/painter/stage.h" "src/devils_engine/painter/system.h" "src/devils_engine/painter/vulkan_minimal.h" "src/devils_engine/painter/system_info.h" "src/devils_engine/painter/common.h")
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input lua54)
 target_compile_definitions(${PROJECT_NAME} PRIVATE "DEVILS_ENGINE_PROJECT_NAME=\"${PROJECT_NAME}\"")
 
 foreach (library_path IN LISTS DYN_LIBRARIES_LIST)

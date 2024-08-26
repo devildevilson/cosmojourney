@@ -94,6 +94,10 @@ void append(const std::span<const uint8_t> &bytes, const std::string &path, cons
   file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
 
+bool create_directory(const std::string &path) {
+  return fs::create_directory(path);
+}
+
 bool exists(const std::string &path) noexcept {
   return fs::exists(path);
 }
@@ -103,6 +107,14 @@ size_t size(const std::string &path) noexcept {
   const size_t size = fs::file_size(path, ec);
   if (ec) return 0;
   return size;
+}
+
+bool is_directory(const std::string &path) noexcept {
+  return fs::is_directory(path);
+}
+
+bool is_regular_file(const std::string &path) noexcept {
+  return fs::is_regular_file(path);
 }
 }
 }

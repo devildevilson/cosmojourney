@@ -49,6 +49,9 @@ static std::tuple<std::string_view, std::string_view, std::string_view> parse_pa
   return std::make_tuple(id, name, ext);
 }
 
+// зачем я массив передаю? черт его знает я все равно завишу от указателя на систему
+// как будто как раз тут нужно передавать указатель на систему, где мы и создадим новый ресурс...
+// ну да выглядит как недостаток интерфейса
 void zip_module::resources_list(std::vector<resource_interface*> &arr) const {
   int32_t err = MZ_OK;
   err = mz_zip_reader_goto_first_entry(native_handle);

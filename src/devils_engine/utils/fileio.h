@@ -30,8 +30,11 @@ void append(const std::span<uint8_t> &bytes, const std::string &path, const enum
 void append(const std::string &bytes, const std::string &path, const enum type type = type::text);
 void append(const std::span<const char> &bytes, const std::string &path, const enum type type = type::binary);
 void append(const std::span<const uint8_t> &bytes, const std::string &path, const enum type type = type::binary);
+bool create_directory(const std::string &path);
 bool exists(const std::string &path) noexcept;
 size_t size(const std::string &path) noexcept;
+bool is_directory(const std::string &path) noexcept;
+bool is_regular_file(const std::string &path) noexcept;
 }
 }
 

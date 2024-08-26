@@ -73,6 +73,12 @@ namespace devils_engine {
       return view<>(span.begin(), span.end());
     }
 
+    // такой фильтр предполагает что мы знаем иерархию папок
+    // а это может быть не так, 
+    // точнее я задам изначальную структуру папок
+    // но потом люди могут захотеть сделать что угодно
+    // это все равно удобно для тех кто знает иерархию
+    // но и +м надо сделать чисто фильтр по типу
     std::span<resource_interface * const> system::raw_find(const std::string_view &filter) const {
       if (filter == "") return std::span(resources);
 
