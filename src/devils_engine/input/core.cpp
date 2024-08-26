@@ -15,6 +15,7 @@
 #include "utils/core.h"
 
 //#define GLFW_INCLUDE_VULKAN
+//#include "painter/vulkan_header.h"
 #include "GLFW/glfw3.h"
 
 #include "key_names.h"
@@ -94,6 +95,7 @@ std::string_view monitor_name(GLFWmonitor *m) noexcept {
 GLFWwindow* create_window(const uint32_t width, const uint32_t height, const std::string& name, GLFWmonitor* m, GLFWwindow* share) {
   if (m != nullptr) glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
   glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   return glfwCreateWindow(width, height, name.c_str(), m, share);
 }
 

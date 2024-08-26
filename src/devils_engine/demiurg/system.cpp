@@ -57,6 +57,14 @@ namespace devils_engine {
       }
     }
 
+    resource_interface *system::create_resource(const std::string_view &id, const std::string_view &extension) {
+      auto t = find_proper_type(id, extension);
+      if (t == nullptr) return nullptr;
+      auto ptr = t->create();
+      all_resources.push_back(ptr);
+      return ptr;
+    }
+
     system::type* system::find_type(const std::string_view &id, const std::string_view &extension) const { return find_proper_type(id, extension); }
 
     std::string_view system::root() const { return root_path; }

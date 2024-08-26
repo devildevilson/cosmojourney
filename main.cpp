@@ -22,6 +22,12 @@
 #include "utils/dice.h"
 #include "utils/named_serializer.h"
 #include "utils/time.h"
+#include "input/core.h"
+#include "input/events.h"
+#include "thread/lock.h"
+#include "painter/vulkan_header.h"
+#include "painter/system_info.h"
+#include "painter/auxiliary.h"
 
 using namespace devils_engine;
 
@@ -128,6 +134,26 @@ struct abc {
   std::unordered_map<std::string_view, int> map;
 };
 //BOOST_DESCRIBE_STRUCT(abc, (), (a, b, c, d, e, f))
+
+static void err_handler(int32_t code, const char* desc) {
+  utils::error("GLFW throw an error code {}: {}", code, desc);
+}
+
+int g_scancode = -1;
+
+static void key_func(GLFWwindow* window, int key, int scancode, int action, int mods) {
+  auto name = input::key_name_native(key, scancode);
+  if (name.empty()) name = "no name";
+
+  if (name == "E") g_scancode = scancode;
+
+  input::events::update_key(scancode, action);
+
+  const auto state = input::events::current_event_state(scancode);
+  const auto state_name = input::event_state::to_string(state);
+
+  if (action != 0) utils::info("Press '{}' '{}' {} {}", state_name, name, key, scancode);
+}
 
 int main(int argc, char const *argv[]) {
   //const size_t test_count = 100000;
@@ -393,22 +419,22 @@ int main(int argc, char const *argv[]) {
 
   //utils::println(s);
   
-  const std::string modules_root_path = "./folder1/";
-  demiurg::modules_listing ml(modules_root_path);
-  ml.reload();
+  //const std::string modules_root_path = "./folder1/";
+  //demiurg::modules_listing ml(modules_root_path);
+  //ml.reload();
 
-  std::vector<std::string> paths;
-  for (const auto &m : ml.entries()) {
-    utils::println(m->path, m->hash, m->file_date);
-    paths.push_back(m->path);
-  }
+  //std::vector<std::string> paths;
+  //for (const auto &m : ml.entries()) {
+  //  utils::println(m->path, m->hash, m->file_date);
+  //  paths.push_back(m->path);
+  //}
 
-  ml.save_list("list123", paths);
+  //ml.save_list("list123", paths);
 
-  // так что теперь
-  demiurg::system s(modules_root_path);
-  s.set_modules_list("list123");
-  s.load_default_modules();
+  //// так что теперь
+  //demiurg::system s(modules_root_path);
+  //s.set_modules_list("list123");
+  //s.load_default_modules();
 
   // можно сделать настройки, что в настройках у нас есть?
   // по большому счету это структура + метод сериализации
@@ -432,8 +458,150 @@ int main(int argc, char const *argv[]) {
   //  utils::println(m.path, m.hash, m.file_date);
   //}
 
+  // мне еще надо сделать какой то адекватный способ взаимодействия с клавиатурой
+  //
+
+  //input::init i(&err_handler);
+
+  //auto w = input::create_window(640, 480, "test", nullptr, nullptr);
+
+  //input::set_window_callback(w, &key_func);
+  //
+  //const auto fps30 = utils::app_clock::resolution() / 30;
+  //size_t last_sleep = 0;
+  //int64_t sleep_diff = 0;
+
+  //input::events::set_key("test_event", 18);
+
+  //const uint32_t pressed_states = input::event_state::press_mask;
+
+  //const size_t time_buffer_size = 5;
+  //int64_t time_buffer[time_buffer_size]{0};
+  //size_t time_buffer_counter = 0;
+
+  //const auto control_tp = std::chrono::high_resolution_clock::now();
+  //auto compute_tp = std::chrono::high_resolution_clock::now();
+  //auto sleep_tp = std::chrono::high_resolution_clock::now();
+  //size_t work_time = 0;
+  //size_t sleep_time = 0;
+  //size_t whole_round_time = 0;
+  //size_t current_sleep = 0;
+
+  //size_t counter = 0;
+
+  //while (!input::should_close(w)) {
+  //  const auto prev_tp = compute_tp;
+  //  compute_tp = std::chrono::high_resolution_clock::now();
+
+  //  const auto dur1 = compute_tp - sleep_tp;
+  //  sleep_time = std::chrono::duration_cast<std::chrono::microseconds>(dur1).count();
+  //  const auto dur3 = compute_tp - prev_tp;
+  //  whole_round_time = std::chrono::duration_cast<std::chrono::microseconds>(dur3).count();
+
+  //  utils::println("fps_default", fps30, "round_time", whole_round_time, "current_sleep", current_sleep, "last_sleep", sleep_time, "diff", sleep_diff, "work_time", work_time);
+
+  //  const auto control_dur = compute_tp - control_tp;
+  //  const size_t cur_stamp = std::chrono::duration_cast<std::chrono::microseconds>(control_dur).count();
+  //  const size_t approx_frame_index = cur_stamp / fps30;
+  //  //utils::println("cur_stamp", cur_stamp, "approx_frame_index", approx_frame_index, "frame_index", counter);
+
+  //  const size_t computed_stamp = (counter+1) * fps30;
+  //  const size_t stamp_diff = computed_stamp - cur_stamp;
+
+  //  input::poll_events();
+  //  input::events::update(fps30);
+
+  //  const auto state = input::events::current_event_state(g_scancode);
+  //  const auto state_name = input::event_state::to_string(state);
+
+  //  //utils::println("state_name", state_name, g_scancode);
+  //  const auto period_press = input::events::timed_check_event("test_event", pressed_states, 0, utils::app_clock::resolution());
+  //  if (period_press) utils::println("state_name", state_name, g_scancode);
+
+  //  //std::this_thread::sleep_for(std::chrono::microseconds(25000));
+  //  thread::spin_sleep_for(std::chrono::microseconds(25000));
+
+  //  // const size_t current_sleep = last_sleep == 0 ? fps30 : fps30 -
+  //  // std::max((int64_t(last_sleep) - int64_t(fps30)), int64_t(0));
+  //  sleep_diff = (int64_t(fps30) - int64_t(whole_round_time));
+  //  time_buffer[time_buffer_counter] = sleep_diff;
+  //  time_buffer_counter = (time_buffer_counter + 1) % time_buffer_size;
+
+  //  double accum = 0;
+  //  for (size_t i = 0; i < time_buffer_size; ++i) {
+  //    accum += time_buffer[i];
+  //  }
+  //  const int64_t avg = accum / double(time_buffer_size);
+
+  //  const auto until = control_tp + std::chrono::microseconds(computed_stamp);
+
+  //  counter += 1;
+
+  //  sleep_tp = std::chrono::high_resolution_clock::now();
+  //  const auto dur2 = sleep_tp - compute_tp;
+  //  work_time = std::chrono::duration_cast<std::chrono::microseconds>(dur2).count();
+
+  //  const auto control_dur2 = sleep_tp - control_tp;
+  //  const size_t cur_stamp2 = std::chrono::duration_cast<std::chrono::microseconds>(control_dur2).count();
+  //  const size_t stamp_diff2 = computed_stamp - cur_stamp2;
+
+  //  //current_sleep = std::max(int64_t(fps30 - work_time) + avg, int64_t(0));
+  //  //current_sleep = std::max(int64_t(stamp_diff - work_time), int64_t(0));
+  //  current_sleep = std::max(int64_t(stamp_diff2 - work_time), int64_t(0));
+
+  //  {
+  //    //const auto tp = std::chrono::high_resolution_clock::now();
+  //    //std::this_thread::sleep_for(std::chrono::microseconds(current_sleep));
+  //    std::this_thread::sleep_until(until);
+  //    //thread::spin_sleep_until(until);
+  //    //thread::spin_sleep_for(std::chrono::microseconds(current_sleep));
+  //    //const auto dur = std::chrono::high_resolution_clock::now() - tp;
+  //    //last_sleep = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
+  //    //sleep_diff = std::max((int64_t(last_sleep) - int64_t(fps30)), int64_t(0));
+  //  }
+  //}
+
+  // пока что sleep_until выглядит самым приятным вариантом среди всех
+  // если вдруг сон опять напортачит и будет слишком долгим то следующие кадры не ждем
+  // но и при этом это не spin_lock, а значит проц не будет занят на 100 процентов 
+  // легко почтитать и довольно просто понять на сколько отстаем
+  // наверное даже можно заменить им вообще все структуры
+  //std::this_thread::sleep_until
+  //thread::spin_sleep_until // идем практически идеально ровно, но съедаем 100% ядра
+  //thread::light_spin_sleep_until // съедаем окол 100% ядра, но все равно идем как попало
+  //std::this_thread::sleep_for // сложно правильно расчитать время сна, сон может быть черти какой, но это легкий сон
+  //thread::spin_sleep_for // сложно правильно расчитать время сна, спим идеально ровно то что расчитали, но съедаем 100% ядра
+  //thread::light_spin_sleep_for // теже беды, но еще и нет никаких гарантий что мы спим ровно то что расчитали
+
+  //input::destroy(w);
+
+  //const size_t count = painter::count_vulkan_device_features();
+  //utils::println(count);
+  
+  // своеобразный хелло ворлд, долго с ним возился
+  input::init init(&err_handler);
+
+  painter::system_info inf;
+  auto w = input::create_window(640, 480, "test", nullptr, nullptr);
+  auto surf = painter::create_surface(inf.instance, w);
+  inf.check_devices_surface_capability(surf);
+  const auto dev = inf.choose_physical_device();
+
+  inf.dump_cache_to_disk(dev);
+
+  painter::destroy_surface(inf.instance, surf);
+  input::destroy(w);
+
   return 0;
 }
+
+// вот такой есть способ алиаса, относительно неплохой
+// к сожалению наверное не подойдет в качестве исходной функции для lua и скриптового биндинга
+// единственный нормальный способ это в макрос списком новые имена передать увы (ебанина коня)
+//template <typename... Args>
+//auto g(Args &&...args) -> decltype(f(std::forward<Args>(args)...)) {
+//  return f(std::forward<Args>(args)...);
+//}
 
 // небольшие мысли по поводу архитектуры: открыл vcmi там походу полностью клиент-серверная архитектура даже для локальной игры
 // было бы неплохо сделать примерно тоже самое, там полностью определены все (?) типы взаимодействия в игре
@@ -520,3 +688,28 @@ struct gpu_tile {
 
 // надо чутка подумать какой интерфейс подойдет для системы звуков и наверное сверху сделать обертку
 // которая запустит звуки в отдельном потоке
+
+// вот тут какая мысля появилась - у нас И звуки И графика требуют той или иной интерполяции для таких данных
+// как положение и направление движения и скорость и еще парочка
+// (положение и скорость кстати нужны еще чтобы интерполировать отсутствие данных из сети)
+// нам необходим некий один большой буффер с этими данными из которого будет браться как раз интерполяция
+// как это сделать? так же на счет анимации - буфер который хранит итоговые матрицы может получиться просто гиганстким
+// можно записывать анимационные текстуры (ну тоже в общем то гигансткий буфер)
+// короче надо что то придумать с интерполяцией
+// как будто после того как посчитается физика должен идти некий шаг где мы записываем новые положения в конечный буфер
+// а потом куча других систем считают из этого буфера, то есть рид-врайт мьютекс
+
+// похоже что можно сделать вот так
+//std::shared_mutex write;  // use boost's or c++14
+//
+//// One write, no reads.
+//void write_fun() {
+//  std::lock_guard<std::shared_mutex> lock(write);
+//  // DO WRITE
+//}
+//
+//// Multiple reads, no write
+//void read_fun() {
+//  std::shared_lock<std::shared_mutex> lock(write);
+//  // do read
+//}

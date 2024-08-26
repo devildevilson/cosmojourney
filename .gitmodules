@@ -46,3 +46,6 @@
 [submodule "include/parallel-hashmap"]
 	path = include/parallel-hashmap
 	url = https://github.com/greg7mdp/parallel-hashmap.git
+[submodule "include/VulkanMemoryAllocator-Hpp"]
+	path = include/VulkanMemoryAllocator-Hpp
+	url = https://github.com/YaaZ/VulkanMemoryAllocator-Hpp.git

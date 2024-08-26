@@ -23,7 +23,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
   if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	if(MSVC)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /Wall /permissive- /Zc:preprocessor")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /permissive- /Zc:preprocessor")
     else()
 	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra -fno-rtti")
     endif()
@@ -54,6 +54,9 @@ include_directories(
   include/alpaca/include/
   include/sol2/include/
   include/fmt/include/
+  include/parallel-hashmap/
+  include/VulkanMemoryAllocator-Hpp/include/
+  libs/vulkan/Include/
   libs/lua54/include/
   libs/glfw34/include/
   libs/ktx/include/
@@ -66,6 +69,7 @@ link_directories(libs/lua54)
 link_directories(libs/glfw34)
 link_directories(libs/ktx)
 link_directories(libs/openal)
+link_directories(libs/vulkan)
 
 if(MSVC)
   set(DYN_LIBRARIES_LIST
@@ -74,6 +78,7 @@ if(MSVC)
     libs/openal/soft_oal.dll
     libs/glfw34/glfw3.dll
     libs/ktx/ktx.dll
+    libs/vulkan/shaderc_shared.dll
   )
 else()
   set(DYN_LIBRARIES_LIST
@@ -92,7 +97,7 @@ add_subdirectory(src/devils_engine/input/)
 #add_subdirectory(src/devils_engine/interface/)
 
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/bindings/generic.h" "src/devils_engine/bindings/env.h" "src/devils_engine/bindings/env.cpp" "src/devils_engine/bindings/lua_header.h" "src/devils_engine/bindings/shared.h" "src/devils_engine/input/core.h" "src/devils_engine/input/core.cpp" "src/devils_engine/input/events.h" "src/devils_engine/painter/stage_buffer.h" "src/devils_engine/painter/stage.h" "src/devils_engine/painter/system.h" "src/devils_engine/painter/vulkan_minimal.h" "src/devils_engine/painter/system_info.h" "src/devils_engine/painter/common.h")
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/painter/vulkan_header.h" "src/devils_engine/painter/vulkan_header.cpp" "src/devils_engine/painter/system_info.cpp" "src/devils_engine/painter/auxiliary.h" "src/devils_engine/painter/auxiliary.cpp")
 target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input lua54)
 target_compile_definitions(${PROJECT_NAME} PRIVATE "DEVILS_ENGINE_PROJECT_NAME=\"${PROJECT_NAME}\"")
 

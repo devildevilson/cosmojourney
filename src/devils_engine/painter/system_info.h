@@ -15,7 +15,6 @@
 // и даже найти по имени переменной фичу + также расставить значения в битовом поле
 
 // часть данных из этой структуры запишем в кеш - по нему быстренько снова создадим устройство
-// какие данные положим на диск?
 
 namespace devils_engine {
 namespace painter {
@@ -29,6 +28,7 @@ struct system_info {
       cpu,
       count
     };
+    static std::string to_string(const enum type type);
 
     enum class present_mode {
       immediate,
@@ -39,6 +39,7 @@ struct system_info {
       shared_continuous_refresh,
       count
     };
+    static std::string to_string(const enum present_mode present_mode);
 
     struct queue_properties_t {
       VkFlags flags;
@@ -64,14 +65,17 @@ struct system_info {
 
   // да наверн сразу все и найдем че нам
   system_info();
-  // не забыть перед этим удалить VkSurfaceKHR
+  // не забыть перед этим удалить VkSurfaceKHR, да и окно тоже
   ~system_info();
 
   // запишем в массив
   void check_devices_surface_capability(const VkSurfaceKHR s);
 
-  void dump_cache_to_disk();
+  VkPhysicalDevice choose_physical_device() const;
+
+  void dump_cache_to_disk(VkPhysicalDevice dev);
 };
+
 }
 }
 

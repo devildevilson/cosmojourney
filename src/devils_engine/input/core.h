@@ -7,6 +7,9 @@
 #include <string_view>
 #include <vector>
 
+// здесь отстутствует создание поверхности окна
+// от рендера к нам что должно придти?
+
 typedef struct GLFWmonitor GLFWmonitor;
 typedef struct GLFWwindow GLFWwindow;
 typedef struct GLFWcursor GLFWcursor;

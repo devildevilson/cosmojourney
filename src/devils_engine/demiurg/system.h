@@ -64,7 +64,7 @@ namespace devils_engine {
 
         std::string name;
         std::string ext;
-        std::array<std::string_view, 16> exts;
+        //std::array<std::string_view, 16> exts;
         resource_interface* type_list;
         utils::block_allocator allocator;
         resource_producer createf;
@@ -92,19 +92,29 @@ namespace devils_engine {
       system(std::string root) noexcept;
       ~system() noexcept;
 
-      // ext - укажем через запятую
-      template <typename T>
-      void register_type(std::string name, std::string ext) {
-        auto type = types_pool.create(std::move(name), std::move(ext), sizeof(T) * 100, sizeof(T), alignof(T), [](utils::block_allocator &allocator) -> resource_interface * {
-          auto ptr = allocator.create<T>();
+      // ext - укажем через запятую или другой знак, например png,bmp,jpg, то что первое будет считать за основной ресурс
+      // и если втретится составной тип например obj,mtl, то сначала будет идти obj а потом mtl
+      // здесь в аргументы можно сложить вещи которые нужны при загрузке
+      // текстурки возможно все равно придется загружать с помощью хендла
+      template <typename T, typename... Args>
+      void register_type(std::string name, std::string ext, Args&&... args) {
+        auto constructor = [args = std::make_tuple(std::forward<Args>(args)...)](
+                utils::block_allocator &allocator
+        ) -> resource_interface * {
+          auto ptr = std::apply(&utils::block_allocator::create<T>, std::tuple_cat(std::make_tuple(std::ref(allocator)), args));
           ptr->loading_type_id = utils::type_id<T>();
           ptr->loading_type = utils::type_name<T>();
           return ptr;
-        });
+        };
+
+        auto type = types_pool.create(std::move(name), std::move(ext), sizeof(T) * 100, sizeof(T), alignof(T), std::move(constructor));
         
-        //types.insert(std::make_pair(types->name, type));
         types[type->name] = type;
       }
+
+      // видимо придется немного переделать модули, чтобы они пользовались вот этим
+      // модули можно вообще отсюда убрать и переместить в какой нибудь другой класс (предпочтительно)
+      resource_interface *create_resource(const std::string_view &id, const std::string_view &extension);
 
       system::type* find_type(const std::string_view &id, const std::string_view &extension) const;
 
@@ -120,18 +130,21 @@ namespace devils_engine {
       template <typename T>
       size_t find(const std::string_view &filter, std::vector<T* const> &arr) const {
         const auto v = find(filter);
-        for (size_t i = 0; i < std::min(v.size(), arr.capacity() - arr.size()); ++i) {
+        size_t i = 0;
+        for (; i < std::min(v.size(), arr.capacity() - arr.size()); ++i) {
           if (v[i]->loading_type_id != utils::type_id<T>()) continue;
           arr.push_back(static_cast<T *const>(v[i]));
         }
 
-        return v.size();
+        return i;
       }
+
+      // при загрузке ресурсов нужно открыть все модули (ну или по крайней мере модули ресурсов)
 
       // наверное все удалим и заново прочитаем дерево файлов (логично)
       void parse_file_tree();
 
-      // с конфигом работаем в другом месте, сюда просто передаем пачку путей
+      // конфиг сохраняем в другом месте, здесь уже сразу подгружаем созданный конфиг
       std::vector<list_entry> load_list(const std::string_view &list_name) const;
       void load_modules(std::vector<list_entry> ms);
       void load_default_modules();
@@ -146,20 +159,12 @@ namespace devils_engine {
       std::string modules_list_name;
 
       utils::memory_pool<type, sizeof(type)*100> types_pool;
-      //qc::hash::RawMap<std::string_view, type *, qc::hash::FastHash<std::string_view>> types;
-      //ska::flat_hash_map<std::string_view, type*> types;
       phmap::flat_hash_map<std::string_view, type *> types;
       std::vector<resource_interface *> resources;
       std::vector<resource_interface *> all_resources;
       // это загруженные модули, ни в коем случае нельзя их трогать во время игры
       // список получаем из конфига
       std::vector<std::unique_ptr<module_interface>> modules;
-
-      // здесь еще будет отдельный список модулей + список списков модулей
-      // наверное список получим и отдадим его вовне, что должно быть в списке?
-      // полный путь + время создания + название + (возможно) id воркшопа + хеш + ресурс картинки + ресурс с описанием
-      // получаем на вход список модулей в определенном порядке, по ним создаем конфиг на диск
-      // затем при загрузке считываем конфиг
 
       system::type *find_proper_type(const std::string_view &id, const std::string_view &extension) const;
       std::span<resource_interface * const> raw_find(const std::string_view &filter) const;
@@ -170,8 +175,5 @@ namespace devils_engine {
     void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type);
   }
 }
-
-// определение ресурсов расположим где то в самой игре... хотя может и нет
-// тут видимо будет только определение системы
 
 #endif

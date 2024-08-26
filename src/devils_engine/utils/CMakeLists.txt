@@ -78,4 +78,4 @@ include_directories(
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
-target_link_libraries(${DEVILS_LIBRARY_NAME} density minizip bzip2 lzma zlibstatic-ng zstd_static bcrypt ncrypt crypt32)
+target_link_libraries(${DEVILS_LIBRARY_NAME} zstd_static zlibstatic-ng minizip lzma density bzip2 bcrypt ncrypt crypt32)

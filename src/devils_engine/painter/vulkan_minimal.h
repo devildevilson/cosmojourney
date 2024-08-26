@@ -73,4 +73,10 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkVideoSessionParametersKHR)
 
 // VkResult ?
 
+#ifdef _NDEBUG
+constexpr bool enable_validation_layers = false;
+#else
+constexpr bool enable_validation_layers = true;
+#endif
+
 #endif
