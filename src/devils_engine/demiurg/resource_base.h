@@ -102,7 +102,6 @@ namespace devils_engine {
 
       const module_interface* module;
 
-      // наверное по итогу это не нужно
       std::vector<char> file_memory;
       std::string_view file_text;
 

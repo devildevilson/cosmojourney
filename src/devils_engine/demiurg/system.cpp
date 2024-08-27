@@ -238,7 +238,7 @@ namespace devils_engine {
           return e;
         } 
         
-        utils::error("'{}' is not exists???", core_file);
+        utils::error("'{}' is not exist???", core_file);
       }
 
       const auto path = root_path + std::string(list_name) + ".json";
@@ -267,12 +267,10 @@ namespace devils_engine {
       // какие моды используются при подключении к серверу
 
       for (const auto &entry : ms) {
-        const auto [ name, ext ] = get_name_ext(entry.path);
-
         fs::directory_entry e(entry.path);
         if (!e.exists()) {
           // ошибка? не, попробуем все равно загрузиться
-          utils::warn("Could not find module '{}' (path: '{}')", name, entry.path);
+          utils::warn("Could not find module '{}'", entry.path);
           continue;
         }
 
@@ -280,6 +278,7 @@ namespace devils_engine {
         const auto datetime = utils::format_localtime(ftime, utils::ISO_datetime_format);
 
         if (!e.is_directory()) {
+          const auto [name, ext] = get_name_ext(entry.path);
           const auto cont = file_io::read<uint8_t>(entry.path);
           const auto hash = utils::SHA256::easy(cont.data(), cont.size());
           if (!entry.hash.empty() && hash != entry.hash) {
@@ -291,6 +290,7 @@ namespace devils_engine {
           auto mem = std::make_unique<folder_module>(this, entry.path);
           modules.push_back(std::move(mem));
         } else {
+          const auto [name, ext] = get_name_ext(entry.path);
           // тут надо проверить ext, в принципе наверное тут будет только .mod и .zip
           if (ext == "mod" || ext == "zip") {
             utils::error("Zip archive is not implemented yet");
@@ -376,6 +376,9 @@ namespace devils_engine {
       }
     }
 
+    void system::open_modules() { for (const auto &m : modules) { m->open(); } }
+    void system::close_modules() { for (const auto &m : modules) { m->close(); } }
+
     void system::clear() {
       for (auto ptr : all_resources) {
         const auto itr = types.find(ptr->type);
@@ -389,6 +392,8 @@ namespace devils_engine {
     size_t system::resources_count() const noexcept { return resources.size(); }
     size_t system::all_resources_count() const noexcept { return all_resources.size(); }
 
+    // if type is models/monster1
+    // then something/somesome/abc/models/monster1 is prior over models/monster1/something/somesome/abc
     system::type * system::find_proper_type(const std::string_view &id, const std::string_view &extencion) const {
       type *t = nullptr;
       std::string_view current_full_str = id;

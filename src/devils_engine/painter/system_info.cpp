@@ -94,7 +94,7 @@ void system_info::check_devices_surface_capability(const VkSurfaceKHR s) {
 
     for (size_t i = 0; i < info.queue_families.size(); ++i) {
       const bool supp = physical_device_presentation_support(instance, dev, i);
-      if (supp) info.queue_family_index_surface_support = i;
+      if (supp) { info.queue_family_index_surface_support = i; break; }
     }
   }
 }
@@ -173,6 +173,10 @@ void system_info::dump_cache_to_disk(VkPhysicalDevice dev) {
     data.desirable_present_mode = system_info::physical_device::to_string(m1);
     data.fallback_present_mode = system_info::physical_device::to_string(m2);
     data.memory_capacity = info.memory;
+
+    std::transform(data.device_type.begin(), data.device_type.end(), data.device_type.begin(), [] (const char c) { return std::tolower(c); });
+    std::transform(data.desirable_present_mode.begin(), data.desirable_present_mode.end(), data.desirable_present_mode.begin(), [] (const char c) { return std::tolower(c); });
+    std::transform(data.fallback_present_mode.begin(), data.fallback_present_mode.end(), data.fallback_present_mode.begin(), [] (const char c) { return std::tolower(c); });
   }
 
   if (data.device_name.empty()) utils::error("Trying to dump data for invalid physical device");

@@ -97,8 +97,8 @@ add_subdirectory(src/devils_engine/input/)
 #add_subdirectory(src/devils_engine/interface/)
 
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/painter/vulkan_header.h" "src/devils_engine/painter/vulkan_header.cpp" "src/devils_engine/painter/system_info.cpp" "src/devils_engine/painter/auxiliary.h" "src/devils_engine/painter/auxiliary.cpp")
-target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input lua54)
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/painter/vulkan_header.h" "src/devils_engine/painter/vulkan_header.cpp" "src/devils_engine/painter/system_info.cpp" "src/devils_engine/painter/auxiliary.h" "src/devils_engine/painter/auxiliary.cpp" "src/devils_engine/painter/shader_guru.h" "src/devils_engine/painter/shader_crafter.h" "src/devils_engine/painter/shader_crafter.cpp" "src/devils_engine/painter/glsl_source_file.h" "src/devils_engine/painter/glsl_source_file.cpp")
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input lua54 shaderc_shared)
 target_compile_definitions(${PROJECT_NAME} PRIVATE "DEVILS_ENGINE_PROJECT_NAME=\"${PROJECT_NAME}\"")
 
 foreach (library_path IN LISTS DYN_LIBRARIES_LIST)

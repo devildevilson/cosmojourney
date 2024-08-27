@@ -24,6 +24,11 @@
 //template <typename K, typename T>
 //using qc_hash_map = qc::hash::RawMap<K, T>;
 
+// нужно еще предусмотреть конфиги - специальные файлы которые ПРОИЗВОДЯТ ресурсы
+// они МОГУТ вернуть пачку структур которые должны превратиться в несколько ресурсов
+// в чем основная проблема? нужно добавить новый ресурс и перестроить массив доступных ресурсов
+// ДО того как к этому ресурсу обратятся, для конфигов можно вернуть обещалку ресурса
+
 namespace devils_engine {
   namespace demiurg {
     template <typename T = resource_interface *const>
@@ -128,15 +133,32 @@ namespace devils_engine {
       view<> find(const std::string_view &filter) const;
       // так работать это дело не будет, нужно отдельный контейнер делать
       template <typename T>
-      size_t find(const std::string_view &filter, std::vector<T* const> &arr) const {
-        const auto v = find(filter);
+      size_t find(const std::string_view &filter_str, std::vector<T*> &arr) const {
+        const auto v = find(filter_str);
         size_t i = 0;
         for (; i < std::min(v.size(), arr.capacity() - arr.size()); ++i) {
-          if (v[i]->loading_type_id != utils::type_id<T>()) continue;
-          arr.push_back(static_cast<T *const>(v[i]));
+          if (!std::is_same_v<T, resource_interface> && v[i]->loading_type_id != utils::type_id<T>()) continue;
+          auto ptr = v[i];
+          arr.push_back(static_cast<T*>(ptr));
         }
 
         return i;
+      }
+
+      // здесь мы будем искать именно подстроку
+      template <typename T>
+      size_t filter(const std::string_view &filter_str, std::vector<T *> &arr) const {
+        size_t counter = 0;
+        for (size_t i = 0; i < resources.size() && arr.size() < arr.capacity(); ++i) {
+          auto ptr = resources[i];
+          if (!std::is_same_v<T, resource_interface> && ptr->loading_type_id != utils::type_id<T>()) continue;
+          if (ptr->id.find(filter_str) == std::string_view::npos) continue;
+
+          counter += 1;
+          arr.push_back(static_cast<T *>(ptr));
+        }
+
+        return counter;
       }
 
       // при загрузке ресурсов нужно открыть все модули (ну или по крайней мере модули ресурсов)
@@ -149,6 +171,10 @@ namespace devils_engine {
       void load_modules(std::vector<list_entry> ms);
       void load_default_modules();
       void parse_resources();
+
+      // как я ранее уже упоминал, имеет смысл вынести отсюда модули и оставить это дело только заниматься ресурсами
+      void open_modules();
+      void close_modules();
 
       void clear();
 
