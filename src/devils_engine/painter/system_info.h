@@ -60,20 +60,25 @@ struct system_info {
     physical_device();
   };
 
+  bool instance_owner;
   VkInstance instance;
   std::vector<physical_device> devices;
 
   // да наверн сразу все и найдем че нам
   system_info();
+  system_info(VkInstance instance);
   // не забыть перед этим удалить VkSurfaceKHR, да и окно тоже
-  ~system_info();
+  ~system_info() noexcept;
+
+  // запускаем в конструкторе
+  void init();
 
   // запишем в массив
   void check_devices_surface_capability(const VkSurfaceKHR s);
 
   VkPhysicalDevice choose_physical_device() const;
 
-  void dump_cache_to_disk(VkPhysicalDevice dev);
+  void dump_cache_to_disk(VkPhysicalDevice dev, cached_system_data* cached_data = nullptr);
 };
 
 }

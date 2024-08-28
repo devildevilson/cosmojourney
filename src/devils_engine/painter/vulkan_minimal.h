@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#ifndef VULKAN_CORE_H_
+
 // from vulkan_core.h
 #define VK_DEFINE_HANDLE(object) typedef struct object##_T* object;
 // lets assume that this code would not be compiled in x86
@@ -55,6 +57,12 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugUtilsMessengerEXT)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkShaderEXT)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkVideoSessionKHR)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkVideoSessionParametersKHR)
+VK_DEFINE_HANDLE(VmaAllocator)
+VK_DEFINE_HANDLE(VmaPool)
+VK_DEFINE_HANDLE(VmaAllocation)
+VK_DEFINE_HANDLE(VmaDefragmentationContext)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VmaVirtualAllocation)
+VK_DEFINE_HANDLE(VmaVirtualBlock)
 #define VK_ATTACHMENT_UNUSED              (~0U)
 #define VK_FALSE                          0U
 #define VK_LOD_CLAMP_NONE                 1000.0F
@@ -73,6 +81,9 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkVideoSessionParametersKHR)
 
 // VkResult ?
 
+#endif
+
+// это имеет смысл сделать в рантайме
 #ifdef _NDEBUG
 constexpr bool enable_validation_layers = false;
 #else

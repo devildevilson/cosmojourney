@@ -6,6 +6,8 @@ project(
   LANGUAGES CXX C
 )
 
+set(DEVILS_ENGINE_NAME "devils_engine")
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
@@ -41,6 +43,10 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 endif()
 
 include_directories(
+  libs/vulkan/Include/
+  libs/lua54/include/
+  libs/glfw34/include/
+  libs/ktx/include/
   include/dr_libs/
   include/spdlog/include/
   include/vorbis/include/
@@ -56,10 +62,6 @@ include_directories(
   include/fmt/include/
   include/parallel-hashmap/
   include/VulkanMemoryAllocator-Hpp/include/
-  libs/vulkan/Include/
-  libs/lua54/include/
-  libs/glfw34/include/
-  libs/ktx/include/
   src/devils_engine/
   src/cosmojourney/
 )
@@ -94,12 +96,14 @@ add_subdirectory(src/devils_engine/sound/)
 add_subdirectory(src/devils_engine/demiurg/)
 add_subdirectory(src/devils_engine/thread/)
 add_subdirectory(src/devils_engine/input/)
+add_subdirectory(src/devils_engine/painter/)
 #add_subdirectory(src/devils_engine/interface/)
 
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/painter/vulkan_header.h" "src/devils_engine/painter/vulkan_header.cpp" "src/devils_engine/painter/system_info.cpp" "src/devils_engine/painter/auxiliary.h" "src/devils_engine/painter/auxiliary.cpp" "src/devils_engine/painter/shader_guru.h" "src/devils_engine/painter/shader_crafter.h" "src/devils_engine/painter/shader_crafter.cpp" "src/devils_engine/painter/glsl_source_file.h" "src/devils_engine/painter/glsl_source_file.cpp")
-target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input lua54 shaderc_shared)
-target_compile_definitions(${PROJECT_NAME} PRIVATE "DEVILS_ENGINE_PROJECT_NAME=\"${PROJECT_NAME}\"")
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp")
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input devils_painter lua54)
+target_compile_definitions(${PROJECT_NAME} PUBLIC "DEVILS_ENGINE_PROJECT_NAME=\"${PROJECT_NAME}\"")
+target_compile_definitions(${PROJECT_NAME} PUBLIC "DEVILS_ENGINE_ENGINE_NAME=\"${DEVILS_ENGINE_NAME}\"")
 
 foreach (library_path IN LISTS DYN_LIBRARIES_LIST)
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 

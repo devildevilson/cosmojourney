@@ -16,11 +16,18 @@
 #include <string_view>
 #include <reflect>
 #include <bitset>
+#include <tuple>
 #include "utils/type_traits.h"
 #include "utils/core.h"
 
 namespace devils_engine {
 namespace painter {
+
+template <typename T>
+void set_name(vk::Device device, T handle, const std::string &name) {
+  vk::DebugUtilsObjectNameInfoEXT i(T::objectType, uint64_t(typename T::CType(obj)), name.c_str());
+  device.setDebugUtilsObjectNameEXT(i);
+}
 
 template <typename T>
 consteval void count_features(size_t &counter, const T &obj) {
@@ -97,6 +104,35 @@ using vulkan_features_bitset = std::bitset<device_features_count>;
 
 // так теперь надо заполнить фичи в битовое поле
 vulkan_features_bitset make_device_features_bitset(VkPhysicalDevice dev);
+
+
+std::vector<vk::ExtensionProperties> required_device_extensions(vk::PhysicalDevice device, const std::vector<const char*> &layers, const std::vector<const char*> &extensions);
+std::vector<vk::LayerProperties> required_validation_layers(const std::vector<const char*> &layers);
+
+std::tuple<vk::Image, vma::Allocation> create_image(
+  vma::Allocator allocator, 
+  const vk::ImageCreateInfo &info,
+  const vma::MemoryUsage &mem_usage,
+  void** pData = nullptr,
+  const std::string &name = ""
+);
+
+std::tuple<vk::AccessFlags, vk::AccessFlags, vk::PipelineStageFlags, vk::PipelineStageFlags> make_barrier_data(const vk::ImageLayout &old, const vk::ImageLayout &New);
+
+std::tuple<vk::ImageMemoryBarrier, vk::PipelineStageFlags, vk::PipelineStageFlags> make_image_memory_barrier(
+  vk::Image image, const vk::ImageLayout &old_layout, const vk::ImageLayout &new_layout, const vk::ImageSubresourceRange &range
+);
+
+void change_image_layout(
+  vk::Device device, 
+  vk::Image image, 
+  vk::CommandPool transfer_pool, 
+  vk::Queue transfer_queue, 
+  vk::Fence fence, 
+  const vk::ImageLayout &old_layout, 
+  const vk::ImageLayout &new_layout, 
+  const vk::ImageSubresourceRange &range
+);
 
 }
 }

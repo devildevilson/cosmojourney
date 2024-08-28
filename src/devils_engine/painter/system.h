@@ -36,15 +36,15 @@
 // осталось понять как добавить текстурные данные только для чтения
 // + нам бы еще сделать кеш скомпилированных шейдеров
 
+// создал почти все мне необходимое, что теперь?
+// эту структуру в пору переназвать как нибудь, можно просто контейнер
+// она нам нужно чтобы с ее поощью создавать оставшиеся рендер штуки
+// тут наверное будем еще хранить кеш шейдеров в каком нибудь виде
+// где создадим сюрфейс и свопчеин? вообще так то можно и тут
+// нет свопчаин сильно зависит от рендертаргета (ну то есть это он и есть)
 namespace devils_engine {
 namespace painter {
-class system {
-public:
-  system();
-  ~system();
-
-
-private:
+struct system {
   VkInstance instance;
   VkDebugUtilsMessengerEXT debug_messenger;
   VkPhysicalDevice physical_device;
@@ -53,6 +53,21 @@ private:
   VkQueue compute_queue;
   VkQueue presentation_queue;
   VkPipelineCache cache;
+
+  VmaAllocator buffer_allocator;
+  VkDescriptorPool descriptor_pool;
+
+  VkCommandPool graphics_command_pool;
+  VkCommandPool transfer_command_pool;
+  VkFence transfer_fence;
+
+  VkSurfaceKHR surface;
+  VkSwapchainKHR swapchain;
+
+  system();
+  ~system() noexcept;
+
+  void flush_cache();
 };
 }
 }

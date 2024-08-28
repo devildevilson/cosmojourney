@@ -5,6 +5,8 @@
 #include "GLFW/glfw3.h"
 #include "input/core.h"
 
+#include "system_info.h"
+
 #include <ranges>
 namespace rv = std::ranges::views;
 
@@ -90,6 +92,52 @@ VkSurfaceKHR create_surface(VkInstance instance, GLFWwindow* window) {
 void destroy_surface(VkInstance instance, VkSurfaceKHR surface) {
   vk::Instance(instance).destroySurfaceKHR(surface);
 }
+
+VkPhysicalDevice find_device_process(VkInstance i, cached_system_data* cached_data) {
+  painter::system_info inf(i);
+  auto w = input::create_window(640, 480, "test", nullptr, nullptr);
+  auto surf = painter::create_surface(inf.instance, w);
+  inf.check_devices_surface_capability(surf);
+  const auto dev = inf.choose_physical_device();
+
+  inf.dump_cache_to_disk(dev, cached_data);
+
+  painter::destroy_surface(inf.instance, surf);
+  input::destroy(w);
+
+  // инстанса уже тут не будет, мы можем чуть переделать структуру system_info
+  // передав туда инстанс, вот теперь девайс должен быть валидным указателем
+  return dev;
+}
+
+bool do_command(VkDevice device, VkCommandPool pool, VkQueue queue, VkFence fence, std::function<void(VkCommandBuffer)> action) {
+  vk::Device d(device);
+  vk::CommandBufferAllocateInfo ai(pool, vk::CommandBufferLevel::ePrimary, 1);
+  const auto buffer = std::move(d.allocateCommandBuffersUnique(ai)[0]);
+
+  action(buffer.get());
+
+  const vk::SubmitInfo si(nullptr, nullptr, buffer.get(), nullptr);
+  vk::Queue(queue).submit(si, fence);
+
+  const auto res = d.waitForFences(vk::Fence(fence), VK_TRUE, SIZE_MAX);
+  d.resetFences(vk::Fence(fence));
+
+  return res == vk::Result::eSuccess;
+}
+
+void copy_buffer(VkDevice device, VkCommandPool pool, VkQueue queue, VkFence fence, VkBuffer src, VkBuffer dst, size_t srcoffset, size_t dstoffset, size_t size) {
+  do_command(device, pool, queue, fence, [&] (VkCommandBuffer buffer) {
+    auto b = vk::CommandBuffer(buffer);
+    const vk::CommandBufferBeginInfo binfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    b.begin(binfo);
+    b.copyBuffer(src, dst, vk::BufferCopy(srcoffset, dstoffset, size));
+    b.end();
+  });
+}
+
+VkDevice allocator_device(VmaAllocator allocator) { return (*allocator).m_hDevice; }
+VkInstance allocator_instance(VmaAllocator allocator) { return (*allocator).m_hInstance; }
 
 }
 }

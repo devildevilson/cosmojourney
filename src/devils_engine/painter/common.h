@@ -19,6 +19,8 @@ struct cached_system_data {
   std::string fallback_present_mode;
   size_t memory_capacity;
 };
+
+#define DEVILS_ENGINE_PAINTER_CACHED_SYSTEM_DATA_INIT {{}, {}, 0, 0, 0, 0, 0, {}, {}, 0}
 }
 }
 

@@ -25,24 +25,35 @@ std::string system_info::physical_device::to_string(const enum present_mode pres
 
 system_info::physical_device::physical_device() : handle(VK_NULL_HANDLE), memory(0), id(UINT32_MAX), vendor_id(UINT32_MAX), type(physical_device::type::count), queue_family_index_surface_support(UINT32_MAX) {}
 
-system_info::system_info() : instance(VK_NULL_HANDLE) {
-  load_dispatcher1();
+system_info::system_info() : instance_owner(true), instance(VK_NULL_HANDLE) { init(); }
+system_info::system_info(VkInstance i) : instance_owner(false), instance(i) { init(); }
 
-  vk::ApplicationInfo app_info(DEVILS_ENGINE_PROJECT_NAME, 0, "devils_engine", 0, VK_API_VERSION_1_3);
+system_info::~system_info() noexcept {
+  if (instance_owner) vk::Instance(instance).destroy();
+  instance = VK_NULL_HANDLE;
+}
 
-  if (enable_validation_layers && !check_validation_layer_support(default_validation_layers)) {
-    utils::error("Could not find validation layers for Vulkan");
+void system_info::init() {
+  if (instance_owner) {
+    load_dispatcher1();
+
+    vk::ApplicationInfo app_info(DEVILS_ENGINE_PROJECT_NAME, 0, "devils_engine", 0, VK_API_VERSION_1_3);
+
+    if (enable_validation_layers && !check_validation_layer_support(default_validation_layers)) {
+      utils::error("Could not find validation layers for Vulkan");
+    }
+
+    const auto req_extensions = get_required_extensions();
+
+    vk::InstanceCreateInfo i({}, &app_info, default_validation_layers, req_extensions);
+
+    auto instancepp = vk::createInstance(i);
+    instance = instancepp;
+
+    load_dispatcher2(instance);
   }
 
-  const auto req_extensions = get_required_extensions();
-
-  vk::InstanceCreateInfo i({}, &app_info, default_validation_layers, req_extensions);
-
-  auto instancepp = vk::createInstance(i);
-  instance = instancepp;
-
-  load_dispatcher2(instance);
-
+  vk::Instance instancepp = instance;
   const auto phys_devices = instancepp.enumeratePhysicalDevices();
 
   devices.resize(phys_devices.size());
@@ -77,11 +88,6 @@ system_info::system_info() : instance(VK_NULL_HANDLE) {
       }
     }
   }
-}
-
-system_info::~system_info() {
-  vk::Instance(instance).destroy();
-  instance = VK_NULL_HANDLE;
 }
 
 void system_info::check_devices_surface_capability(const VkSurfaceKHR s) {
@@ -155,7 +161,7 @@ static std::pair<system_info::physical_device::present_mode, system_info::physic
   return std::make_pair(secondary, system_info::physical_device::present_mode::immediate);
 }
 
-void system_info::dump_cache_to_disk(VkPhysicalDevice dev) {
+void system_info::dump_cache_to_disk(VkPhysicalDevice dev, cached_system_data* cached_data) {
   cached_system_data data;
 
   for (const auto &info : devices) {
@@ -188,6 +194,8 @@ void system_info::dump_cache_to_disk(VkPhysicalDevice dev) {
   const auto file_path = directory_path + "main_device.json";
   const auto json = utils::to_json<glz::opts{ .prettify = true, .indentation_width = 2 }>(data);
   file_io::write(json, file_path);
+
+  if (cached_data != nullptr) *cached_data = data;
 }
 }
 }
