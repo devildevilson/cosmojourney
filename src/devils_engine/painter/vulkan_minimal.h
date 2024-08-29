@@ -6,6 +6,8 @@
 
 #ifndef VULKAN_CORE_H_
 
+#define VK_NULL_HANDLE nullptr
+
 // from vulkan_core.h
 #define VK_DEFINE_HANDLE(object) typedef struct object##_T* object;
 // lets assume that this code would not be compiled in x86

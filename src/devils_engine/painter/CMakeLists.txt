@@ -55,7 +55,7 @@ set(SRC_LIST
   system.cpp
   system_info.cpp
   vulkan_header.cpp
-)
+ "attachments_container.cpp")
 
 set(HDR_LIST
   auxiliary.h
@@ -70,7 +70,7 @@ set(HDR_LIST
   stage.h
   stage_buffer.h
   vulkan_minimal.h
- "target.h")
+ "attachments_container.h")
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(${DEVILS_LIBRARY_NAME} ${SHADERC_LIBRARY_NAME})

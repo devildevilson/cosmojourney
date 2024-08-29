@@ -18,7 +18,7 @@ const auto path_to_pipeline_cache = utils::project_folder() + "cache/cache.packe
 
 #define VMA_DEFAULT_MEMORY_SIZE (32 * 1024 * 1024)
 
-system::system() :
+container::container() :
   instance(VK_NULL_HANDLE),
   debug_messenger(VK_NULL_HANDLE),
   physical_device(VK_NULL_HANDLE),
@@ -118,37 +118,11 @@ system::system() :
 
   // тут нужно создать аллокаторы
   { 
-    vma::VulkanFunctions f(
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetPhysicalDeviceProperties,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetPhysicalDeviceMemoryProperties,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkAllocateMemory,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkFreeMemory,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkMapMemory,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkUnmapMemory,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkFlushMappedMemoryRanges,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkInvalidateMappedMemoryRanges,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkBindBufferMemory,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkBindImageMemory,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetBufferMemoryRequirements,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetImageMemoryRequirements,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkCreateBuffer,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkDestroyBuffer,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkCreateImage,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkDestroyImage,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdCopyBuffer,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetBufferMemoryRequirements2KHR,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetImageMemoryRequirements2KHR,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkBindBufferMemory2KHR,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkBindImageMemory2KHR,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetPhysicalDeviceMemoryProperties2KHR,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceBufferMemoryRequirements,
-      VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceImageMemoryRequirements
-    );
+    const auto f = make_functions();
     vma::AllocatorCreateInfo i({}, physical_device, device, VMA_DEFAULT_MEMORY_SIZE);
     i.instance = instance;
     i.pVulkanFunctions = &f;
+    i.vulkanApiVersion = VK_API_VERSION_1_0;
 
     buffer_allocator = vma::createAllocator(i);
   }
@@ -190,7 +164,7 @@ system::system() :
   }
 }
 
-system::~system() noexcept {
+container::~container() noexcept {
   auto d = vk::Device(device);
   d.waitIdle();
 
@@ -207,7 +181,7 @@ system::~system() noexcept {
   vk::Instance(instance).destroy();
 }
 
-void system::flush_cache() {
+void container::flush_cache() {
   const auto data = vk::Device(device).getPipelineCacheData(cache);
   const auto compressed_data = utils::compress(data, utils::compression_level::best);
   file_io::write(compressed_data, path_to_pipeline_cache);

@@ -3,6 +3,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <vector>
 #include "vulkan_minimal.h"
 
 // в системе нужно еще задать кеши, например пиплайн и скомпилированный шейдер кеш
@@ -44,7 +46,7 @@
 // нет свопчаин сильно зависит от рендертаргета (ну то есть это он и есть)
 namespace devils_engine {
 namespace painter {
-struct system {
+struct container {
   VkInstance instance;
   VkDebugUtilsMessengerEXT debug_messenger;
   VkPhysicalDevice physical_device;
@@ -64,10 +66,29 @@ struct system {
   VkSurfaceKHR surface;
   VkSwapchainKHR swapchain;
 
-  system();
-  ~system() noexcept;
+  container();
+  ~container() noexcept;
 
   void flush_cache();
+};
+
+// тут что по идее создаем все ресурсы и даем несколкьо полезных функций наружу
+// например зададим ряд интерфейсов и здесь их положим все в свои массивы
+// выкинем наружу несколько функций которые пройдутся по интерфейсам и запустят функцию
+class system {
+public:
+  system();
+  ~system();
+
+private:
+  std::unique_ptr<container> main_container;
+  // надо также выкинуть функции создания изображения
+  // и связать это дело все с демиургом
+  // у нас есть несколько вещей для ресурсов:
+  // создание шага рендеринга и впихивание его в свой массив
+  // менеджмент картинок: получить место под картинку определенного размера
+  // и скопировать ее
+  // 
 };
 }
 }
