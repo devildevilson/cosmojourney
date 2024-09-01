@@ -37,6 +37,11 @@ bool do_command(VkDevice device, VkCommandPool pool, VkQueue queue, VkFence fenc
 void copy_buffer(VkDevice device, VkCommandPool pool, VkQueue queue, VkFence fence, VkBuffer src, VkBuffer dst, size_t srcoffset = 0, size_t dstoffset = 0, size_t size = VK_WHOLE_SIZE);
 //void copy_image(VkDevice device, VkCommandPool pool, VkQueue queue, VkFence fence, VkImage dst, VkImage src, );
 
+std::vector<const char*> get_all_instance_extension();
+std::vector<const char*> get_all_device_extension(VkPhysicalDevice device);
+std::vector<const char*> check_instance_extension(std::vector<const char*> input);
+std::vector<const char*> check_device_extension(VkPhysicalDevice device, std::vector<const char*> input);
+
 VkDevice allocator_device(VmaAllocator allocator);
 VkInstance allocator_instance(VmaAllocator allocator);
 
@@ -163,6 +168,12 @@ bool format_is_sscaled(uint32_t format);
 bool format_is_compressed(uint32_t format);
 bool format_is_packed(uint32_t format);
 bool format_element_is_texel(uint32_t format);
+bool format_is_undef(uint32_t format);
+bool format_has_depth(uint32_t format);
+bool format_has_stencil(uint32_t format);
+bool format_is_multiplane(uint32_t format);
+bool format_is_color(uint32_t format);
+
 //bool format_sizes_are_equal(uint32_t srcFormat, uint32_t dstFormat, uint32_t region_count, const VkImageCopy *regions);
 bool format_requires_ycbcr_conversion(uint32_t format);
 uint32_t format_depth_size(uint32_t format);
@@ -180,11 +191,6 @@ size_t safe_division(size_t dividend, size_t divisor);
 uint32_t get_plane_index(uint32_t aspect);
 uint32_t find_multiplane_compatible_format(uint32_t fmt, uint32_t plane_aspect);
 std::tuple<uint32_t, uint32_t> find_multiplane_extent_divisors(uint32_t mp_fmt, uint32_t plane_aspect);
-bool format_is_undef(uint32_t format);
-bool format_has_depth(uint32_t format);
-bool format_has_stencil(uint32_t format);
-bool format_is_multiplane(uint32_t format);
-bool format_is_color(uint32_t format);
 
 }
 }

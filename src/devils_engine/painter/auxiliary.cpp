@@ -138,6 +138,61 @@ void copy_buffer(VkDevice device, VkCommandPool pool, VkQueue queue, VkFence fen
   });
 }
 
+std::vector<const char*> get_all_instance_extension() {
+  phmap::flat_hash_set<const char*> names;
+  const auto layers = vk::enumerateInstanceLayerProperties();
+  for (const auto &layer : layers) {
+    const auto exts = vk::enumerateInstanceExtensionProperties(std::string(layer.layerName.data()));
+    for (const auto &ext : exts) {
+      names.insert(ext.extensionName.data());
+    }
+  }
+
+  const auto exts = vk::enumerateInstanceExtensionProperties();
+  for (const auto &ext : exts) {
+    names.insert(ext.extensionName.data());
+  }
+
+  return std::vector<const char*>(names.begin(), names.end());
+}
+
+std::vector<const char *> get_all_device_extension(VkPhysicalDevice device) {
+  vk::PhysicalDevice pd(device);
+  phmap::flat_hash_set<const char*> names;
+  const auto layers = pd.enumerateDeviceLayerProperties();
+  for (const auto &layer : layers) {
+    const auto exts = pd.enumerateDeviceExtensionProperties(std::string(layer.layerName.data()));
+    for (const auto &ext : exts) {
+      names.insert(ext.extensionName.data());
+    }
+  }
+
+  const auto exts = pd.enumerateDeviceExtensionProperties();
+  for (const auto &ext : exts) {
+    names.insert(ext.extensionName.data());
+  }
+
+  return std::vector<const char*>(names.begin(), names.end());
+}
+
+std::vector<const char*> check_instance_extension(std::vector<const char*> input) {
+  const auto exts = get_all_instance_extension();
+  std::vector<const char*> out;
+  for (const auto name : input) {
+    if (std::find(exts.begin(), exts.end(), name) != exts.end()) out.push_back(name);
+  }
+  return out;
+}
+
+std::vector<const char *> check_device_extension(VkPhysicalDevice device, std::vector<const char *> input) {
+  const auto exts = get_all_device_extension(device);
+  std::vector<const char*> out;
+  for (const auto name : input) {
+    if (std::find(exts.begin(), exts.end(), name) != exts.end()) out.push_back(name);
+  }
+  return out;
+}
+
 VkDevice allocator_device(VmaAllocator allocator) { return (*allocator).m_hDevice; }
 VkInstance allocator_instance(VmaAllocator allocator) { return (*allocator).m_hInstance; }
 

@@ -78,7 +78,7 @@ namespace devils_engine {
       template <size_t t, typename T>
       size_t list_count(T* cur) noexcept {
         size_t counter = 0;
-        for (auto c = cur; c != nullptr; c = list_next<t>(c, cur)) { ++counter; }
+        for (auto c = cur; c != nullptr; c = list_next<t>(c)) { ++counter; }
         return counter;
       }
     }

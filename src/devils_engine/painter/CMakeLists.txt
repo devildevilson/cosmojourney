@@ -55,7 +55,7 @@ set(SRC_LIST
   system.cpp
   system_info.cpp
   vulkan_header.cpp
- "attachments_container.cpp")
+ "attachments_container.cpp" "container.cpp" "queue_stages.h" "queue_stages.cpp" "render_pass_stages.cpp" "common_stages.cpp" "layouting.cpp" "image_pool.cpp" "hierarchical_image_container.cpp" "pipelines_resources.cpp" "arbitrary_image_container.cpp" "render_pass_resources.cpp" "framebuffer_resources.cpp" "swapchain_resources.cpp")
 
 set(HDR_LIST
   auxiliary.h
@@ -67,10 +67,10 @@ set(HDR_LIST
   vulkan_header.h
   common.h
   shader_guru.h
-  stage.h
+  "primitives.h"
   stage_buffer.h
   vulkan_minimal.h
- "attachments_container.h")
+ "attachments_container.h" "container.h" "render_pass_stages.h" "common_stages.h" "layouting.h" "image_pool.h" "pipelines_resources.h" "pipeline_create_config.h" "pipelines_config_static_container.h" "arbitrary_image_container.h" "render_pass_resources.h" "framebuffer_resources.h" "swapchain_resources.h")
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(${DEVILS_LIBRARY_NAME} ${SHADERC_LIBRARY_NAME})

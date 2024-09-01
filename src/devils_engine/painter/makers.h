@@ -126,7 +126,7 @@ namespace devils_engine {
       descriptor_set_layout_maker(vk::Device device);
 
       descriptor_set_layout_maker & binding(const uint32_t bind, const vk::DescriptorType type, const vk::ShaderStageFlags stage, const uint32_t count = 1);
-      descriptor_set_layout_maker & samplers(const uint32_t bind, const vk::DescriptorType type, const vk::ShaderStageFlags stage, const std::vector<vk::Sampler> &samplers);
+      descriptor_set_layout_maker & combined(const uint32_t bind, const vk::DescriptorType type, const vk::ShaderStageFlags stage, const std::vector<vk::Sampler> &samplers);
 
       vk::DescriptorSetLayout create(const std::string &name);
     protected:
@@ -212,6 +212,7 @@ namespace devils_engine {
       
       vk::Pipeline create(
         const std::string &name,
+        vk::PipelineCache cache,
         vk::PipelineLayout layout,
         vk::RenderPass renderPass,
         const uint32_t subpass = 0,

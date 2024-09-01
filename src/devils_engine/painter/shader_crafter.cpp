@@ -12,7 +12,7 @@ namespace painter {
 
 class simple_shader_includer : public shaderc::CompileOptions::IncluderInterface {
 public:
-  simple_shader_includer(demiurg::system* sys) : _sys(sys) {}
+  simple_shader_includer(const demiurg::system* sys) : _sys(sys) {}
 
   shaderc_include_result* GetInclude(
     const char* requested_source, // запрашиваемый файл
@@ -65,10 +65,10 @@ public:
   }
 
 private:
-  demiurg::system* _sys;
+  const demiurg::system* _sys;
 };
 
-shader_crafter::shader_crafter(demiurg::system* sys) : _sys(sys), _opt(true), _type(0), _err_type(shaderc_compilation_status_success) {}
+shader_crafter::shader_crafter(const demiurg::system* sys) : _sys(sys), _opt(true), _type(0), _err_type(shaderc_compilation_status_success) {}
 
 // здесь бы мы хотели принять на вход текст шейдера
 // и получить на выход бинарник готовый к употреблению

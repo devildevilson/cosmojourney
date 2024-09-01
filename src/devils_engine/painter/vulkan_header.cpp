@@ -189,6 +189,12 @@ vk::ImageCreateInfo texture2D_staging(
     vk::ImageLayout::eUndefined
   );
 }
+
+vk::ImageViewCreateInfo view_info(
+  vk::Image img, vk::Format format, vk::ImageViewType type, const vk::ImageSubresourceRange &r, const vk::ComponentMapping &cm
+) {
+  return vk::ImageViewCreateInfo({}, img, type, format, cm, r);
+}
     
 vk::ImageViewCreateInfo make_view_info(
   vk::Image            image,

@@ -6,6 +6,8 @@
 #include <vector>
 #include <array>
 #include "vulkan_minimal.h"
+#include "pipeline_create_config.h"
+#include "primitives.h"
 
 // рендер таргет с точки зрения вулкана это набор ресурсов которые подключены в инпут атачмент
 // потенциально таргетом может быть любая конфигурация из картинок
@@ -40,32 +42,35 @@ struct attachment {
 
 // у всех изображений для фреймбуфера КРАЙНЕ ЖЕЛАТЕЛЬНО один и тот же размер (по крайней мере он должен быть больше чем размер области рендеринга)
 // сюрфейс откуда получим? наверное он сюда должен придти извне
-struct attachments_container {
+struct attachments_container : public attachments_provider, public recreate_target {
   VkInstance instance;
   VkDevice device;
-  VkPhysicalDevice physical_device;
-  VkSurfaceKHR surface;
-  std::vector<uint32_t> formats;
-  
-  uint32_t width, height;
   VmaAllocator allocator;
-  VkSwapchainKHR swapchain;
-  uint32_t current_image;
+  const class frame_acquisitor* frame_acquisitor;
+  //VkPhysicalDevice physical_device;
+  //VkSurfaceKHR surface;
+  std::vector<attachment_config_t> attachments_config;
+  
+  //VkSwapchainKHR swapchain;
+  //uint32_t current_image;
   std::vector<std::vector<attachment>> attachments;
 
   // наверное создадим отдельный аллокатор для этого типа картинок
-  attachments_container(VkInstance instaince, VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface, std::vector<uint32_t> formats);
+  //attachments_container(VkInstance instaince, VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface, std::vector<attachment_config_t> attachments_config);
+  attachments_container(VkInstance instance, VkDevice device, VmaAllocator allocator, const class frame_acquisitor* frame_acquisitor, std::vector<attachment_config_t> attachments_config);
   ~attachments_container() noexcept;
 
-  uint32_t max_frames() const;
-  size_t get_views(const uint32_t frame_index, VkImageView* views, const size_t max_size) const;
-  void recreate(const uint32_t width, const uint32_t height);
-  uint32_t acquire_next_image(VkSemaphore semaphore, uint32_t &current_image);
+  //uint32_t max_frames() const;
+  //size_t get_views(const uint32_t frame_index, VkImageView* views, const size_t max_size) const;
+  void recreate(const uint32_t width, const uint32_t height) override;
+  //uint32_t acquire_next_image(VkSemaphore semaphore, uint32_t &current_image);
   void clear();
-  void destroy_swapchain();
+  //void destroy_swapchain();
 
-  void recreate_swapchain(const uint32_t width, const uint32_t height);
+  //void recreate_swapchain(const uint32_t width, const uint32_t height);
   void recreate_images(const uint32_t width, const uint32_t height);
+
+  size_t attachment_handles(const size_t buffering, VkImageView* views, const size_t max_size) const override;
 };
 
 // таким образом для атачментов нам реально нужно только указать форматы 

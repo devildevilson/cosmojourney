@@ -16,6 +16,22 @@ if (CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+if(MSVC)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /GR- /permissive- /Zc:preprocessor")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} /GR- /O2 /permissive- /Zc:preprocessor")
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} /GR- /permissive- /Zc:preprocessor")
+  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} /GR- /O2 /permissive- /Zc:preprocessor")
+else()
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -Wall -Wextra -fno-rtti")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -fno-rtti")
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -Wall -Wextra -fno-rtti")
+  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -O3 -fno-rtti")
+endif()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+  add_definitions(-D_NDEBUG)
+endif()
+
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -23,22 +39,21 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
   set(CMAKE_CXX_STANDARD 23)
 
-  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	if(MSVC)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /permissive- /Zc:preprocessor")
-    else()
-	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra -fno-rtti")
-    endif()
-  endif()
+  #if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	#if(MSVC)
+  #    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /permissive- /Zc:preprocessor")
+  #  else()
+	#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra -fno-rtti")
+  #  endif()
+  #endif()
 
-  if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_definitions(-D_NDEBUG)
-	if(MSVC)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /O2 /permissive- /Zc:preprocessor")
-    else()
-	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fno-rtti")
-    endif()
-  endif()
+  #if (CMAKE_BUILD_TYPE STREQUAL "Release")
+	#if(MSVC)
+  #    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /O2 /permissive- /Zc:preprocessor")
+  #  else()
+	#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fno-rtti")
+  #  endif()
+  #endif()
 
 endif()
 
@@ -62,6 +77,7 @@ include_directories(
   include/fmt/include/
   include/parallel-hashmap/
   include/VulkanMemoryAllocator-Hpp/include/
+  include/dynamic_bitset/include
   src/devils_engine/
   src/cosmojourney/
 )
@@ -88,7 +104,8 @@ else()
   )
 endif()
 
-# Find packages go here.
+add_compile_definitions("DEVILS_ENGINE_PROJECT_NAME=\"${PROJECT_NAME}\"")
+add_compile_definitions("DEVILS_ENGINE_ENGINE_NAME=\"${DEVILS_ENGINE_NAME}\"")
 
 # Link each target with other targets or add options, etc.
 add_subdirectory(src/devils_engine/utils/)
@@ -99,11 +116,11 @@ add_subdirectory(src/devils_engine/input/)
 add_subdirectory(src/devils_engine/painter/)
 #add_subdirectory(src/devils_engine/interface/)
 
+add_subdirectory(include/dynamic_bitset)
+
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
 add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp")
-target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input devils_painter lua54)
-target_compile_definitions(${PROJECT_NAME} PUBLIC "DEVILS_ENGINE_PROJECT_NAME=\"${PROJECT_NAME}\"")
-target_compile_definitions(${PROJECT_NAME} PUBLIC "DEVILS_ENGINE_ENGINE_NAME=\"${DEVILS_ENGINE_NAME}\"")
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input devils_painter lua54 sul::dynamic_bitset)
 
 foreach (library_path IN LISTS DYN_LIBRARIES_LIST)
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 

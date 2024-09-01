@@ -343,7 +343,7 @@ namespace devils_engine {
       return *this;
     }
     
-    descriptor_set_layout_maker & descriptor_set_layout_maker::samplers(const uint32_t bind, const vk::DescriptorType type, const vk::ShaderStageFlags stage, const std::vector<vk::Sampler> &samplers) {
+    descriptor_set_layout_maker & descriptor_set_layout_maker::combined(const uint32_t bind, const vk::DescriptorType type, const vk::ShaderStageFlags stage, const std::vector<vk::Sampler> &samplers) {
       const vk::DescriptorSetLayoutBinding b{
         bind,
         type,
@@ -873,6 +873,7 @@ namespace devils_engine {
     
     vk::Pipeline pipeline_maker::create(
       const std::string &name,
+      vk::PipelineCache cache,
       vk::PipelineLayout layout,
       vk::RenderPass renderPass,
       const uint32_t subpass,
@@ -881,8 +882,8 @@ namespace devils_engine {
     ) {
       const auto info = get_info(layout, renderPass, subpass, base, baseIndex);
       
-      auto [res, p] = device.createGraphicsPipeline(nullptr, info);
-      if (res != vk::Result::eSuccess) throw std::runtime_error("createGraphicsPipeline failed");
+      auto [res, p] = device.createGraphicsPipeline(cache, info);
+      if (res != vk::Result::eSuccess) utils::error("Could not create graphics pipeline '{}'", name);
       if (!name.empty()) set_name(device, p, name);
       
       shaders_specs.clear();
@@ -961,7 +962,7 @@ namespace devils_engine {
       );
 
       auto [res, p] = device.createComputePipeline(nullptr, info);
-      if (res != vk::Result::eSuccess) throw std::runtime_error("createComputePipeline failed");
+      if (res != vk::Result::eSuccess) utils::error("Could not create compute pipeline '{}'", name);
       if (!name.empty()) set_name(device, p, name);
       entries.clear();
       
