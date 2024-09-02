@@ -17,16 +17,6 @@ enum values {
 };
 }
 
-// какой то минимальный контекст
-// в качестве контекста теперь будет только командный буфер
-//struct context {
-//  uint32_t index;
-//  VkCommandBuffer buffer;
-//};
-
-// для двойной буферизации создадим 2 набора последовательностей stage
-// 
-
 class arbitrary_data {
 public:
   virtual ~arbitrary_data() noexcept = default;
@@ -112,7 +102,17 @@ struct wait_event_provider : public wait_target {
 class submit_target : public arbitrary_data {
 public:
   virtual ~submit_target() noexcept = default;
+  virtual void begin() = 0;
   virtual void submit() const = 0; // ??????
+};
+
+class present_target : public arbitrary_data {
+public:
+  virtual ~present_target() noexcept = default;
+  virtual void begin() = 0;
+  virtual uint32_t acquire_next_image() = 0;
+  virtual void process() = 0;
+  virtual uint32_t present() const = 0;
 };
 
 struct pipeline_layout_provider {

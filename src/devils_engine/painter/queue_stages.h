@@ -68,32 +68,35 @@ private:
 };
 
 // для того чтобы полностью запустить фрейм что нам нужно?
-// 1) это пробежать клир
-// 2) это пробежать бегин
-// 3) получить новый индекс картинки
-// 4) подождать фенс и другие вещи
+// 1) пробежать клир
+// 2) получить новый индекс картинки
+// 3) подождать фенс и другие вещи
+// 4) пробежать бегин
 // 5) пробежать process
 // 6) запустить презентацию
 
-class queue_present : public submit_target, public semaphore_provider, public wait_fence_provider {
+class queue_present : public present_target, public semaphore_provider, public wait_fence_provider {
 public:
-  queue_present(VkDevice device, VkQueue queue, const frame_acquisitor* fram);
+  static const size_t wait_targets_max_count = 8;
 
-  // тут поди будет запуск функций queue_main
+  queue_present(VkDevice device, VkQueue queue, VkSwapchainKHR swapchain, frame_acquisitor* fram, queue_main* main);
+  ~queue_present() noexcept;
 
-  void submit() const override;
+  void begin() override;
+  uint32_t acquire_next_image() override;
+  void process() override;
+  uint32_t present() const override;
 
   void add_waiter(wait_target* w);
 protected:
   VkDevice device;
   VkQueue queue;
-  const frame_acquisitor* fram;
-
+  VkSwapchainKHR swapchain;
+  frame_acquisitor* fram;
   queue_main* main;
 
-  // ждем вещи зависящие от кадра или какую то синхронизацию с внешней системой
   uint32_t wait_count;
-  wait_target* wait_targets[8];
+  wait_target* wait_targets[wait_targets_max_count];
 };
 
 }

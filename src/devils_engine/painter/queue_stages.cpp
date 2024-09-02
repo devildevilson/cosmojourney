@@ -131,7 +131,68 @@ void queue_main::add(VkSemaphore semaphore, const uint32_t stage_flag) {
   wait_flags[index] = stage_flag;
 }
 
+const size_t queue_present::wait_targets_max_count;
+queue_present::queue_present(VkDevice device, VkQueue queue, VkSwapchainKHR swapchain, frame_acquisitor* fram, queue_main* main) :
+  device(device), queue(queue), swapchain(swapchain), fram(fram), main(main)
+{
+  signal = vk::Device(device).createSemaphore(vk::SemaphoreCreateInfo());
+  signal_stage = uint32_t(vk::PipelineStageFlagBits::eBottomOfPipe);
+  fence = vk::Device(device).createFence(vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled));
+}
 
+queue_present::~queue_present() noexcept {
+  vk::Device(device).destroy(signal);
+  vk::Device(device).destroy(fence);
+}
+
+void queue_present::begin() {
+  const size_t timeout = 1000ull * 1000ull * 1000ull; // 1 секунда
+
+  vk::Device d(device);
+  const auto res = d.waitForFences(vk::Fence(fence), VK_TRUE, timeout);
+  if (res != vk::Result::eSuccess) utils::error("Wait for frame fence took too long. Error: {}", vk::to_string(res));
+  d.resetFences(vk::Fence(fence));
+
+  // 1) это пробежать клир
+  main->clear();
+}
+
+uint32_t queue_present::acquire_next_image() {
+  const size_t timeout = 1000ull * 1000ull * 1000ull; // 1 секунда
+  return fram->acquire_next_image(timeout, signal, fence);
+}
+
+void queue_present::process() {
+  const size_t timeout = 1000ull * 1000ull * 1000ull; // 1 секунда
+
+  // 4) подождать фенс и другие вещи
+  for (uint32_t i = 0; i < wait_count; ++i) {
+    const auto res = wait_targets[i]->wait(timeout);
+    if (res != 0) utils::error("Wait for too long. Error: {}", vk::to_string(vk::Result(res)));
+  }
+
+  // 2) это пробежать бегин 
+  // нам с очень малой вероятностью потребуется знать какую картинку из свопчейна мы взяли
+  main->begin();
+
+  // 5) пробежать process
+  main->process(VK_NULL_HANDLE);
+}
+
+uint32_t queue_present::present() const {
+  VkSemaphore semaphores[2]{ signal, main->signal };
+  vk::Result local_res = vk::Result::eSuccess;
+
+  vk::PresentInfoKHR pi(2, (vk::Semaphore*)semaphores, 1, (vk::SwapchainKHR*)&swapchain, &fram->current_image_index, &local_res);
+  const auto res = vk::Queue(queue).presentKHR(pi);
+  return uint32_t(res);
+}
+
+void queue_present::add_waiter(wait_target* w) {
+  if (wait_count >= wait_targets_max_count) utils::error("Too many wait targets");
+  wait_targets[wait_count] = w;
+  wait_count += 1;
+}
 
 }
 }

@@ -4,10 +4,28 @@
 #include <cstdint>
 #include <cstddef>
 #include <chrono>
+#include <atomic>
 #include <thread>
 
 namespace devils_engine {
 namespace thread {
+namespace semaphore_state {
+enum values { unsignaled, signaled };
+}
+
+class semaphore_interface {
+public:
+  using clock = std::chrono::high_resolution_clock;
+  using tp = clock::time_point;
+
+  virtual ~semaphore_interface() noexcept = default;
+  virtual void reset() = 0;
+  virtual semaphore_state::values state() const = 0;
+  virtual bool wait_until(tp t, const size_t tolerance_in_ns = 1) const = 0;
+  template <typename T>
+  inline bool wait_for(T dur, const size_t tolerance_in_ns = 1) const { return wait_until(clock::now() + dur, tolerance_in_ns); }
+};
+
 class spin_mutex {
 public: 
   inline spin_mutex() noexcept : val(false) {}

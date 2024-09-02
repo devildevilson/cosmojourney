@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "vulkan_minimal.h"
+#include "primitives.h"
 
 // так тут нужно сделать какую то удобную систему лейаутов
 // в том плане что мне наверное все парочку лейаутов потребуется за всю программу
@@ -15,7 +16,7 @@
 namespace devils_engine {
 namespace painter {
 
-struct layouting {
+struct layouting : public arbitrary_data {
   struct layouting_create_info {
     uint32_t readonly_storage_buffers_count;
     uint32_t combined_image_samplers_count;

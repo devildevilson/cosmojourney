@@ -40,6 +40,13 @@ class simple_swapchain;
 // да, здесь же можно сделать обновление экрана
 // + перекомпиляцию шейдеров (пересборку пиплина)
 
+// осталось практически вот что: у меня явно в кадре есть 
+// какая то работа которая должна быть синхронизирована с цпу
+// это например стриминг ресурсов на видеокарту
+// например мне нужно перекопировать данные с хоста на гпу
+// это дело должно контроллироваться за счет vkevent
+// мне явно нужен какой то стейдж который
+
 // обязательно где то надо еще делать вот это vmaSetCurrentFrameIndex
 class system {
 public:
@@ -55,26 +62,6 @@ public:
   // должна ли загрузка происходить только в основном потоке? не обязательно
   // загрузка тащемта это набор функций которые выполняются одна за другой + синхронизация во время выполнения
 
-  template <typename T, typename... Args>
-  T *add_stage(Args&&... args) {
-    auto ptr = std::make_unique<T>(std::forward<Args>(args)...);
-    auto p = ptr.get();
-    stages.push_back(std::move(ptr));
-
-    if constexpr (std::derived_from<T, recreate_target>) {
-      if (recreating == nullptr) recreating = p;
-      else recreating->add(p);
-    } else if constexpr (std::derived_from<T, submit_target>) {
-      if (submiting == nullptr) submiting = p;
-      else submiting->add(p);
-    } else if constexpr (std::derived_from<T, recompile_shaders_target>) {
-      if (recompiling_shaders == nullptr) recompiling_shaders = p;
-      else recompiling_shaders->add(p);
-    }
-    
-    return p;
-  }
-
   template <typename... Args>
   container* create_main_container(Args&&... args) {
     main_container.reset(new container(std::forward<Args>(args)...));
@@ -89,8 +76,32 @@ public:
     return ptr;
   }
 
+  template <typename T, typename... Args>
+  T *add_stage(Args&&... args) {
+    auto ptr = std::make_unique<T>(std::forward<Args>(args)...);
+    auto p = ptr.get();
+    objects.push_back(std::move(ptr));
+
+    if constexpr (std::derived_from<T, recreate_target>) {
+      if (recreating == nullptr) recreating = p;
+      else recreating->add(p);
+    } 
+    
+    /*if constexpr (std::derived_from<T, submit_target>) {
+      if (submiting == nullptr) submiting = p;
+      else submiting->add(p);
+    } */
+    
+    if constexpr (std::derived_from<T, recompile_shaders_target>) {
+      if (recompiling_shaders == nullptr) recompiling_shaders = p;
+      else recompiling_shaders->add(p);
+    }
+    
+    return p;
+  }
+
   // количество нужно указать
-  template <typename... Args>
+  /*template <typename... Args>
   layouting* create_layouting(Args&&... args) {
     graphics_layout.reset(new layouting(std::forward<Args>(args)...));
     return graphics_layout.get();
@@ -100,21 +111,24 @@ public:
   attachments_container* create_attachment_container(Args&&... args) {
     attachments.reset(new attachments_container(std::forward<Args>(args)...));
     return attachments.get();
-  }
+  }*/
 
   template <typename T, typename... Args>
-  T* add_frame_submiter(Args&&... args) {
+  T* add_frame_presenter(Args&&... args) {
     auto std_ptr = std::make_unique(std::forward<Args>(args)...);
     auto ptr = std_ptr.get();
-    frames_submiters.emplace_back(std::move(std_ptr));
+    frames_presenters.emplace_back(std::move(std_ptr));
     return ptr;
   }
 
   uint32_t recompile_shaders();
   void recreate(const uint32_t width, const uint32_t height);
 
+  uint32_t compute_frame();
+
   VkInstance get_instance() const;
   VkDevice get_device() const;
+  container* get_main_container() const;
   void set_window_surface(VkSurfaceKHR surface);
 
   graphics_pipeline_create_config* get_graphics_pipeline_config(const std::string &name);
@@ -133,26 +147,26 @@ private:
   // другое дело что потребуется наверное опять заводить несколько способов аллокации
   std::vector<std::unique_ptr<image_container>> image_containers;
 
-  std::unique_ptr<layouting> graphics_layout;
+  //std::unique_ptr<layouting> graphics_layout;
   //std::unique_ptr<arbitrary_image_container> any_images;
   //std::unique_ptr<hierarchical_image_container> block_images;
   //std::unique_ptr<image_pool> array32_images;
   //std::unique_ptr<image_pool> array512_images; // ?
 
-  std::unique_ptr<attachments_container> attachments;
+  //std::unique_ptr<attachments_container> attachments;
   // надо также выкинуть функции создания изображения
   
   // сюда нужно передать окно
   VkSurfaceKHR surface;
-  std::unique_ptr<simple_swapchain> swapchain;
+  //std::unique_ptr<simple_swapchain> swapchain;
 
-  std::vector<std::unique_ptr<arbitrary_data>> stages;
+  std::vector<std::unique_ptr<arbitrary_data>> objects;
   recreate_target* recreating;
-  submit_target* submiting; // так указать это дело НЕЛЬЗЯ, желательно убрать из аттачмент контейнера swapchain
+  //submit_target* submiting; // так указать это дело НЕЛЬЗЯ, желательно убрать из аттачмент контейнера swapchain
   recompile_shaders_target* recompiling_shaders; 
 
   size_t submiter_counter;
-  std::vector<std::unique_ptr<submit_target>> frames_submiters;
+  std::vector<std::unique_ptr<present_target>> frames_presenters;
 
   // система должна подгрузить все конфиги всех вулкан штук и положить их где то здесь
   // + система подгрузит конфиги из кода + подгрузит конфиги с диска (диск по приоритету)
