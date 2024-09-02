@@ -22,7 +22,7 @@ namespace devils_engine {
 namespace painter {
 struct attachments_container;
 
-class render_pass_main : public parent_stage {
+class render_pass_main : public sibling_stage, public parent_stage {
 public:
   render_pass_main(VkDevice device, const framebuffer_provider* provider);
   ~render_pass_main() noexcept;
@@ -35,7 +35,7 @@ protected:
   const framebuffer_provider* provider;
 };
 
-class next_subpass : public stage {
+class next_subpass : public sibling_stage {
 public:
   void begin() override;
   void process(VkCommandBuffer buffer) override;

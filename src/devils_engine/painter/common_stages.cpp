@@ -14,15 +14,22 @@ void memory_barrier::begin() {}
 void memory_barrier::process(VkCommandBuffer buffer) {
   vk::CommandBuffer b(buffer);
 
-  vk::MemoryBarrier2 bar(static_cast<vk::PipelineStageFlags2>(srcStageMask), static_cast<vk::AccessFlags2>(srcAccessMask), static_cast<vk::PipelineStageFlags2>(dstStageMask), static_cast<vk::AccessFlags2>(dstAccessMask));
-  vk::DependencyInfo di(vk::DependencyFlagBits::eByRegion, bar);
-  b.pipelineBarrier2(di);
+  vk::MemoryBarrier bar(static_cast<vk::AccessFlags>(srcAccessMask), static_cast<vk::AccessFlags>(dstAccessMask));
+  b.pipelineBarrier(static_cast<vk::PipelineStageFlags>(srcStageMask), static_cast<vk::PipelineStageFlags>(dstStageMask), vk::DependencyFlagBits::eByRegion, bar, nullptr, nullptr);
 }
 
 void memory_barrier::clear() {}
 
 compute_sync::compute_sync() noexcept : memory_barrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT) {}
 compute_to_graphics_sync::compute_to_graphics_sync() noexcept : memory_barrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT) {}
+
+set_event::set_event(VkEvent event, const uint32_t stage_flags) noexcept : event(event), stage_flags(stage_flags) {}
+void set_event::begin() {}
+void set_event::process(VkCommandBuffer buffer) {
+  vk::CommandBuffer b(buffer);
+  b.setEvent(event, vk::PipelineStageFlags(stage_flags));
+}
+void set_event::clear() {}
 
 pipeline_view::pipeline_view(const pipeline_provider* provider) noexcept : provider(provider) {}
 void pipeline_view::begin() {}

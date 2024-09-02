@@ -19,7 +19,7 @@
 
 namespace devils_engine {
 namespace painter {
-class queue_dependant : public parent_stage, public submit_target, public semaphore_provider, public semaphore_wait_dependency {
+class queue_dependant : public sibling_stage, public parent_stage, public submit_target, public semaphore_provider, public semaphore_wait_dependency {
 public:
   constexpr static const size_t wait_semaphores_max = 16;
 
@@ -43,7 +43,7 @@ private:
   uint32_t wait_flags[wait_semaphores_max];
 };
 
-class queue_main : public parent_stage, public submit_target, public semaphore_provider, public wait_fence_provider, public semaphore_wait_dependency {
+class queue_main : public sibling_stage, public parent_stage, public submit_target, public semaphore_provider, public wait_fence_provider, public semaphore_wait_dependency {
 public:
   constexpr static const size_t wait_semaphores_max = 16;
 
@@ -67,6 +67,14 @@ private:
   uint32_t wait_flags[wait_semaphores_max];
 };
 
+// для того чтобы полностью запустить фрейм что нам нужно?
+// 1) это пробежать клир
+// 2) это пробежать бегин
+// 3) получить новый индекс картинки
+// 4) подождать фенс и другие вещи
+// 5) пробежать process
+// 6) запустить презентацию
+
 class queue_present : public submit_target, public semaphore_provider, public wait_fence_provider {
 public:
   queue_present(VkDevice device, VkQueue queue, const frame_acquisitor* fram);
@@ -75,13 +83,17 @@ public:
 
   void submit() const override;
 
-
+  void add_waiter(wait_target* w);
 protected:
   VkDevice device;
   VkQueue queue;
   const frame_acquisitor* fram;
 
   queue_main* main;
+
+  // ждем вещи зависящие от кадра или какую то синхронизацию с внешней системой
+  uint32_t wait_count;
+  wait_target* wait_targets[8];
 };
 
 }

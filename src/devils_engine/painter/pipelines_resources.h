@@ -23,6 +23,8 @@ public:
   void init(VkRenderPass render_pass, const uint32_t subpass, const graphics_pipeline_create_config* conf, const size_t attachments_count, const subpass_data_t::attachment* atts);
 
   // КОЛОР БЛЕНДИНГ ЗАВИСИТ ОТ РАСПОЛОЖЕНИЯ АТТАЧМЕНТОВ В САБПАССЕ
+  // имеет смысл это переназвать в recreate_pipeline
+  // так а сами шейдеры брать из ресурсов
   uint32_t recompile_shaders() override;
 protected:
   VkDevice device;

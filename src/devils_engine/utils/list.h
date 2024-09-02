@@ -23,6 +23,11 @@ namespace devils_engine {
           m_next = obj;
         }
 
+        void set(T* obj) noexcept {
+          static_assert(std::is_base_of_v<list<T, t>, T>);
+          m_next = obj;
+        }
+
         void remove(T* prev) noexcept {
           static_assert(std::is_base_of_v<list<T, t>, T>);
           auto l = static_cast<list<T, t>>(prev);
@@ -38,6 +43,12 @@ namespace devils_engine {
       void list_add(T* cur, T* obj) noexcept {
         list<T, t>* l = cur;
         l->add(obj);
+      }
+
+      template <size_t t, typename T>
+      void list_set(T* cur, T* obj) noexcept {
+        list<T, t>* l = cur;
+        l->set(obj);
       }
 
       template <size_t t, typename T>

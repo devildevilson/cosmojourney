@@ -32,26 +32,29 @@ public:
   virtual ~arbitrary_data() noexcept = default;
 };
 
-// порядок важен, но скорее всего и так и сяк придется в коде учитывать смену указателей
-class stage : public arbitrary_data, public utils::forw::list<stage, primitive_list_type::siblings> {
+class stage : public arbitrary_data {
 public:
   virtual ~stage() noexcept = default;
-
   virtual void begin() = 0;
   virtual void process(VkCommandBuffer buffer) = 0; // ЖЕЛАТЕЛЬНО чтобы был конст
   virtual void clear() = 0;
+};
 
-  inline stage* next() const { return utils::forw::list_next<primitive_list_type::siblings>(this); }
-  inline void set_next(stage* s) { utils::forw::list_add<primitive_list_type::siblings>(this, s); }
+// порядок важен, но скорее всего и так и сяк придется в коде учитывать смену указателей
+class sibling_stage : public stage, public utils::forw::list<stage, primitive_list_type::siblings> {
+public:
+  virtual ~sibling_stage() noexcept = default;
+  inline sibling_stage* next() const { return utils::forw::list_next<primitive_list_type::siblings>(this); }
+  inline void set_next(sibling_stage* s) { utils::forw::list_set<primitive_list_type::siblings>(this, s); }
 };
 
 class parent_stage : public stage {
 public:
   inline parent_stage() noexcept : childs(nullptr) {}
   virtual ~parent_stage() noexcept = default;
-  inline void set_childs(stage* childs) { this->childs = childs; }
+  inline void set_childs(sibling_stage* childs) { this->childs = childs; }
 protected:
-  stage* childs;
+  sibling_stage* childs;
 };
 
 // порядок теперь супер важен: сначала свопчеин, потом аттачменты, и в конце фреймбуфер
@@ -190,6 +193,31 @@ public:
   virtual void change_layout_all(VkCommandBuffer buffer, const uint32_t old_layout, const uint32_t new_layout) const = 0;
   virtual void copy_data(VkCommandBuffer buffer, VkImage image, const uint32_t index) const = 0;
   virtual void blit_data(VkCommandBuffer buffer, const std::tuple<VkImage,uint32_t,uint32_t> &src_image, const uint32_t index, const uint32_t filter = 0) const = 0;
+};
+
+class buffer_container {
+public:
+  std::string container_name;
+  inline buffer_container(std::string container_name) noexcept : container_name(std::move(container_name)) {}
+  virtual ~buffer_container() noexcept = default;
+
+  // тут поди тоже какой то юинт будет возвращаться
+  // у меня есть несколько задач где мне нужен будет большой буфер
+  // несколько задач где нужно много мелких буферов
+  // + к этому пригодится дропать большой буфер и создавать новый
+  // данные как то можно посчитать заранее?
+
+  virtual bool is_exists(const uint32_t index) const = 0;
+  virtual uint32_t create(std::string name, const uint32_t size) = 0;
+  virtual void destroy(const uint32_t index) = 0;
+
+  virtual VkBuffer storage(const uint32_t index) const = 0;
+  virtual size_t size(const uint32_t index) const = 0;
+  virtual size_t offset(const uint32_t index) const = 0;
+
+  virtual void update_descriptor_set(VkDescriptorSet set, const uint32_t binding, const uint32_t first_element) const = 0;
+  virtual void copy(VkCommandBuffer buffer, VkBuffer srcbuf, const size_t srcoffset, const uint32_t index, const size_t size) const = 0;
+  virtual void copy(VkCommandBuffer buffer, const uint32_t index, VkBuffer dstbuf, const size_t dstoffset, const size_t size) const = 0;
 };
 
 // короче судя по всему до этого индекса ВООБЩЕ нет никому дела кроме фреймбуфера

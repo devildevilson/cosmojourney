@@ -80,30 +80,6 @@ static vk::AttachmentStoreOp make_store_op(const attachment_operation op) {
   return vop;
 }
 
-static vk::AttachmentSte make_load_op(const attachment_operation op) {
-  auto vop = vk::AttachmentLoadOp::eLoad;
-  switch (op) {
-    case attachment_operation::dont_care: vop = vk::AttachmentLoadOp::eDontCare; break;
-    case attachment_operation::clear: vop = vk::AttachmentLoadOp::eClear; break;
-    case attachment_operation::keep: vop = vk::AttachmentLoadOp::eLoad; break;
-    default: break;
-  }
-
-  return vop;
-}
-
-static vk::AttachmentStoreOp make_store_op(const attachment_operation op) {
-  auto vop = vk::AttachmentStoreOp::eStore;
-  switch (op) {
-    case attachment_operation::dont_care: vop = vk::AttachmentStoreOp::eDontCare; break;
-    case attachment_operation::clear: vop = vk::AttachmentStoreOp::eDontCare; break;
-    case attachment_operation::keep: vop = vk::AttachmentStoreOp::eStore; break;
-    default: break;
-  }
-
-  return vop;
-}
-
 simple_render_pass::simple_render_pass(VkDevice device, const render_pass_data_t* create_data, const attachments_provider* provider) :
   device(device), create_data(create_data), provider(provider)
 {
