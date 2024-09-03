@@ -70,7 +70,7 @@ set(HDR_LIST
   "primitives.h"
   stage_buffer.h
   vulkan_minimal.h
- "attachments_container.h" "container.h" "render_pass_stages.h" "common_stages.h" "layouting.h" "image_pool.h" "pipelines_resources.h" "pipeline_create_config.h" "pipelines_config_static_container.h" "arbitrary_image_container.h" "render_pass_resources.h" "framebuffer_resources.h" "swapchain_resources.h")
+ "attachments_container.h" "container.h" "render_pass_stages.h" "common_stages.h" "layouting.h" "image_pool.h" "pipelines_resources.h" "pipeline_create_config.h" "pipelines_config_static_container.h" "arbitrary_image_container.h" "render_pass_resources.h" "framebuffer_resources.h" "swapchain_resources.h" "buffer_resources.h")
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(${DEVILS_LIBRARY_NAME} ${SHADERC_LIBRARY_NAME})
