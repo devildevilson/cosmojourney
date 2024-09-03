@@ -65,7 +65,7 @@ void simple_swapchain::recreate(const uint32_t width, const uint32_t height) {
   destroy_swapchain();
 
   swapchain = new_swapchain;
-  set_name(device, swapchain, "window_swapchain");
+  set_name(device, vk::SwapchainKHR(swapchain), "window_swapchain");
 
   const auto vk_images = dev.getSwapchainImagesKHR(swapchain);
   if (vk_images.size() != max_count) {

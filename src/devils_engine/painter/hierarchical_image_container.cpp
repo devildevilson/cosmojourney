@@ -18,7 +18,7 @@ hierarchical_image_container2::hierarchical_image_container2(VkDevice device, Vm
   std::sort(info.begin(), info.end(), &comp);
 
   for (const auto & inf : info) {
-    pools.push_back(std::make_unique<image_pool>(device, allocator, format, inf.width, inf.height, inf.count));
+    pools.push_back(std::make_unique<image_pool>("dependant_pool", device, allocator, format, image_container::extent_t{inf.width, inf.height}, inf.count));
   }
 }
 
@@ -89,7 +89,7 @@ std::tuple<uint32_t, uint32_t> hierarchical_image_container2::extent(const uint3
   return pools[index]->extent();
 }
 
-void hierarchical_image_container2::write_descriptor_set(VkDescriptorSet set, const uint32_t binding, const uint32_t start_element = 0) const {
+void hierarchical_image_container2::write_descriptor_set(VkDescriptorSet set, const uint32_t binding, const uint32_t start_element) const {
   descriptor_set_updater dsu(device);
   dsu.currentSet(set).begin(binding, start_element, vk::DescriptorType::eCombinedImageSampler);
   for (const auto & pool : pools) {
@@ -423,7 +423,9 @@ void hierarchical_image_container::copy_data(VkCommandBuffer buffer, VkImage ima
   b.copyImage(image, vk::ImageLayout::eTransferSrcOptimal, img.handle, vk::ImageLayout::eTransferDstOptimal, ic);
 }
 
-void hierarchical_image_container::blit_data(VkCommandBuffer buffer, const std::tuple<VkImage, uint32_t, uint32_t> &src_image, const uint32_t index, const uint32_t filter = 0) const {
+#define MAKE_BLIT_OFFSETS(w_1,h_1) {VkOffset3D{0,0,0}, VkOffset3D{int32_t(w_1),int32_t(h_1),1}}
+
+void hierarchical_image_container::blit_data(VkCommandBuffer buffer, const std::tuple<VkImage, uint32_t, uint32_t> &src_image, const uint32_t index, const uint32_t filter) const {
   if (index >= images.size()) utils::error("Trying to blit image to image index '{}', but capacity is {}", index, images.size());
   if (is_exists(index)) utils::error("Trying to blit image to non existing image index '{}'", index);
 
@@ -433,8 +435,8 @@ void hierarchical_image_container::blit_data(VkCommandBuffer buffer, const std::
   vk::CommandBuffer b(buffer);
   vk::ImageSubresourceLayers isl1(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
   vk::ImageSubresourceLayers isl2(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
-  vk::ImageBlit blit(isl1, {vk::Offset3D{0,0,0}, vk::Offset3D{src_width,src_height,1}}, isl2, {vk::Offset3D{0,0,0}, vk::Offset3D{img.width,img.height,1}});
-  b.blitImage(src, vk::ImageLayout::eTransferSrcOptimal, img.handle, vk::ImageLayout::eTransferDstOptimal, blit, vk::Filter(filter));
+  VkImageBlit blit{isl1, MAKE_BLIT_OFFSETS(src_width,src_height), isl2, MAKE_BLIT_OFFSETS(img.width,img.height)};
+  b.blitImage(src, vk::ImageLayout::eTransferSrcOptimal, img.handle, vk::ImageLayout::eTransferDstOptimal, vk::ImageBlit(blit), vk::Filter(filter));
 }
 
 }

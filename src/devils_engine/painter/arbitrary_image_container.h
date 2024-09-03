@@ -32,7 +32,7 @@ namespace painter {
 
 constexpr size_t default_arbitrary_image_container_slots = 4096;
 
-class arbitrary_image_container : public image_container {
+class arbitrary_image_container final : public image_container {
 public:
   struct image_t {
     VmaAllocation allocation;
@@ -52,7 +52,8 @@ public:
   void resize(const size_t new_size);
 
   bool is_exists(const uint32_t index) const override;
-  uint32_t create(std::string name, const image_container::extent_t extent, const uint32_t format, VkSampler sampler) override;
+  uint32_t create(std::string name, const extent_t extent, const uint32_t format, VkSampler sampler) override;
+  uint32_t create_any(std::string name, const extent_t extent, const uint32_t format, VkSampler sampler) override;
   void destroy(const uint32_t index) override;
 
   VkImage storage(const uint32_t index) const override;

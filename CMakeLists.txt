@@ -17,9 +17,9 @@ if (CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 
 if(MSVC)
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /GR- /permissive- /Zc:preprocessor")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /wd5045 /wd4820 /GR- /permissive- /Zc:preprocessor")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} /GR- /O2 /permissive- /Zc:preprocessor")
-  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} /GR- /permissive- /Zc:preprocessor")
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} /wd5045 /wd4820 /GR- /permissive- /Zc:preprocessor")
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} /GR- /O2 /permissive- /Zc:preprocessor")
 else()
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -Wall -Wextra -fno-rtti")
@@ -30,6 +30,8 @@ endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
   add_definitions(-D_NDEBUG)
+  add_definitions(-DNDEBUG)
+  
 endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)

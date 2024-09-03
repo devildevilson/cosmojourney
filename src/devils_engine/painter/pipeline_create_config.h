@@ -140,6 +140,7 @@ struct render_pass_data_t {
   std::vector<subpass_data_t> subpasses;
 };
 
+// сделать именные форматы и запилить возможность указывать в каком аттачменте расположен свопчеин
 struct attachment_config_t {
   std::string name;
   uint32_t format;

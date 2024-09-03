@@ -31,7 +31,7 @@ public:
 };
 
 // порядок важен, но скорее всего и так и сяк придется в коде учитывать смену указателей
-class sibling_stage : public stage, public utils::forw::list<stage, primitive_list_type::siblings> {
+class sibling_stage : public stage, public utils::forw::list<sibling_stage, primitive_list_type::siblings> {
 public:
   virtual ~sibling_stage() noexcept = default;
   inline sibling_stage* next() const { return utils::forw::list_next<primitive_list_type::siblings>(this); }

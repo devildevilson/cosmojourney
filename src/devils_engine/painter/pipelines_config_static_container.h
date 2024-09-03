@@ -24,7 +24,7 @@ std::vector<std::string> available_default_samplers_configs();
 const graphics_pipeline_create_config* get_default_graphics_pipeline_config(const std::string &name);
 const compute_pipeline_create_config* get_default_compute_pipeline_config(const std::string &name);
 const render_pass_data_t* get_default_render_pass_config(const std::string &name);
-std::vector<const attachment_config_t*> get_default_attachments_config(const std::string &name);
+const std::vector<attachment_config_t> * get_default_attachments_config(const std::string &name);
 const sampler_config_t* get_default_sampler_config(const std::string &name);
 
 }

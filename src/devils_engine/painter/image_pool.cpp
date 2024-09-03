@@ -25,7 +25,7 @@ static bool is_compatible_format(const uint32_t storage_format, const uint32_t v
 // вообще в будущем у меня большая часть текстур будет одного размера (причем высокого)
 // будет иметь смысл создавать имдж пуллы для более больших текстурок
 image_pool::image_pool(std::string name, VkDevice device, VmaAllocator allocator, const uint32_t format, const extent_t extent, const uint32_t count) :
-  image_container(std::move(name)), _device(device), _allocator(allocator), _allocation(VK_NULL_HANDLE), _storage(VK_NULL_HANDLE), _view(VK_NULL_HANDLE), _width(width), _height(height), _format(format), _capacity(count), _size(0), _images(count)
+  image_container(std::move(name)), _device(device), _allocator(allocator), _allocation(VK_NULL_HANDLE), _storage(VK_NULL_HANDLE), _view(VK_NULL_HANDLE), _width(extent.width), _height(extent.height), _format(format), _size(0), _images(count)
 {
   vk::Device d(_device);
   vma::Allocator a(_allocator);
@@ -56,8 +56,8 @@ image_pool::image_pool(std::string name, VkDevice device, VmaAllocator allocator
   set_name(d, vk::ImageView(_view), container_name + "_image_pull_image_view");
 
   auto null_inf = texture2D({4, 4}, usage);
-  const vma::AllocationCreateInfo aci(vma::AllocationCreateFlagBits::eDedicatedMemory, vma::MemoryUsage::eGpuOnly);
-  auto [ img2, alloc2 ] = a.createImage(ici, aci);
+  const vma::AllocationCreateInfo aci2(vma::AllocationCreateFlagBits::eDedicatedMemory, vma::MemoryUsage::eGpuOnly);
+  auto [ img2, alloc2 ] = a.createImage(null_inf, aci2);
   _null_storage = img2;
   _null_allocation = alloc2;
   set_name(d, vk::Image(_null_storage), container_name + "_image_pull_null_image");
@@ -111,6 +111,10 @@ uint32_t image_pool::create(std::string name, const extent_t, const uint32_t for
   _images[index].format = format;
   set_name(_device, vk::ImageView(_images[index].view), _images[index].name);
   return index;
+}
+
+uint32_t image_pool::create_any(std::string name, const extent_t extent, const uint32_t format, VkSampler sampler) {
+  return create(std::move(name), extent, format, sampler);
 }
 
 void image_pool::destroy(const uint32_t index) {
@@ -236,6 +240,8 @@ void image_pool::copy_data(VkCommandBuffer buffer, VkImage image, const uint32_t
   b.copyImage(image, vk::ImageLayout::eTransferSrcOptimal, _storage, vk::ImageLayout::eTransferDstOptimal, ic);
 }
 
+#define MAKE_BLIT_OFFSETS(w_1,h_1) {VkOffset3D{0,0,0}, VkOffset3D{int32_t(w_1),int32_t(h_1),1}}
+
 void image_pool::blit_data(VkCommandBuffer buffer, const std::tuple<VkImage,uint32_t,uint32_t> &src_image, const uint32_t index, const uint32_t filter) const {
   if (index >= capacity()) utils::error("Trying to blit image to image index '{}', but capacity is {}", index, capacity());
 
@@ -243,8 +249,8 @@ void image_pool::blit_data(VkCommandBuffer buffer, const std::tuple<VkImage,uint
   vk::CommandBuffer b(buffer);
   vk::ImageSubresourceLayers isl1(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
   vk::ImageSubresourceLayers isl2(vk::ImageAspectFlagBits::eColor, 0, index, 1);
-  vk::ImageBlit blit(isl1, {vk::Offset3D{0,0,0}, vk::Offset3D{src_width,src_height,1}}, isl2, {vk::Offset3D{0,0,0}, vk::Offset3D{_width,_height,1}});
-  b.blitImage(src, vk::ImageLayout::eTransferSrcOptimal, _storage, vk::ImageLayout::eTransferDstOptimal, blit, vk::Filter(filter));
+  VkImageBlit blit{isl1, MAKE_BLIT_OFFSETS(src_width, src_height), isl2, MAKE_BLIT_OFFSETS(_width, _height)};
+  b.blitImage(src, vk::ImageLayout::eTransferSrcOptimal, _storage, vk::ImageLayout::eTransferDstOptimal, vk::ImageBlit(blit), vk::Filter(filter));
 }
 
 }

@@ -148,11 +148,11 @@ vk::Format find_supported_format(vk::PhysicalDevice phys, const std::vector<vk::
 vk::ImageCreateInfo texture2D(
   const vk::Extent2D &size, 
   const vk::ImageUsageFlags &usage, 
-  const vk::Format &format = vk::Format::eR8G8B8A8Unorm, 
-  const uint32_t &arrayLayers = 1,
-  const uint32_t &mipLevels = 1,
-  const vk::SampleCountFlagBits &samples = vk::SampleCountFlagBits::e1,
-  const vk::ImageCreateFlags &flags = {}
+  const vk::Format &format, 
+  const uint32_t &arrayLayers,
+  const uint32_t &mipLevels,
+  const vk::SampleCountFlagBits &samples,
+  const vk::ImageCreateFlags &flags
 ) {
   return vk::ImageCreateInfo(
     flags, 
@@ -171,9 +171,9 @@ vk::ImageCreateInfo texture2D(
     
 vk::ImageCreateInfo texture2D_staging(
   const vk::Extent2D &size,
-  const vk::ImageUsageFlags &usage = vk::ImageUsageFlagBits::eTransferSrc,
-  const vk::Format &format = vk::Format::eR8G8B8A8Unorm,
-  const vk::ImageCreateFlags &flags = {}
+  const vk::ImageUsageFlags &usage,
+  const vk::Format &format,
+  const vk::ImageCreateFlags &flags
 ) {
   return vk::ImageCreateInfo(
     flags, 
@@ -198,16 +198,16 @@ vk::ImageViewCreateInfo view_info(
     
 vk::ImageViewCreateInfo make_view_info(
   vk::Image            image,
-  vk::Format           format    = vk::Format::eR8G8B8A8Unorm,
-  vk::ImageViewType    viewType  = vk::ImageViewType::e2D,
-  vk::ImageSubresourceRange subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1},
-  vk::ComponentMapping components            = {},
-  vk::ImageViewCreateFlags flags = {}
+  vk::Format           format,
+  vk::ImageViewType    viewType,
+  vk::ImageSubresourceRange subresourceRange,
+  vk::ComponentMapping components,
+  vk::ImageViewCreateFlags flags
 ) {
   return vk::ImageViewCreateInfo(flags, image, viewType, format, components, subresourceRange);
 }
     
-vk::BufferCreateInfo buffer_info(const vk::DeviceSize &size, const vk::BufferUsageFlags &usage, const vk::BufferCreateFlags &flags = {}) {
+vk::BufferCreateInfo buffer_info(const vk::DeviceSize &size, const vk::BufferUsageFlags &usage, const vk::BufferCreateFlags &flags) {
   return vk::BufferCreateInfo(flags, size, usage, vk::SharingMode::eExclusive, nullptr);
 }
 
@@ -646,6 +646,9 @@ vk::ComponentMapping to_rgba(vk::Format format) {
 
   return vk::ComponentMapping{r,g,b,a};
 }
+
+VkDevice allocator_device(VmaAllocator allocator) { return (*allocator).m_hDevice; }
+VkInstance allocator_instance(VmaAllocator allocator) { return (*allocator).m_hInstance; }
 
 }
 }

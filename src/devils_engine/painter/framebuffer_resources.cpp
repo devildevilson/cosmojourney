@@ -32,7 +32,7 @@ void simple_framebuffer::recreate(const uint32_t width, const uint32_t height) {
 }
 
 VkFramebuffer simple_framebuffer::current_framebuffer() const {
-  return framebuffers[image_acquisitor->current_image_index];
+  return framebuffers[frame_acquisitor->current_image_index];
 }
 
 void simple_framebuffer::clear() {

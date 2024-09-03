@@ -55,9 +55,9 @@ protected:
   const pipeline_provider* provider;
 };
 
-class descriptor_set_view : public sibling_stage {
+class bind_descriptor_sets : public sibling_stage {
 public:
-  descriptor_set_view(const pipeline_provider* provider, const uint32_t first_set, std::vector<VkDescriptorSet> sets) noexcept;
+  bind_descriptor_sets(const pipeline_layout_provider* provider, const uint32_t first_set, std::vector<VkDescriptorSet> sets) noexcept;
   void begin() override;
   void process(VkCommandBuffer buffer) override;
   void clear() override;
@@ -67,22 +67,38 @@ protected:
   std::vector<VkDescriptorSet> sets;
 };
 
+// задаем тут динамический оффсет в том плане что не нужно отдельный дескриптор сет задавать
+// так мы можем обновлять буфер не боясь что мы чего то там перезапишем во время выполнения
+class bind_dynamic_descriptor_set : public sibling_stage {
+public:
+  bind_dynamic_descriptor_set(const pipeline_layout_provider* provider, const uint32_t first_set, VkDescriptorSet set, const uint32_t offset) noexcept;
+  void begin() override;
+  void process(VkCommandBuffer buffer) override;
+  void clear() override;
+protected:
+  const pipeline_layout_provider* provider;
+  uint32_t first_set;
+  uint32_t offset;
+  VkDescriptorSet set;
+};
+
 // буферы можем тоже прибиндить сразу все, не нужно их перебиндить
 // в будущем потребуется указать еще и офсет, наверное нужно будет сделать массив буфер провайдеров
-class bind_vertex_buffer_view : public sibling_stage {
+class bind_vertex_buffers : public sibling_stage {
 public:
-  bind_vertex_buffer_view(const uint32_t first_buffer, std::vector<VkBuffer> buffers) noexcept;
+  bind_vertex_buffers(const uint32_t first_buffer, std::vector<VkBuffer> buffers, std::vector<size_t> offsets) noexcept;
   void begin() override;
   void process(VkCommandBuffer buffer) override;
   void clear() override;
 protected:
   uint32_t first_buffer;
   std::vector<VkBuffer> buffers;
+  std::vector<size_t> offsets;
 };
 
-class bind_index_buffer_view : public sibling_stage {
+class bind_index_buffer : public sibling_stage {
 public:
-  bind_index_buffer_view(VkBuffer index, const size_t offset) noexcept;
+  bind_index_buffer(VkBuffer index, const size_t offset) noexcept;
   void begin() override;
   void process(VkCommandBuffer buffer) override;
   void clear() override;

@@ -13,7 +13,7 @@
 namespace devils_engine {
 namespace painter {
 
-class image_pool : public image_container {
+class image_pool final : public image_container {
 public:
   struct image_t {
     VkImageView view;
@@ -31,6 +31,7 @@ public:
 
   bool is_exists(const uint32_t index) const override;
   uint32_t create(std::string name, const extent_t extent, const uint32_t format, VkSampler sampler) override;
+  uint32_t create_any(std::string name, const extent_t extent, const uint32_t format, VkSampler sampler) override;
   void destroy(const uint32_t index) override;
 
   //bool is_free(const uint32_t index) const;

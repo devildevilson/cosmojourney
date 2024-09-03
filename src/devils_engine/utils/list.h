@@ -12,13 +12,14 @@ namespace devils_engine {
     namespace forw {
       template <typename T, size_t t>
       struct list {
+        using current_list_p = list<T, t>*;
         T* m_next;
 
         list() noexcept : m_next(nullptr) {}
 
         void add(T* obj) noexcept {
           static_assert(std::is_base_of_v<list<T, t>, T>);
-          auto l = static_cast<list<T, t>>(obj);
+          current_list_p l = obj;
           l->m_next = m_next;
           m_next = obj;
         }
@@ -30,7 +31,7 @@ namespace devils_engine {
 
         void remove(T* prev) noexcept {
           static_assert(std::is_base_of_v<list<T, t>, T>);
-          auto l = static_cast<list<T, t>>(prev);
+          current_list_p l = prev;
           l->m_next = m_next;
           m_next = nullptr;
         }

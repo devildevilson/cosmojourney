@@ -31,7 +31,7 @@ namespace painter {
 
 class image_pool;
 
-class hierarchical_image_container : public image_container {
+class hierarchical_image_container final : public image_container {
 public:
   struct image_t {
     VkImage handle;

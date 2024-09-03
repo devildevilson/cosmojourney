@@ -35,36 +35,55 @@ pipeline_view::pipeline_view(const pipeline_provider* provider) noexcept : provi
 void pipeline_view::begin() {}
 void pipeline_view::process(VkCommandBuffer buffer) { 
   vk::CommandBuffer b(buffer); 
-  b.bindPipeline(static_cast<vk::PipelineBindPoint>(provider->pipeline_bind_point), provider->pipeline);
+  const auto point = static_cast<vk::PipelineBindPoint>(provider->pipeline_bind_point);
+  b.bindPipeline(point, provider->pipeline);
 }
 void pipeline_view::clear() {}
 
-descriptor_set_view::descriptor_set_view(const pipeline_provider* provider, const uint32_t first_set, std::vector<VkDescriptorSet> sets) noexcept : provider(provider), first_set(first_set), sets(std::move(sets)) {}
-void descriptor_set_view::begin() {}
-void descriptor_set_view::process(VkCommandBuffer buffer) {
+bind_descriptor_sets::bind_descriptor_sets(const pipeline_layout_provider* provider, const uint32_t first_set, std::vector<VkDescriptorSet> sets) noexcept : provider(provider), first_set(first_set), sets(std::move(sets)) {}
+void bind_descriptor_sets::begin() {}
+void bind_descriptor_sets::process(VkCommandBuffer buffer) {
   vk::CommandBuffer b(buffer); 
-  b.bindDescriptorSets(static_cast<vk::PipelineBindPoint>(provider->pipeline_bind_point), provider->pipeline_layout, 0, sets.size(), (vk::DescriptorSet*)sets.data(), 0, nullptr);
+  const auto point = static_cast<vk::PipelineBindPoint>(provider->pipeline_bind_point);
+  b.bindDescriptorSets(point, provider->pipeline_layout, first_set, sets.size(), (vk::DescriptorSet*)sets.data(), 0, nullptr);
 }
+void bind_descriptor_sets::clear() {}
 
-void descriptor_set_view::clear() {}
+bind_dynamic_descriptor_set::bind_dynamic_descriptor_set(const pipeline_layout_provider* provider, const uint32_t first_set, VkDescriptorSet set, const uint32_t offset) noexcept :
+  provider(provider), first_set(first_set), offset(offset), set(set)
+{}
+
+void bind_dynamic_descriptor_set::begin() {}
+void bind_dynamic_descriptor_set::process(VkCommandBuffer buffer) {
+  vk::CommandBuffer b(buffer);
+  const auto point = static_cast<vk::PipelineBindPoint>(provider->pipeline_bind_point);
+  vk::DescriptorSet d(set);
+  b.bindDescriptorSets(point, provider->pipeline_layout, first_set, d, offset);
+}
+void bind_dynamic_descriptor_set::clear() {}
 
 // буферы можно прибиндить все с самого начала
 // предпочтительно
-bind_vertex_buffer_view::bind_vertex_buffer_view(const uint32_t first_buffer, std::vector<VkBuffer> buffers) noexcept : first_buffer(first_buffer), buffers(std::move(buffers)) {}
-void bind_vertex_buffer_view::begin() {}
-void bind_vertex_buffer_view::process(VkCommandBuffer buffer) {
-  vk::CommandBuffer b(buffer);
-  b.bindVertexBuffers(first_buffer, buffers.size(), (vk::Buffer*)buffers.data(), 0, nullptr);
+bind_vertex_buffers::bind_vertex_buffers(const uint32_t first_buffer, std::vector<VkBuffer> buffers, std::vector<size_t> offsets) noexcept : 
+  first_buffer(first_buffer), buffers(std::move(buffers)), offsets(std::move(offsets)) 
+{
+  if (this->offsets.size() < this->buffers.size()) utils::error("Offsets count {} must be at least not less than count of buffers {}",  offsets.size(), buffers.size());
 }
-void bind_vertex_buffer_view::clear() {}
 
-bind_index_buffer_view::bind_index_buffer_view(VkBuffer index, const size_t offset) noexcept : index(index), offset(offset) {}
-void bind_index_buffer_view::begin() {}
-void bind_index_buffer_view::process(VkCommandBuffer buffer) {
+void bind_vertex_buffers::begin() {}
+void bind_vertex_buffers::process(VkCommandBuffer buffer) {
+  vk::CommandBuffer b(buffer);
+  b.bindVertexBuffers(first_buffer, buffers.size(), (vk::Buffer*)buffers.data(), offsets.data());
+}
+void bind_vertex_buffers::clear() {}
+
+bind_index_buffer::bind_index_buffer(VkBuffer index, const size_t offset) noexcept : index(index), offset(offset) {}
+void bind_index_buffer::begin() {}
+void bind_index_buffer::process(VkCommandBuffer buffer) {
   vk::CommandBuffer b(buffer);
   b.bindIndexBuffer(index, offset, vk::IndexType::eUint32);
 }
-void bind_index_buffer_view::clear() {}
+void bind_index_buffer::clear() {}
 
 draw::draw(const vertex_draw_provider* provider) noexcept : provider(provider) {}
 void draw::begin() {}

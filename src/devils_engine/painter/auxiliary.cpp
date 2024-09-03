@@ -193,9 +193,6 @@ std::vector<const char *> check_device_extension(VkPhysicalDevice device, std::v
   return out;
 }
 
-VkDevice allocator_device(VmaAllocator allocator) { return (*allocator).m_hDevice; }
-VkInstance allocator_instance(VmaAllocator allocator) { return (*allocator).m_hInstance; }
-
 std::string format_to_string(const uint32_t format) { return vk::to_string(vk::Format(format)); }
 
 struct VULKAN_FORMAT_INFO {

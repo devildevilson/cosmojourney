@@ -115,9 +115,9 @@ container::container() :
   load_dispatcher3(device);
 
   vk::Device d(device);
-  d.getQueue(data.graphics_queue, 1, &graphics_queue);
-  d.getQueue(data.compute_queue, 1, &compute_queue);
-  d.getQueue(data.present_queue, 1, &presentation_queue);
+  graphics_queue = d.getQueue(data.graphics_queue, 1);
+  compute_queue = d.getQueue(data.compute_queue, 1);
+  presentation_queue = d.getQueue(data.present_queue, 1);
 
   {
     std::vector<uint8_t> cache_data;

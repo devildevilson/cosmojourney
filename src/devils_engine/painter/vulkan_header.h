@@ -26,7 +26,7 @@ namespace painter {
 
 template <typename T>
 void set_name(vk::Device device, T handle, const std::string &name) {
-  vk::DebugUtilsObjectNameInfoEXT i(T::objectType, uint64_t(typename T::CType(obj)), name.c_str());
+  vk::DebugUtilsObjectNameInfoEXT i(T::objectType, uint64_t(typename T::CType(handle)), name.c_str());
   device.setDebugUtilsObjectNameEXT(i);
 }
 

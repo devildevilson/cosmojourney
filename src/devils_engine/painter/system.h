@@ -131,11 +131,11 @@ public:
   container* get_main_container() const;
   void set_window_surface(VkSurfaceKHR surface);
 
-  graphics_pipeline_create_config* get_graphics_pipeline_config(const std::string &name);
-  compute_pipeline_create_config* get_compute_pipeline_config(const std::string &name);
-  render_pass_data_t* get_render_pass_config(const std::string &name);
-  std::vector<attachment_config_t> & get_attachments_config(const std::string &name);
-  sampler_config_t* get_sampler_config(const std::string &name);
+  const graphics_pipeline_create_config* get_graphics_pipeline_config(const std::string &name) const;
+  const compute_pipeline_create_config* get_compute_pipeline_config(const std::string &name) const;
+  const render_pass_data_t* get_render_pass_config(const std::string &name) const;
+  const std::vector<attachment_config_t> & get_attachments_config(const std::string &name) const;
+  const sampler_config_t* get_sampler_config(const std::string &name) const;
   void dump_configs_to_disk() const;
   void reload_configs();
 
@@ -170,11 +170,11 @@ private:
 
   // система должна подгрузить все конфиги всех вулкан штук и положить их где то здесь
   // + система подгрузит конфиги из кода + подгрузит конфиги с диска (диск по приоритету)
-  phmap::flat_hash_map<std::string, graphics_pipeline_create_config> graphics_pipeline_configs;
-  phmap::flat_hash_map<std::string, compute_pipeline_create_config> compute_pipeline_configs;
-  phmap::flat_hash_map<std::string, render_pass_data_t> render_pass_configs;
-  phmap::flat_hash_map<std::string, std::vector<attachment_config_t>> attachments_configs;
-  phmap::flat_hash_map<std::string, sampler_config_t> sampler_configs;
+  phmap::node_hash_map<std::string, graphics_pipeline_create_config> graphics_pipeline_configs;
+  phmap::node_hash_map<std::string, compute_pipeline_create_config> compute_pipeline_configs;
+  phmap::node_hash_map<std::string, render_pass_data_t> render_pass_configs;
+  phmap::node_hash_map<std::string, std::vector<attachment_config_t>> attachments_configs;
+  phmap::node_hash_map<std::string, sampler_config_t> sampler_configs;
 };
 }
 }

@@ -55,7 +55,7 @@ set(SRC_LIST
   system.cpp
   system_info.cpp
   vulkan_header.cpp
- "attachments_container.cpp" "container.cpp" "queue_stages.h" "queue_stages.cpp" "render_pass_stages.cpp" "common_stages.cpp" "layouting.cpp" "image_pool.cpp" "hierarchical_image_container.cpp" "pipelines_resources.cpp" "arbitrary_image_container.cpp" "render_pass_resources.cpp" "framebuffer_resources.cpp" "swapchain_resources.cpp")
+ "attachments_container.cpp" "container.cpp" "queue_stages.h" "queue_stages.cpp" "render_pass_stages.cpp" "common_stages.cpp" "layouting.cpp" "image_pool.cpp" "hierarchical_image_container.cpp" "pipelines_resources.cpp" "arbitrary_image_container.cpp" "render_pass_resources.cpp" "framebuffer_resources.cpp" "swapchain_resources.cpp" "pipelines_config_static_container.cpp")
 
 set(HDR_LIST
   auxiliary.h
