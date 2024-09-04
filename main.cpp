@@ -11,11 +11,16 @@
 #include <cstring>
 #include <cassert>
 
+#include "glm/glm.hpp"
+#include "glm/ext.hpp"
+#include "glm/vec4.hpp"
+
 #include "sound/system.h"
 #include "utils/core.h"
 #include "utils/type_traits.h"
 #include "utils/bitstream.h"
 #include "utils/string.h"
+#include "utils/fileio.h"
 #include "demiurg/system.h"
 #include "demiurg/modules_listing.h"
 #include "sound_resource.h"
@@ -26,8 +31,23 @@
 #include "input/events.h"
 #include "thread/lock.h"
 #include "painter/vulkan_header.h"
+#include "painter/system.h"
 #include "painter/system_info.h"
 #include "painter/auxiliary.h"
+#include "painter/glsl_source_file.h"
+#include "painter/shader_crafter.h"
+#include "painter/buffer_resources.h"
+#include "painter/shader_source_file.h"
+#include "painter/container.h"
+#include "painter/queue_stages.h"
+#include "painter/render_pass_resources.h"
+#include "painter/pipelines_resources.h"
+#include "painter/swapchain_resources.h"
+#include "painter/attachments_container.h"
+#include "painter/framebuffer_resources.h"
+#include "painter/layouting.h"
+#include "painter/common_stages.h"
+#include "painter/render_pass_stages.h"
 
 using namespace devils_engine;
 
@@ -155,412 +175,14 @@ static void key_func(GLFWwindow* window, int key, int scancode, int action, int 
   if (action != 0) utils::info("Press '{}' '{}' {} {}", state_name, name, key, scancode);
 }
 
+struct vec4 { float r,g,b,a; };
+
+struct test2_t {
+  vec4 abc;
+  vec4* arr;
+};
+
 int main(int argc, char const *argv[]) {
-  //const size_t test_count = 100000;
-
-  // std::random_device rd;
-  // std::vector<void*> vec(test_count, nullptr);
-  // std::for_each(vec.begin(), vec.end(), [&rd] (void* &data) { const size_t val = size_t(rd()) << 32 | rd(); data = reinterpret_cast<void*>(val); });
-  //
-  // func1(vec);
-  // func2(vec);
-
-  // мне бы хотелось сильно переработать то как у меня отрисовывается кадр
-  // прежде всего я бы хотел готовить сам рендер в самом начале кадра, а затем пока он вычисляется
-  // вычислять собственно инпут и изменения состояния игры
-
-  // что то вроде:
-  // while (true) {
-  //   timer.start();
-
-  //   render->update();
-  //   render->start();
-
-  //   user_input();
-  //   thinker(); // ИИ и физику наверное одновременно сделать не выйдет
-  //   physics(); // + было бы неплохо сразу из коробки клиент-серверную архитектуру, результаты вычисления нужно сравнить с сервером
-  //   wait_when_it_save_to_push(render);
-  //   push_to_render(); // вот тут может быть целая куча мелких дел которые можно по разным потокам раскидать
-
-  //   render->end();
-  //   render->present();
-
-  //   timer.end();
-  //   sync(timer);
-  // }
-
-  /*std::unique_ptr<sound::system::resource> res1;
-  std::unique_ptr<sound::system::resource> res2;
-  std::unique_ptr<sound::system::resource> res3;
-  std::unique_ptr<sound::system::resource> res4;
-
-  {
-    const std::string file_name = "SARIGAMI.mp3";
-    utils::time_log log("loading resource " + file_name);
-    std::vector<char> buffer;
-    load_file(file_name, buffer);
-    res1 = std::make_unique<sound::system::resource>("test_mp3", sound::system::resource::type::mp3, std::move(buffer));
-    utils::println("File", file_name, "duration:", res1->duration(), "s");
-  }
-
-  {
-    const std::string file_name = "swim2.ogg";
-    utils::time_log log("loading resource " + file_name);
-    std::vector<char> buffer;
-    load_file(file_name, buffer);
-    res2 = std::make_unique<sound::system::resource>("test_ogg", sound::system::resource::type::ogg, std::move(buffer));
-    utils::println("File", file_name, "duration:", res2->duration(), "s");
-  }*/
-
-  /*{
-    const std::string file_name = "piano.wav";
-    utils::time_log log("loading resource " + file_name);
-    std::vector<char> buffer;
-    load_file(file_name, buffer);
-    res3 = std::make_unique<sound::system::resource>("test_wav", sound::system::resource::type::wav, std::move(buffer));
-    utils::println("File", file_name, "duration:", res3->duration(), "s");
-  }*/
-
-  /*{
-    const std::string file_name = "senbonzakura.flac";
-    utils::time_log log("loading resource " + file_name);
-    std::vector<char> buffer;
-    load_file(file_name, buffer);
-    res4 = std::make_unique<sound::system::resource>("test_flac", sound::system::resource::type::flac, std::move(buffer));
-    utils::println("File", file_name, "duration:", res4->duration(), "s");
-  }*/
-
-  //sound::system s;
-  //
-  //size_t id = 0;
-  //{
-  //  utils::time_log log("start playing");
-  //  sound::settings ss;
-  //  ss.is_loop = true;
-  //  id = s.setup_sound(res1.get(), ss);
-  //}
-
-  //s.set_master_volume(0.1f);
-  //
-  //float master_gain = 0.0f;
-  //size_t counter = 0;
-  //const double dur = res1->duration();
-  //while (true) {
-  //  s.update(100000);
-  //  const double pos = s.stat_sound(id);
-  //  const double cur_seconds = pos * dur;
-  //  utils::println("Stat", pos, ":", cur_seconds, "s (", dur, "s) master_gain", master_gain);
-
-  //  //if (abc > 0.05 && abc < 0.5) s.set_sound(id, 0.5);
-  //  //counter += 1;
-  //  //if (counter%30 == 0) master_gain += 0.05f;
-
-  //  //s.set_master_volume(master_gain);
-
-  //  std::this_thread::sleep_for(std::chrono::microseconds(100000));
-  //}
-
-  // spdlog::set_level(spdlog::level::trace);
-
-  // {
-  //   traced_func();
-  // }
-
-  // {
-  //   //const utils::tracer t12313;
-  //   traced_func2();
-  // }
-
-  // {
-  //   utils::tracer t;
-  //   traced_func3();
-  // }
-
-  ////utils_assertf(5==4, "test assert {}", 1);
-  ////utils_assert(5==4);
-  ////assert(5==4);
-
-  //utils::println(utils::type_name<decltype(&main)>(), utils::type_id<decltype(&main)>());
-
-  
-  // надо наверное добавить сюда размер, на всякий случай?
-  //uint8_t buf[1024];
-  //memset(buf, 0, 1024);
-  //utils::bitstream bs(buf);
-
-  //enum abc {
-  //  e1,
-  //  e2,
-  //  e3,
-  //  e4,
-  //  e5,
-  //  e6,
-  //  count
-  //};
-
-  //constexpr size_t enum_bits = utils::count_significant(abc::count);
-
-  //// можно ли считать что это дело готово?
-  //bs.write(enum_bits, e2);
-  //bs.write(enum_bits, e4);
-  //bs.write(enum_bits, e6);
-  //assert(static_cast<abc>(bs.peek_at(0, enum_bits)) == abc::e2);
-  //assert(static_cast<abc>(bs.peek_at(enum_bits, enum_bits)) == abc::e4);
-  //assert(static_cast<abc>(bs.peek_at(enum_bits+enum_bits, enum_bits)) == abc::e6);
-  //utils::println("enum_bits", enum_bits, "bs.pos", bs.position());
-
-  //const size_t arr_size = 3;
-  //std::array<std::string_view, arr_size> arr;
-  //const std::string_view test = "abc+def";
-  //const size_t count = utils::string::split(test, "+", arr.data(), arr_size);
-  //utils::println("count", count);
-  ////assert(count == SIZE_MAX);
-  //for (size_t i = 0; i < std::min(count, arr_size); ++i) {
-  //  utils::print(i+1, arr[i], ";");
-  //}
-  //utils::println();
-
-  //const std::string_view test2 = "event [ guard1, guard2 ]";
-  //const auto inside = utils::string::trim(utils::string::inside(test2, "[", "]"));
-  //utils::println(test2, "|", inside);
-
-  //const std::string_view test3 = "   aa  a   ";
-  //utils::println(utils::string::trim(test3));
-
-  //const std::string_view table_line = "*s1 + e1 [ guard1, guard2 ] -> core/states/scripts/action1, core/states/scripts/action2 = s2";
-  //std::string_view current_state, final_state, event;
-  //std::array<std::string_view, 8> guards, actions;
-  //parse_table_line(table_line, current_state, event, guards.data(), 8, actions.data(), 8, final_state);
-  //utils::println(table_line);
-  //utils::print(current_state, "+", event, "[", guards[0]);
-  //for (size_t i = 1; guards[i] != ""; ++i) {
-  //  utils::print(",", guards[i]);
-  //}
-  //utils::print(" ] ->", actions[0]);
-  //for (size_t i = 1; actions[i] != ""; ++i) {
-  //  utils::print(",", actions[i]);
-  //}
-  //utils::print(" =", final_state);
-  //utils::println();
-
-  //demiurg::system sys("folder1");
-  //sys.register_type<cosmojourney::sound_resource>("sound", "mp3,ogg,flac,wav");
-  //// в первый раз оказалось дольше
-  //{
-  //  utils::time_log l("parse_file_tree");
-  //  sys.parse_file_tree();
-  //}
-
-  //{
-  //  utils::time_log l("parse_file_tree");
-  //  sys.parse_file_tree();
-  //}
-
-  //{
-  //  utils::time_log l("sound/ferambie");
-  //  const auto found1 = sys.find("sound/ferambie");
-  //  utils::println();
-  //  utils::println("sound/ferambie", found1.size());
-  //  for (const auto ptr : found1) {
-  //    utils::println(ptr->id);
-  //  }
-  //}
-
-  //{
-  //  utils::time_log l("sound/s");
-  //  const auto found2 = sys.find("sound/s");
-  //  utils::println();
-  //  utils::println("sound/s", found2.size());
-  //  for (const auto ptr : found2) {
-  //    utils::println(ptr->id);
-  //  }
-  //}
-
-  //{
-  //  utils::time_log l("sound/");
-  //  const auto found3 = sys.find("sound/");
-  //  utils::println();
-  //  utils::println("sound/", found3.size());
-  //  for (const auto ptr : found3) {
-  //    //utils::println(ptr->id);
-  //    //ptr->loading(utils::safe_handle_t());
-  //    for (auto rep = ptr; rep != nullptr; rep = rep->replacement_next(ptr)) {
-  //      for (auto sup = rep; sup != nullptr; sup = sup->supplementary_next(rep)) {
-  //        utils::println(sup->module_name, sup->id, sup->ext);
-  //      }
-  //    }
-  //  }
-  //}
-
-  // приведение работает вот так
-  //utils::safe_handle_t handle;
-  //auto abc = (size_t *)handle;
-
-  //utils::time_log l("prng");
-  //auto state = utils::xoroshiro128starstar::init(123);
-  //const size_t ret = utils::dice_accumulator(3, 20, state); // 3d20
-  //utils::println("ret", ret);
-
-  
-  // glaze не работает с const char* !!!
-  // ну и скорее всего вообще ни с какими указателями
-  //abc s{ 1, 0.5f, 0.24, "string", "view", 
-  //"char*", 
-  //def{ 3.14, 5, 12 }, {1, 2, 3}, {"abc", "def", "asfaf"}, {4,5}, { { "ab", 45 }, { "de", 64 } } };
-
-  //std::string c;
-  //std::vector<uint8_t> v;
-  //c.reserve(10000);
-  //utils::to_binary(s, v);
-  //utils::println(v.size(), v.data());
-  //c.clear();
-  //utils::to_lua(s, c);
-  //utils::println(c);
-
-  //utils::println(s);
-  
-  //const std::string modules_root_path = "./folder1/";
-  //demiurg::modules_listing ml(modules_root_path);
-  //ml.reload();
-
-  //std::vector<std::string> paths;
-  //for (const auto &m : ml.entries()) {
-  //  utils::println(m->path, m->hash, m->file_date);
-  //  paths.push_back(m->path);
-  //}
-
-  //ml.save_list("list123", paths);
-
-  //// так что теперь
-  //demiurg::system s(modules_root_path);
-  //s.set_modules_list("list123");
-  //s.load_default_modules();
-
-  // можно сделать настройки, что в настройках у нас есть?
-  // по большому счету это структура + метод сериализации
-  // 
-
-  //const auto t = utils::timestamp();
-  //const auto ms = s.get_modules();
-  ////for (const auto &m : ms) {
-  ////  utils::println(m.path, m.hash, t, m.timestamp, m.file_date);
-  ////}
-
-  //// записывать можно только путь, хеш сумму и метку времени
-  //// а для интерфейса потребуется все данные
-  //// я бы даже сказал что нужно создать ряд структур для файлов + представление для них в листах
-  //// да как будто система примет в себя только лист с модулями
-  //// а какая то внешняя система будет отвечать за менеджмент листов 
-  //// звучит норм вообще то говоря
-  //s.save_list("new1", ms);
-  //const auto list = s.load_list("new1");
-  //for (const auto &m : list) {
-  //  utils::println(m.path, m.hash, m.file_date);
-  //}
-
-  // мне еще надо сделать какой то адекватный способ взаимодействия с клавиатурой
-  //
-
-  //input::init i(&err_handler);
-
-  //auto w = input::create_window(640, 480, "test", nullptr, nullptr);
-
-  //input::set_window_callback(w, &key_func);
-  //
-  //const auto fps30 = utils::app_clock::resolution() / 30;
-  //size_t last_sleep = 0;
-  //int64_t sleep_diff = 0;
-
-  //input::events::set_key("test_event", 18);
-
-  //const uint32_t pressed_states = input::event_state::press_mask;
-
-  //const size_t time_buffer_size = 5;
-  //int64_t time_buffer[time_buffer_size]{0};
-  //size_t time_buffer_counter = 0;
-
-  //const auto control_tp = std::chrono::high_resolution_clock::now();
-  //auto compute_tp = std::chrono::high_resolution_clock::now();
-  //auto sleep_tp = std::chrono::high_resolution_clock::now();
-  //size_t work_time = 0;
-  //size_t sleep_time = 0;
-  //size_t whole_round_time = 0;
-  //size_t current_sleep = 0;
-
-  //size_t counter = 0;
-
-  //while (!input::should_close(w)) {
-  //  const auto prev_tp = compute_tp;
-  //  compute_tp = std::chrono::high_resolution_clock::now();
-
-  //  const auto dur1 = compute_tp - sleep_tp;
-  //  sleep_time = std::chrono::duration_cast<std::chrono::microseconds>(dur1).count();
-  //  const auto dur3 = compute_tp - prev_tp;
-  //  whole_round_time = std::chrono::duration_cast<std::chrono::microseconds>(dur3).count();
-
-  //  utils::println("fps_default", fps30, "round_time", whole_round_time, "current_sleep", current_sleep, "last_sleep", sleep_time, "diff", sleep_diff, "work_time", work_time);
-
-  //  const auto control_dur = compute_tp - control_tp;
-  //  const size_t cur_stamp = std::chrono::duration_cast<std::chrono::microseconds>(control_dur).count();
-  //  const size_t approx_frame_index = cur_stamp / fps30;
-  //  //utils::println("cur_stamp", cur_stamp, "approx_frame_index", approx_frame_index, "frame_index", counter);
-
-  //  const size_t computed_stamp = (counter+1) * fps30;
-  //  const size_t stamp_diff = computed_stamp - cur_stamp;
-
-  //  input::poll_events();
-  //  input::events::update(fps30);
-
-  //  const auto state = input::events::current_event_state(g_scancode);
-  //  const auto state_name = input::event_state::to_string(state);
-
-  //  //utils::println("state_name", state_name, g_scancode);
-  //  const auto period_press = input::events::timed_check_event("test_event", pressed_states, 0, utils::app_clock::resolution());
-  //  if (period_press) utils::println("state_name", state_name, g_scancode);
-
-  //  //std::this_thread::sleep_for(std::chrono::microseconds(25000));
-  //  thread::spin_sleep_for(std::chrono::microseconds(25000));
-
-  //  // const size_t current_sleep = last_sleep == 0 ? fps30 : fps30 -
-  //  // std::max((int64_t(last_sleep) - int64_t(fps30)), int64_t(0));
-  //  sleep_diff = (int64_t(fps30) - int64_t(whole_round_time));
-  //  time_buffer[time_buffer_counter] = sleep_diff;
-  //  time_buffer_counter = (time_buffer_counter + 1) % time_buffer_size;
-
-  //  double accum = 0;
-  //  for (size_t i = 0; i < time_buffer_size; ++i) {
-  //    accum += time_buffer[i];
-  //  }
-  //  const int64_t avg = accum / double(time_buffer_size);
-
-  //  const auto until = control_tp + std::chrono::microseconds(computed_stamp);
-
-  //  counter += 1;
-
-  //  sleep_tp = std::chrono::high_resolution_clock::now();
-  //  const auto dur2 = sleep_tp - compute_tp;
-  //  work_time = std::chrono::duration_cast<std::chrono::microseconds>(dur2).count();
-
-  //  const auto control_dur2 = sleep_tp - control_tp;
-  //  const size_t cur_stamp2 = std::chrono::duration_cast<std::chrono::microseconds>(control_dur2).count();
-  //  const size_t stamp_diff2 = computed_stamp - cur_stamp2;
-
-  //  //current_sleep = std::max(int64_t(fps30 - work_time) + avg, int64_t(0));
-  //  //current_sleep = std::max(int64_t(stamp_diff - work_time), int64_t(0));
-  //  current_sleep = std::max(int64_t(stamp_diff2 - work_time), int64_t(0));
-
-  //  {
-  //    //const auto tp = std::chrono::high_resolution_clock::now();
-  //    //std::this_thread::sleep_for(std::chrono::microseconds(current_sleep));
-  //    std::this_thread::sleep_until(until);
-  //    //thread::spin_sleep_until(until);
-  //    //thread::spin_sleep_for(std::chrono::microseconds(current_sleep));
-  //    //const auto dur = std::chrono::high_resolution_clock::now() - tp;
-  //    //last_sleep = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
-  //    //sleep_diff = std::max((int64_t(last_sleep) - int64_t(fps30)), int64_t(0));
-  //  }
-  //}
-
   // пока что sleep_until выглядит самым приятным вариантом среди всех
   // если вдруг сон опять напортачит и будет слишком долгим то следующие кадры не ждем
   // но и при этом это не spin_lock, а значит проц не будет занят на 100 процентов 
@@ -573,25 +195,118 @@ int main(int argc, char const *argv[]) {
   //thread::spin_sleep_for // сложно правильно расчитать время сна, спим идеально ровно то что расчитали, но съедаем 100% ядра
   //thread::light_spin_sleep_for // теже беды, но еще и нет никаких гарантий что мы спим ровно то что расчитали
 
-  //input::destroy(w);
+  // попробовать запуститься и нарисовать треугольник
+  // что мне нужно? шейдеры нужны
 
-  //const size_t count = painter::count_vulkan_device_features();
-  //utils::println(count);
+  input::init i(&err_handler);
+
+  demiurg::system dsys(utils::project_folder() + "folder1/");
+  // НЕ УКАЗЫВАТЬ ПОСЛЕДНИЙ СЛЕШ (то есть не делать как папки)
+  dsys.register_type<painter::shader_source_file>("shaders", "vert,frag");
+  dsys.register_type<painter::glsl_source_file>("include", "glsl");
+
+  dsys.load_default_modules();
+  dsys.parse_resources();
+
+  {
+    std::vector<demiurg::resource_interface*> resources;
+    resources.reserve(1000);
+    dsys.find("shaders/", resources);
+    for (const auto ptr : resources) {
+      ptr->load({});
+    }
+  }
+
+  painter::system psys;
+  psys.reload_configs();
+  auto gc = psys.create_main_container();
+  auto layout = psys.create<painter::layouting>(gc->device, painter::layouting::create_info{1, 1, 1, 1, 1, 1});
+  auto w = input::create_window(800, 600, "triangle"); // окно поди можно создать когда угодно ранее
+  auto surf = painter::create_surface(gc->instance, w);
+  psys.set_window_surface(surf);
+  auto sch = psys.create<painter::simple_swapchain>(gc->device, gc->physical_device, surf, 2);
+  auto conf = psys.get_attachments_config("default");
+  auto ac = psys.create<painter::attachments_container>(gc->device, gc->buffer_allocator, sch, std::move(conf));
+  auto rp_conf = psys.get_render_pass_config("default");
+  auto rp = psys.create<painter::main_render_pass>(gc->device, rp_conf, ac);
+  auto fc = psys.create<painter::simple_framebuffer>(gc->device, rp, ac, sch);
+  auto pl_conf = psys.get_graphics_pipeline_config("default");
+  auto pl = psys.create<painter::simple_graphics_pipeline>(gc->device, layout->pipeline_layout, gc->cache, &dsys);
+  pl->init(rp->render_pass, 0, pl_conf, rp_conf->subpasses[0].attachments.size(), rp_conf->subpasses[0].attachments.data());
+  auto t_buf = psys.create<painter::common_buffer>(gc->buffer_allocator, 5 * sizeof(glm::vec4), painter::usage::vertex, painter::reside::host);
+  auto ptr = reinterpret_cast<glm::vec4*>(t_buf->mapped_data());
+  ptr[0] = glm::vec4(0.0f, 1.0f, 0.0f, glm::uintBitsToFloat(glm::packUnorm4x8(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f))));
+  ptr[1] = glm::vec4(0.5f, 0.0f, 0.0f, glm::uintBitsToFloat(glm::packUnorm4x8(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f))));
+  ptr[2] = glm::vec4(1.0f, 1.0f, 0.0f, glm::uintBitsToFloat(glm::packUnorm4x8(glm::vec4(0.0f, 0.0f, 1.0f, 1.0f))));
+
+  psys.recreate(800, 600);
+
+  painter::do_command(gc->device, gc->transfer_command_pool, gc->graphics_queue, gc->transfer_fence, [sch] (VkCommandBuffer buf) {
+    vk::CommandBufferBeginInfo cbbi(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    vk::CommandBuffer b(buf);
+    b.begin(cbbi);
+
+    for (uint32_t i = 0; i < sch->max_images; ++i) {
+      auto img = sch->frame_storage(i);
+      vk::ImageSubresourceRange isr(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+      const auto &[bar, ss, ds] = painter::make_image_memory_barrier(img, vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR, isr);
+      vk::CommandBuffer(buf).pipelineBarrier(ss, ds, vk::DependencyFlagBits::eByRegion, nullptr, nullptr, bar);
+    }
+
+    b.end();
+  });
+
+  painter::vertex_draw_provider vdp{ 3, 1, 0, 0 };
+
+  // первый рисовальщик фреймов
+  {
+    auto cmd_bar2 = psys.create<painter::change_frame_image_layout>(sch, uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal), uint32_t(vk::ImageLayout::ePresentSrcKHR));
+    auto cmd_bar1 = psys.create<painter::change_frame_image_layout>(sch, uint32_t(vk::ImageLayout::ePresentSrcKHR), uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal));
+    auto cmd_draw = psys.create<painter::draw>(&vdp);
+    auto cmd_pl = psys.create<painter::pipeline_view>(pl);
+    auto cmd_vtx = psys.create<painter::bind_vertex_buffers>(0, std::vector{t_buf->buffer}, std::vector{size_t(0)});
+    auto cmd_rp = psys.create<painter::render_pass_main>(gc->device, fc);
+    auto cmd_qs = psys.create<painter::queue_main>(gc->device, gc->graphics_command_pool, gc->graphics_queue, std::initializer_list<VkSemaphore>{}, std::initializer_list<uint32_t>{});
+    auto cmd_p = psys.create_frame_presenter<painter::queue_present>(gc->device, gc->presentation_queue, sch->get_swapchain(), sch, cmd_qs);
+    cmd_vtx->set_next(cmd_pl); cmd_pl->set_next(cmd_draw); 
+    cmd_bar1->set_next(cmd_rp); cmd_rp->set_childs(cmd_vtx); cmd_rp->set_next(cmd_bar2);
+    cmd_qs->set_childs(cmd_bar1);
+  }
   
-  // своеобразный хелло ворлд, долго с ним возился
-  input::init init(&err_handler);
+  // второй рисовальщик фреймов
+  {
+    auto cmd_bar2 = psys.create<painter::change_frame_image_layout>(sch, uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal), uint32_t(vk::ImageLayout::ePresentSrcKHR));
+    auto cmd_bar1 = psys.create<painter::change_frame_image_layout>(sch, uint32_t(vk::ImageLayout::ePresentSrcKHR), uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal));
+    auto cmd_draw = psys.create<painter::draw>(&vdp);
+    auto cmd_pl = psys.create<painter::pipeline_view>(pl);
+    auto cmd_vtx = psys.create<painter::bind_vertex_buffers>(0, std::vector{t_buf->buffer}, std::vector{size_t(0)});
+    auto cmd_rp = psys.create<painter::render_pass_main>(gc->device, fc);
+    auto cmd_qs = psys.create<painter::queue_main>(gc->device, gc->graphics_command_pool, gc->graphics_queue, std::initializer_list<VkSemaphore>{}, std::initializer_list<uint32_t>{});
+    auto cmd_p = psys.create_frame_presenter<painter::queue_present>(gc->device, gc->presentation_queue, sch->get_swapchain(), sch, cmd_qs);
+    cmd_vtx->set_next(cmd_pl); cmd_pl->set_next(cmd_draw);
+    cmd_bar1->set_next(cmd_rp); cmd_rp->set_childs(cmd_vtx); cmd_rp->set_next(cmd_bar2);
+    cmd_qs->set_childs(cmd_bar1);
+  }
 
-  painter::system_info inf;
-  auto w = input::create_window(640, 480, "test", nullptr, nullptr);
-  auto surf = painter::create_surface(inf.instance, w);
-  inf.check_devices_surface_capability(surf);
-  const auto dev = inf.choose_physical_device();
+  const size_t target_fps = 1000000.0 / 500.0;
 
-  inf.dump_cache_to_disk(dev);
+  // чет все глючит и фреймы мне не показывает почему?
 
-  painter::destroy_surface(inf.instance, surf);
-  input::destroy(w);
+  size_t frame_counter = 0;
+  auto tp = std::chrono::high_resolution_clock::now();
+  while (!input::should_close(w)) {
+    frame_counter += 1;
+    const auto next_tp = tp + std::chrono::microseconds(frame_counter * target_fps);
 
+    const size_t one_second = 1000ull * 1000ull * 1000ull;
+    const auto res = vk::Result(psys.wait_frame(one_second));
+    if (res != vk::Result::eSuccess) utils::error("Wait for prev frame returned '{}'", vk::to_string(res));
+    psys.compute_frame();
+
+    std::this_thread::sleep_until(next_tp);
+  }
+
+  painter::destroy_surface(gc->instance, surf);
   return 0;
 }
 
