@@ -21,15 +21,37 @@ void memory_barrier::process(VkCommandBuffer buffer) {
 void memory_barrier::clear() {}
 
 compute_sync::compute_sync() noexcept : memory_barrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT) {}
-compute_to_graphics_sync::compute_to_graphics_sync() noexcept : memory_barrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT) {}
+compute_to_graphics_sync::compute_to_graphics_sync() noexcept : memory_barrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT) {}
+
+buffer_memory_barrier::buffer_memory_barrier(const buffer_provider* provider, const uint32_t srcAccessMask, const uint32_t dstAccessMask, const uint32_t srcStageMask, const uint32_t dstStageMask) noexcept :
+  memory_barrier(srcAccessMask, dstAccessMask, srcStageMask, dstStageMask), provider(provider)
+{}
+
+void buffer_memory_barrier::process(VkCommandBuffer buffer) {
+  if (provider->buffer == VK_NULL_HANDLE) return;
+
+  vk::CommandBuffer b(buffer);
+  vk::BufferMemoryBarrier bar(static_cast<vk::AccessFlags>(srcAccessMask), static_cast<vk::AccessFlags>(dstAccessMask), VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, provider->buffer, provider->offset, provider->size);
+  b.pipelineBarrier(static_cast<vk::PipelineStageFlags>(srcStageMask), static_cast<vk::PipelineStageFlags>(dstStageMask), vk::DependencyFlagBits::eByRegion, nullptr, bar, nullptr);
+}
+
+storage_buffer_sync::storage_buffer_sync(const buffer_provider* provider) noexcept : buffer_memory_barrier(provider, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT) {}
+storage_buffer_to_graphics::storage_buffer_to_graphics(const buffer_provider* provider) noexcept : buffer_memory_barrier(provider, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT) {}
+indirect_buffer_to_graphics::indirect_buffer_to_graphics(const buffer_provider* provider) noexcept : buffer_memory_barrier(provider, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT) {}
 
 set_event::set_event(VkEvent event, const uint32_t stage_flags) noexcept : event(event), stage_flags(stage_flags) {}
 void set_event::begin() {}
 void set_event::process(VkCommandBuffer buffer) {
-  vk::CommandBuffer b(buffer);
-  b.setEvent(event, vk::PipelineStageFlags(stage_flags));
+  vk::CommandBuffer(buffer).setEvent(event, vk::PipelineStageFlags(stage_flags));
 }
 void set_event::clear() {}
+
+reset_event::reset_event(VkEvent event, const uint32_t stage_flags) noexcept : event(event), stage_flags(stage_flags) {}
+void reset_event::begin() {}
+void reset_event::process(VkCommandBuffer buffer) {
+  vk::CommandBuffer(buffer).resetEvent(event, vk::PipelineStageFlags(stage_flags));
+}
+void reset_event::clear() {}
 
 pipeline_view::pipeline_view(const pipeline_provider* provider) noexcept : provider(provider) {}
 void pipeline_view::begin() {}

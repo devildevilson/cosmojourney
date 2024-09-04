@@ -44,6 +44,9 @@ std::vector<const char*> check_device_extension(VkPhysicalDevice device, std::ve
 
 VkDevice allocator_device(VmaAllocator allocator);
 VkInstance allocator_instance(VmaAllocator allocator);
+size_t allocator_memory_map_aligment(VmaAllocator allocator);
+size_t allocator_storage_aligment(VmaAllocator allocator);
+size_t allocator_uniform_aligment(VmaAllocator allocator);
 
 std::string format_to_string(const uint32_t format);
 

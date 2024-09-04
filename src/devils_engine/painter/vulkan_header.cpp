@@ -211,6 +211,18 @@ vk::BufferCreateInfo buffer_info(const vk::DeviceSize &size, const vk::BufferUsa
   return vk::BufferCreateInfo(flags, size, usage, vk::SharingMode::eExclusive, nullptr);
 }
 
+std::tuple<vk::BufferCreateInfo, vma::AllocationCreateInfo> dedicated_buffer(const size_t size, const vk::BufferUsageFlags usage, const vma::MemoryUsage memusage, const vk::BufferCreateFlags &flags) {
+  const auto memflags = 
+    memusage == vma::MemoryUsage::eCpuOnly ||
+    memusage == vma::MemoryUsage::eCpuToGpu ||
+    memusage == vma::MemoryUsage::eCpuCopy 
+  ? vma::AllocationCreateFlagBits::eMapped : vma::AllocationCreateFlags{};
+  return std::make_tuple(
+    vk::BufferCreateInfo(flags, size, usage, vk::SharingMode::eExclusive, nullptr),
+    vma::AllocationCreateInfo(memflags, memusage)
+  );
+}
+
 vk::ImageUsageFlags main_attachment_usage_from_format(vk::Format format) {
   switch (format) {
     case vk::Format::eD16Unorm:
@@ -649,6 +661,17 @@ vk::ComponentMapping to_rgba(vk::Format format) {
 
 VkDevice allocator_device(VmaAllocator allocator) { return (*allocator).m_hDevice; }
 VkInstance allocator_instance(VmaAllocator allocator) { return (*allocator).m_hInstance; }
+size_t allocator_memory_map_aligment(VmaAllocator allocator) {
+  return (*allocator).m_PhysicalDeviceProperties.limits.minMemoryMapAlignment;
+}
+
+size_t allocator_storage_aligment(VmaAllocator allocator) {
+  return (*allocator).m_PhysicalDeviceProperties.limits.minStorageBufferOffsetAlignment;
+}
+
+size_t allocator_uniform_aligment(VmaAllocator allocator) {
+  return (*allocator).m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
+}
 
 }
 }

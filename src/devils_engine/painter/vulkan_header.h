@@ -164,6 +164,7 @@ vk::ImageViewCreateInfo make_view_info(
 );
     
 vk::BufferCreateInfo buffer_info(const vk::DeviceSize &size, const vk::BufferUsageFlags &usage, const vk::BufferCreateFlags &flags = {});
+std::tuple<vk::BufferCreateInfo, vma::AllocationCreateInfo> dedicated_buffer(const size_t size, const vk::BufferUsageFlags usage, const vma::MemoryUsage memusage, const vk::BufferCreateFlags &flags = {});
 
 vk::ImageUsageFlags main_attachment_usage_from_format(vk::Format format);
 

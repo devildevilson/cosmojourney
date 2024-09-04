@@ -86,17 +86,18 @@ class wait_target : public arbitrary_data {
 public:
   virtual ~wait_target() noexcept = default;
   virtual uint32_t wait(const size_t max_time) const = 0;
+  virtual uint32_t status() const = 0;
+  virtual uint32_t reset() const = 0;
 };
 
-struct wait_fence_provider : public wait_target {
+struct wait_fence_provider {
   VkFence fence;
   inline wait_fence_provider() noexcept : fence(VK_NULL_HANDLE) {}
 };
 
-struct wait_event_provider : public wait_target {
+struct wait_event_provider {
   VkEvent event;
   inline wait_event_provider() noexcept : event(VK_NULL_HANDLE) {}
-  // reset?
 };
 
 class submit_target : public arbitrary_data {
@@ -160,8 +161,9 @@ struct indexed_draw_provider {
 struct buffer_provider {
   VkBuffer buffer;
   size_t offset;
-  // размер?
-  inline buffer_provider() noexcept : buffer(VK_NULL_HANDLE), offset(0) {}
+  // нужен например барьеру
+  size_t size;
+  inline buffer_provider() noexcept : buffer(VK_NULL_HANDLE), offset(0), size(0) {}
 };
 
 // контейнеры для 2D картинок (в прочем все картинки мы можем свести к 2D)

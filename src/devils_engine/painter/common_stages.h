@@ -33,9 +33,44 @@ public:
   compute_to_graphics_sync() noexcept;
 };
 
+class buffer_memory_barrier : public memory_barrier {
+public:
+  buffer_memory_barrier(const buffer_provider* provider, const uint32_t srcAccessMask, const uint32_t dstAccessMask, const uint32_t srcStageMask, const uint32_t dstStageMask) noexcept;
+  void process(VkCommandBuffer buffer) override;
+protected:
+  const buffer_provider* provider;
+};
+
+// так и нам потребуется парочка специальных типов
+class storage_buffer_sync : public buffer_memory_barrier {
+public:
+  storage_buffer_sync(const buffer_provider* provider) noexcept;
+};
+
+class storage_buffer_to_graphics : public buffer_memory_barrier {
+public:
+  storage_buffer_to_graphics(const buffer_provider* provider) noexcept;
+};
+
+class indirect_buffer_to_graphics : public buffer_memory_barrier {
+public:
+  indirect_buffer_to_graphics(const buffer_provider* provider) noexcept;
+};
+
 class set_event : public sibling_stage {
 public:
   set_event(VkEvent event, const uint32_t stage_flags) noexcept;
+  void begin() override;
+  void process(VkCommandBuffer buffer) override;
+  void clear() override;
+protected:
+  VkEvent event;
+  uint32_t stage_flags;
+};
+
+class reset_event : public sibling_stage {
+public:
+  reset_event(VkEvent event, const uint32_t stage_flags) noexcept;
   void begin() override;
   void process(VkCommandBuffer buffer) override;
   void clear() override;
