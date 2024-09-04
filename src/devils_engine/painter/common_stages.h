@@ -9,6 +9,8 @@
 namespace devils_engine {
 namespace painter {
 
+class frame_acquisitor;
+
 class memory_barrier : public sibling_stage {
 public:
   memory_barrier(const uint32_t srcAccessMask, const uint32_t dstAccessMask, const uint32_t srcStageMask, const uint32_t dstStageMask) noexcept;
@@ -55,6 +57,26 @@ public:
 class indirect_buffer_to_graphics : public buffer_memory_barrier {
 public:
   indirect_buffer_to_graphics(const buffer_provider* provider) noexcept;
+};
+
+class change_image_layout : public sibling_stage {
+public:
+  change_image_layout(VkImage img, const uint32_t old_layout, const uint32_t new_layout);
+  void begin() override;
+  void process(VkCommandBuffer buffer) override;
+  void clear() override;
+protected:
+  VkImage img;
+  uint32_t old_layout;
+  uint32_t new_layout;
+};
+
+class change_frame_image_layout : public change_image_layout {
+public:
+  change_frame_image_layout(const frame_acquisitor* frm, const uint32_t old_layout, const uint32_t new_layout);
+  void process(VkCommandBuffer buffer) override;
+protected:
+  const frame_acquisitor* frm;
 };
 
 class set_event : public sibling_stage {

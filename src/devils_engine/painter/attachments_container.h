@@ -43,7 +43,7 @@ struct attachment {
 // у всех изображений для фреймбуфера КРАЙНЕ ЖЕЛАТЕЛЬНО один и тот же размер (по крайней мере он должен быть больше чем размер области рендеринга)
 // сюрфейс откуда получим? наверное он сюда должен придти извне
 struct attachments_container : public attachments_provider, public recreate_target {
-  VkInstance instance;
+  //VkInstance instance;
   VkDevice device;
   VmaAllocator allocator;
   const class frame_acquisitor* frame_acquisitor;
@@ -57,7 +57,8 @@ struct attachments_container : public attachments_provider, public recreate_targ
 
   // наверное создадим отдельный аллокатор для этого типа картинок
   //attachments_container(VkInstance instaince, VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface, std::vector<attachment_config_t> attachments_config);
-  attachments_container(VkInstance instance, VkDevice device, VmaAllocator allocator, const class frame_acquisitor* frame_acquisitor, std::vector<attachment_config_t> attachments_config);
+  //VkInstance instance, 
+  attachments_container(VkDevice device, VmaAllocator allocator, const class frame_acquisitor* frame_acquisitor, std::vector<attachment_config_t> attachments_config);
   ~attachments_container() noexcept;
 
   //uint32_t max_frames() const;

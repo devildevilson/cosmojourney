@@ -178,19 +178,17 @@ void render_pass_main::process(VkCommandBuffer buffer) {
   const auto buf = provider->current_framebuffer();
   const auto rp = provider->render_pass_provider->render_pass;
   const vk::RenderPassBeginInfo rpbi(rp, buf, area, attacments_count, v);
-  const vk::SubpassBeginInfo sbi;
 
   const vk::Viewport a(area.offset.x, area.offset.y, area.extent.width, area.extent.height, 0.0f, 1.0f);
 
   vk::CommandBuffer b(buffer);
-  b.beginRenderPass2(rpbi, sbi);
+  b.beginRenderPass(rpbi, vk::SubpassContents::eInline);
   b.setViewport(0, a);
   b.setScissor(0, area);
 
   for (auto p = childs; p != nullptr; p = p->next()) { p->process(buffer); }
 
-  const vk::SubpassEndInfo sei;
-  b.endRenderPass2(sei);
+  b.endRenderPass();
 }
 
 void render_pass_main::clear() {
@@ -200,9 +198,7 @@ void render_pass_main::clear() {
 void next_subpass::begin() {}
 void next_subpass::process(VkCommandBuffer buffer) {
   vk::CommandBuffer b(buffer);
-  const vk::SubpassBeginInfo sbi;
-  const vk::SubpassEndInfo sei;
-  b.nextSubpass2(sbi, sei);
+  b.nextSubpass(vk::SubpassContents::eInline);
 }
 
 void next_subpass::clear() {}

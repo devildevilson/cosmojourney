@@ -69,7 +69,7 @@ set(SRC_LIST
   framebuffer_resources.cpp
   swapchain_resources.cpp
   pipelines_config_static_container.cpp
- "buffer_resources.cpp")
+ "buffer_resources.cpp" "shader_source_file.cpp")
 
 set(HDR_LIST
   auxiliary.h
@@ -99,7 +99,7 @@ set(HDR_LIST
   framebuffer_resources.h
   swapchain_resources.h
   buffer_resources.h
-)
+ "shader_source_file.h")
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(${DEVILS_LIBRARY_NAME} ${SHADERC_LIBRARY_NAME})

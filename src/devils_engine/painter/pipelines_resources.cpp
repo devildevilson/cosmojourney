@@ -66,6 +66,7 @@ uint32_t simple_graphics_pipeline::recompile_shaders() {
   std::vector<vk::UniqueHandle<vk::ShaderModule, VULKAN_HPP_DEFAULT_DISPATCHER_TYPE>> modules;
 
   std::vector<demiurg::resource_interface*> shader_res(1, nullptr);
+  shader_res.clear();
   for (const auto &sdr : conf->shaders) {
     auto count = system->find(sdr.path, shader_res);
     auto res = shader_res[0];
@@ -127,6 +128,9 @@ uint32_t simple_graphics_pipeline::recompile_shaders() {
 
   pm.dynamicState(vk::DynamicState::eViewport);
   pm.dynamicState(vk::DynamicState::eScissor);
+
+  pm.viewport();
+  pm.scissor();
 
   pm.assembly(static_cast<vk::PrimitiveTopology>(conf->topology), conf->primitive_restart);
   pm.tessellation(false);

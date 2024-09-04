@@ -30,7 +30,12 @@ public:
   void process(VkCommandBuffer) override;
   void clear() override;
   void submit() const override;
+
   void add(VkSemaphore semaphore, const uint32_t stage_flag) override;
+
+  uint32_t wait(const size_t max_time) const override;
+  uint32_t status() const override;
+  uint32_t reset() const override;
 private:
   VkDevice device;
   VkCommandPool pool;
@@ -54,7 +59,12 @@ public:
   void process(VkCommandBuffer) override;
   void clear() override;
   void submit() const override;
+
   void add(VkSemaphore semaphore, const uint32_t stage_flag) override;
+
+  uint32_t wait(const size_t max_time) const override;
+  uint32_t status() const override;
+  uint32_t reset() const override;
 private:
   VkDevice device;
   VkCommandPool pool;
@@ -88,6 +98,10 @@ public:
   uint32_t present() const override;
 
   void add_waiter(wait_target* w);
+
+  uint32_t wait(const size_t max_time) const override;
+  uint32_t status() const override;
+  uint32_t reset() const override;
 protected:
   VkDevice device;
   VkQueue queue;

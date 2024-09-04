@@ -50,14 +50,19 @@ void simple_swapchain::recreate(const uint32_t width, const uint32_t height) {
   const auto image_count = std::clamp(max_images, caps.minImageCount, max_count);
   if (image_count == 1) utils::error("This vulkan device does not supports double buffering");
   if (image_count != max_images) utils::error("Gets new buffering size?");
+
+  //const auto f = vk::Format::eR8G8B8A8Unorm;
+  //vk::ImageFormatListCreateInfo flist(1, &f);
   
-  const auto usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
+  // капец нужно еще полтонны расширений... блин но это супер удобно эх
+  // vk::SwapchainCreateFlagBitsKHR::eMutableFormat
+  const auto usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
   const vk::SwapchainCreateInfoKHR inf(
-    vk::SwapchainCreateFlagBitsKHR::eMutableFormat, vk::SurfaceKHR(surface), 
+    {}, vk::SurfaceKHR(surface), 
     image_count, surface_format.format, surface_format.colorSpace, 
     caps.currentExtent, 1, usage, vk::SharingMode::eExclusive, 0, nullptr, 
     caps.currentTransform, vk::CompositeAlphaFlagBitsKHR::eOpaque, 
-    mode, VK_TRUE, vk::SwapchainKHR(swapchain)
+    mode, VK_TRUE, vk::SwapchainKHR(swapchain)//, &flist
   );
 
   auto new_swapchain = dev.createSwapchainKHR(inf);
@@ -68,7 +73,7 @@ void simple_swapchain::recreate(const uint32_t width, const uint32_t height) {
   set_name(device, vk::SwapchainKHR(swapchain), "window_swapchain");
 
   const auto vk_images = dev.getSwapchainImagesKHR(swapchain);
-  if (vk_images.size() != max_count) {
+  if (vk_images.size() != image_count) {
     utils::error("This vulkan device does not supports double buffering");
   }
 
@@ -79,6 +84,10 @@ void simple_swapchain::recreate(const uint32_t width, const uint32_t height) {
 void simple_swapchain::destroy_swapchain() {
   vk::Device(device).destroy(swapchain);
   swapchain = VK_NULL_HANDLE;
+}
+
+VkSwapchainKHR simple_swapchain::get_swapchain() const {
+  return swapchain;
 }
 }
 }

@@ -17,7 +17,7 @@ namespace devils_engine {
 namespace painter {
 
 struct layouting : public arbitrary_data {
-  struct layouting_create_info {
+  struct create_info {
     uint32_t readonly_storage_buffers_count;
     uint32_t combined_image_samplers_count;
     uint32_t texture_arrays_count;
@@ -43,7 +43,7 @@ struct layouting : public arbitrary_data {
   // 4) количество аттачментов
   // 5) количество изменяемых сторадж буферов
   // 6) количество сторадж картинок (атачменты и сторадж картинки - одно и тоже?)
-  layouting(VkDevice device, const layouting_create_info &info);
+  layouting(VkDevice device, const create_info &info);
   ~layouting() noexcept;
 };
 

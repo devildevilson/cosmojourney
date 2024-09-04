@@ -6,7 +6,7 @@
 namespace devils_engine {
 namespace painter {
 queue_dependant::queue_dependant(VkDevice device, VkCommandPool pool, VkQueue queue, std::initializer_list<VkSemaphore> wait_sems, std::initializer_list<uint32_t> wait_flags) : 
-  device(device), pool(pool), queue(queue), buffer(VK_NULL_HANDLE), wait_semaphores_count(0), wait_semaphores{}, wait_flags{0}
+  device(device), pool(pool), queue(queue), buffer(VK_NULL_HANDLE), wait_semaphores_count(0), wait_semaphores{VK_NULL_HANDLE}, wait_flags{0}
 {
   vk::Device d(device);
   if (wait_sems.size() != wait_flags.size()) utils::error("Wrong number on wait data provided: {} != {}", wait_sems.size(), wait_flags.size());
@@ -64,8 +64,12 @@ void queue_dependant::add(VkSemaphore semaphore, const uint32_t stage_flag) {
   wait_flags[index] = stage_flag;
 }
 
+uint32_t queue_dependant::wait(const size_t max_time) const { return uint32_t(vk::Result::eSuccess); }
+uint32_t queue_dependant::status() const { return uint32_t(vk::Result::eSuccess); }
+uint32_t queue_dependant::reset() const { return uint32_t(vk::Result::eSuccess); }
+
 queue_main::queue_main(VkDevice device, VkCommandPool pool, VkQueue queue, std::initializer_list<VkSemaphore> wait_sems, std::initializer_list<uint32_t> wait_flags) :
-  device(device), pool(pool), queue(queue), buffer(VK_NULL_HANDLE), wait_semaphores_count(0), wait_semaphores{}, wait_flags{0}
+  device(device), pool(pool), queue(queue), buffer(VK_NULL_HANDLE), wait_semaphores_count(0), wait_semaphores{VK_NULL_HANDLE}, wait_flags{0}
 {
   vk::Device d(device);
   if (wait_sems.size() != wait_flags.size()) utils::error("Wrong number on wait data provided: {} != {}", wait_sems.size(), wait_flags.size());
@@ -103,7 +107,12 @@ void queue_main::begin() {
 }
 
 void queue_main::process(VkCommandBuffer) {
+  vk::CommandBuffer b(buffer);
+
+  vk::CommandBufferBeginInfo cbbi(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+  b.begin(cbbi);
   for (auto p = childs; p != nullptr; p = p->next()) { p->process(buffer); }
+  b.end();
 }
 
 void queue_main::clear() {
@@ -112,10 +121,9 @@ void queue_main::clear() {
 
 void queue_main::submit() const {
   static_assert(sizeof(vk::PipelineStageFlags) == sizeof(uint32_t));
-  vk::Fence f(fence);
-  vk::Device d(device);
-  d.resetFences(f);
+  reset();
 
+  const vk::Fence f(fence);
   const vk::Queue q(queue);
   const vk::Semaphore s(signal);
   const vk::CommandBuffer b(buffer);
@@ -131,13 +139,27 @@ void queue_main::add(VkSemaphore semaphore, const uint32_t stage_flag) {
   wait_flags[index] = stage_flag;
 }
 
+uint32_t queue_main::wait(const size_t max_time) const { 
+  return uint32_t(vk::Device(device).waitForFences(vk::Fence(fence), VK_TRUE, max_time));
+}
+
+uint32_t queue_main::status() const { 
+  return uint32_t(vk::Device(device).getFenceStatus(vk::Fence(fence)));
+}
+
+uint32_t queue_main::reset() const {
+  vk::Device(device).resetFences(vk::Fence(fence));
+  return 0;
+}
+
 const size_t queue_present::wait_targets_max_count;
 queue_present::queue_present(VkDevice device, VkQueue queue, VkSwapchainKHR swapchain, frame_acquisitor* fram, queue_main* main) :
-  device(device), queue(queue), swapchain(swapchain), fram(fram), main(main)
+  device(device), queue(queue), swapchain(swapchain), fram(fram), main(main), wait_count(0), wait_targets{VK_NULL_HANDLE}
 {
   signal = vk::Device(device).createSemaphore(vk::SemaphoreCreateInfo());
   signal_stage = uint32_t(vk::PipelineStageFlagBits::eBottomOfPipe);
   fence = vk::Device(device).createFence(vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled));
+  this->main->add(signal, signal_stage);
 }
 
 queue_present::~queue_present() noexcept {
@@ -180,10 +202,14 @@ void queue_present::process() {
 }
 
 uint32_t queue_present::present() const {
-  VkSemaphore semaphores[2]{ signal, main->signal };
+  // пажжите а где мы запускаем сабмит от других кью?
+  main->submit();
+
+  //signal
+  VkSemaphore semaphores[1]{ main->signal };
   vk::Result local_res = vk::Result::eSuccess;
 
-  vk::PresentInfoKHR pi(2, (vk::Semaphore*)semaphores, 1, (vk::SwapchainKHR*)&swapchain, &fram->current_image_index, &local_res);
+  vk::PresentInfoKHR pi(1, (vk::Semaphore*)semaphores, 1, (vk::SwapchainKHR*)&swapchain, &fram->current_image_index, &local_res);
   const auto res = vk::Queue(queue).presentKHR(pi);
   return uint32_t(res);
 }
@@ -192,6 +218,18 @@ void queue_present::add_waiter(wait_target* w) {
   if (wait_count >= wait_targets_max_count) utils::error("Too many wait targets");
   wait_targets[wait_count] = w;
   wait_count += 1;
+}
+
+uint32_t queue_present::wait(const size_t max_time) const { 
+  return main->wait(max_time);
+}
+
+uint32_t queue_present::status() const { 
+  return main->status();
+}
+
+uint32_t queue_present::reset() const {
+  return main->reset();
 }
 
 }

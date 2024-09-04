@@ -394,7 +394,7 @@ namespace devils_engine {
 
     // if type is models/monster1
     // then something/somesome/abc/models/monster1 is prior over models/monster1/something/somesome/abc
-    system::type * system::find_proper_type(const std::string_view &id, const std::string_view &extencion) const {
+    system::type * system::find_proper_type(const std::string_view &id, const std::string_view &extension) const {
       type *t = nullptr;
       std::string_view current_full_str = id;
       while (current_full_str.size() > 0 && t == nullptr) {
@@ -404,7 +404,7 @@ namespace devils_engine {
           const auto itr = types.find(cur_id);
           if (itr != types.end()) {
             auto found_t = itr->second;
-            const size_t ext_index = found_t->ext.find(extencion);
+            const size_t ext_index = found_t->ext.find(extension);
             if (ext_index != std::string::npos) t = itr->second;
           }
 

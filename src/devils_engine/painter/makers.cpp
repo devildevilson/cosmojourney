@@ -1185,7 +1185,7 @@ namespace devils_engine {
       return newPass;
     }
     
-    device_maker::device_maker(vk::Instance inst) : inst(inst) {
+    device_maker::device_maker(vk::Instance inst) : printExtensionInfo(false),  inst(inst) {
       info.flags = {};
       info.queueCreateInfoCount = 0;
       info.pQueueCreateInfos = nullptr;
@@ -1230,6 +1230,34 @@ namespace devils_engine {
         familyProperties.back().count = queuesCount;
         familyProperties.back().flags = props[i].queueFlags;
       }
+
+      return *this;
+    }
+
+    device_maker & device_maker::createQueue(const uint32_t queue_family_index, const uint32_t maxCount, const float* priority) {
+      const auto &props = phys.getQueueFamilyProperties();
+      if (queue_family_index >= props.size()) utils::error("Invalid queue family index {}, max is {}", queue_family_index, props.size());
+      const uint32_t queuesCount = std::min(maxCount, props[queue_family_index].queueCount);
+      if (queuesCount < maxCount) utils::warn("Queue family does not provide this much {} queues, createing with {}", maxCount, queuesCount);
+
+      if (priorities == nullptr) priorities = new float*[props.size()];
+      priorities[queue_family_index] = new float[queuesCount];
+      for (uint32_t j = 0; j < queuesCount; ++j) {
+        priorities[queue_family_index][j] = priority == nullptr ? 1.0f : priority[j];
+      }
+
+      const vk::DeviceQueueCreateInfo info(
+        {},
+        static_cast<uint32_t>(queue_family_index),
+        queuesCount,
+        priorities[queue_family_index]
+      );
+
+      queueInfos.push_back(info);
+
+      familyProperties.emplace_back();
+      familyProperties.back().count = queuesCount;
+      familyProperties.back().flags = props[queue_family_index].queueFlags;
 
       return *this;
     }

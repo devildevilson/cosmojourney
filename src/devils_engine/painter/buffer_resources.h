@@ -210,45 +210,47 @@ using host_similar_buffer = templated_similar_buffer<usage::undefined, reside::h
 template <typename T, uint32_t usage = standart_storage_usage>
 class pair_buffer : public templated_buffer<usage, reside::gpu>, public clever_buffer<T> {
 public:
+  using super = common_buffer;
+
   pair_buffer(VmaAllocator allocator, const size_t size) : templated_buffer<usage, reside::gpu>(allocator, size) {
-    auto [ b, a, m ] = create_buffer(allocator, _orig_size, usage::transfer_src, reside::host);
+    auto [ b, a, m ] = create_buffer(allocator, super::_orig_size, usage::transfer_src, reside::host);
     host_buffer = b;
     host_allocation = a;
-    _mapped_data = m;
-    mapped_pointer = m;
+    super::_mapped_data = m;
+    clever_buffer<T>::mapped_pointer = m;
   }
 
   ~pair_buffer() noexcept {
-    destroy_buffer(allocator, host_buffer, host_allocation);
+    destroy_buffer(super::allocator, host_buffer, host_allocation);
   }
 
   void resize(const size_t size) {
-    const size_t new_buffer_size = align_to_device(size, allocator, usage);
-    if (_orig_size == new_buffer_size) return;
+    const size_t new_buffer_size = align_to_device(size, super::allocator, usage);
+    if (super::_orig_size == new_buffer_size) return;
 
-    destroy_buffer(allocator, buffer, allocation);
-    destroy_buffer(allocator, host_buffer, host_allocation);
+    destroy_buffer(super::allocator, buffer_provider::buffer, super::allocation);
+    destroy_buffer(super::allocator, host_buffer, host_allocation);
 
-    _orig_size = new_buffer_size;
+    super::_orig_size = new_buffer_size;
 
     {
-      auto [ b, a, m ] = create_buffer(allocator, _orig_size, usage, reside::gpu);
-      buffer = b;
-      allocation = a;
-      buffer_provider::size = _orig_size;
+      auto [ b, a, m ] = create_buffer(super::allocator, super::_orig_size, usage, reside::gpu);
+      super::buffer = b;
+      super::allocation = a;
+      super::size = super::_orig_size;
     }
 
     {
-      auto [ b, a, m ] = create_buffer(allocator, _orig_size, usage::transfer_src, reside::host);
+      auto [ b, a, m ] = create_buffer(super::allocator, super::_orig_size, usage::transfer_src, reside::host);
       host_buffer = b;
       host_allocation = a;
-      _mapped_data = m;
-      mapped_pointer = m;
+      super::_mapped_data = m;
+      clever_buffer<T>::mapped_pointer = m;
     }
   }
 
   void copy(VkCommandBuffer cbuf) {
-    copy(cbuf, host_buffer, buffer, 0, 0, _orig_size);
+    copy(cbuf, host_buffer, super::buffer, 0, 0, super::_orig_size);
   }
 protected:
   VkBuffer host_buffer;
@@ -259,13 +261,15 @@ protected:
 template <typename T, uint32_t usage = standart_storage_usage>
 class pair_buffer_simple_stage : public pair_buffer<T, usage>, public sibling_stage {
 public:
+  using super = pair_buffer<T, usage>;
+
   pair_buffer_simple_stage(VmaAllocator allocator, const size_t size) : pair_buffer<T, usage>(allocator, size) {}
   void begin() {}
 
   void process(VkCommandBuffer buffer) {
-    const uint32_t current_index = counter.exchange(0);
+    const uint32_t current_index =  pair_buffer<T, usage>::counter.exchange(0);
     if (current_index == 0) return;
-    copy(buffer);
+    super::copy(buffer);
   }
 
   void clear() {}

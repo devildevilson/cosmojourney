@@ -104,20 +104,22 @@ container::container() :
     auto exts = default_device_extensions;
     exts.push_back("VK_EXT_memory_budget");
 
+    const auto f = dev.getFeatures();
+
     device_maker dm(ins);
     device = dm.beginDevice(dev)
                  .setExtensions(exts)
-                 .createQueues(1)
-                 //.features(f)
+                 .createQueue(0, 1)
+                 .features(f)
                  .create(default_validation_layers, "Graphics device");
   }
 
   load_dispatcher3(device);
 
   vk::Device d(device);
-  graphics_queue = d.getQueue(data.graphics_queue, 1);
-  compute_queue = d.getQueue(data.compute_queue, 1);
-  presentation_queue = d.getQueue(data.present_queue, 1);
+  graphics_queue = d.getQueue(data.graphics_queue, 0);
+  compute_queue = d.getQueue(data.compute_queue, 0);
+  presentation_queue = d.getQueue(data.present_queue, 0);
 
   {
     std::vector<uint8_t> cache_data;
@@ -130,7 +132,8 @@ container::container() :
       utils::info("Couldnt load old cache file '{}'. Creating one from scratch", path_to_pipeline_cache);
     }
 
-    cache = d.createPipelineCache(vk::PipelineCacheCreateInfo(vk::PipelineCacheCreateFlagBits::eExternallySynchronized, cache_data.size(), cache_data.data()));
+    //vk::PipelineCacheCreateFlagBits::eExternallySynchronized // оказыввется нужно расширение для этого
+    cache = d.createPipelineCache(vk::PipelineCacheCreateInfo({}, cache_data.size(), cache_data.data()));
   }
 
   // тут нужно создать аллокаторы

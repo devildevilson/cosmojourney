@@ -5,6 +5,9 @@
 
 #include <parallel_hashmap/phmap.h>
 
+#include <glm/glm.hpp>
+#include <glm/vec4.hpp>
+
 namespace devils_engine {
 namespace painter {
 
@@ -16,10 +19,10 @@ const phmap::flat_hash_map<std::string, graphics_pipeline_create_config> default
     std::make_pair("default",
     graphics_pipeline_create_config{
       "default",
-      { { "vertex", "somethingsomething", "main", {} }, { "fragment", "somethingsomething", "main", {} } },
+      { { "vertex", "shaders/simple1", "main", {} }, { "fragment", "shaders/simple2", "main", {} } },
       {},
 
-      { gp_b_t{ 0, sizeof(uint32_t), "vertex", { gp_b_a_t{ 0, 0, uint32_t(vk::Format::eR32Uint), 0 } } } },
+      { gp_b_t{ 0, sizeof(glm::vec4), "vertex", { gp_b_a_t{ 0, 0, uint32_t(vk::Format::eR32G32B32A32Sfloat), 0 } } } },
 
       uint32_t(vk::PrimitiveTopology::eTriangleList), false,
 
@@ -66,15 +69,28 @@ const phmap::flat_hash_map<std::string, render_pass_data_t> default_render_pass_
                   uint32_t(vk::BlendFactor::eSrcAlpha), uint32_t(vk::BlendFactor::eDstAlpha), uint32_t(vk::BlendOp::eAdd),
             default_color_component_flag
           }
+        }}},
+        subpass_data_t{
+        "external",
+        {subpass_data_t::attachment{
+          subpass_attachment_type::intended,
+          {
+            true, uint32_t(vk::BlendFactor::eSrcColor), uint32_t(vk::BlendFactor::eDstColor), uint32_t(vk::BlendOp::eAdd),
+                  uint32_t(vk::BlendFactor::eSrcAlpha), uint32_t(vk::BlendFactor::eDstAlpha), uint32_t(vk::BlendOp::eAdd),
+            default_color_component_flag
+          }
         }}}
       }
     }
   ),
 };
 
+// капец видимо придется блитить в этот ебучий свопчеин конечное изображение
+// не работает к сожалению (для мутабл формат нужны расширения, а потом этот формат используется в миллиарде мест)
+// uint32_t(vk::Format::eR8G8B8A8Unorm)
 const phmap::flat_hash_map<std::string, std::vector<attachment_config_t>> default_attachments_configs = {
   std::make_pair(
-    "default", std::vector{ attachment_config_t{ "swapchain", uint32_t(vk::Format::eR8G8B8A8Unorm) } }
+    "default", std::vector{ attachment_config_t{ "swapchain", uint32_t(vk::Format::eB8G8R8A8Unorm) } }
   )
 };
 

@@ -333,6 +333,7 @@ namespace devils_engine {
 
       device_maker & beginDevice(const vk::PhysicalDevice phys);
       device_maker & createQueues(const uint32_t maxCount = 4, const float* priority = nullptr);
+      device_maker & createQueue(const uint32_t queue_family_index, const uint32_t maxCount = 4, const float* priority = nullptr);
       device_maker & features(const vk::PhysicalDeviceFeatures &f);
       device_maker & setExtensions(const std::vector<const char*> &extensions, bool printExtensionInfo = false);
 
@@ -344,8 +345,6 @@ namespace devils_engine {
       };
       
       bool printExtensionInfo;
-      size_t bufferBlock;
-      size_t imageBlock;
       
       vk::Instance inst;
       vk::PhysicalDevice phys;

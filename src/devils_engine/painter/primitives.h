@@ -22,7 +22,7 @@ public:
   virtual ~arbitrary_data() noexcept = default;
 };
 
-class stage : public arbitrary_data {
+class stage : public virtual arbitrary_data {
 public:
   virtual ~stage() noexcept = default;
   virtual void begin() = 0;
@@ -31,14 +31,14 @@ public:
 };
 
 // порядок важен, но скорее всего и так и сяк придется в коде учитывать смену указателей
-class sibling_stage : public stage, public utils::forw::list<sibling_stage, primitive_list_type::siblings> {
+class sibling_stage : public utils::forw::list<sibling_stage, primitive_list_type::siblings>, public virtual stage {
 public:
   virtual ~sibling_stage() noexcept = default;
   inline sibling_stage* next() const { return utils::forw::list_next<primitive_list_type::siblings>(this); }
   inline void set_next(sibling_stage* s) { utils::forw::list_set<primitive_list_type::siblings>(this, s); }
 };
 
-class parent_stage : public stage {
+class parent_stage : public virtual stage {
 public:
   inline parent_stage() noexcept : childs(nullptr) {}
   virtual ~parent_stage() noexcept = default;
@@ -48,7 +48,7 @@ protected:
 };
 
 // порядок теперь супер важен: сначала свопчеин, потом аттачменты, и в конце фреймбуфер
-class recreate_target : public arbitrary_data, public utils::ring::list<recreate_target, primitive_list_type::siblings> {
+class recreate_target : public utils::ring::list<recreate_target, primitive_list_type::siblings>, public virtual arbitrary_data {
 public:
   virtual ~recreate_target() noexcept = default;
   virtual void recreate(const uint32_t width, const uint32_t height) = 0;
@@ -58,7 +58,7 @@ public:
 };
 
 // порядок неважен
-class recompile_shaders_target : public arbitrary_data, public utils::forw::list<recompile_shaders_target, primitive_list_type::siblings> {
+class recompile_shaders_target : public utils::forw::list<recompile_shaders_target, primitive_list_type::siblings>, public virtual arbitrary_data {
 public:
   virtual ~recompile_shaders_target() noexcept = default;
   // мы могли бы заранее скомпилировать шейдер модули
@@ -82,7 +82,7 @@ struct semaphore_resource : public semaphore_provider {
 };
 
 // ожидание ожиданию рознь, так что бегать тут ничего не придется
-class wait_target : public arbitrary_data {
+class wait_target : public virtual arbitrary_data {
 public:
   virtual ~wait_target() noexcept = default;
   virtual uint32_t wait(const size_t max_time) const = 0;
@@ -100,14 +100,15 @@ struct wait_event_provider {
   inline wait_event_provider() noexcept : event(VK_NULL_HANDLE) {}
 };
 
-class submit_target : public arbitrary_data {
+class submit_target : public virtual wait_target, public virtual arbitrary_data {
 public:
   virtual ~submit_target() noexcept = default;
   virtual void begin() = 0;
   virtual void submit() const = 0; // ??????
 };
 
-class present_target : public arbitrary_data {
+// придется добавить wait_target и сюда тоже
+class present_target : public virtual wait_target, public virtual arbitrary_data {
 public:
   virtual ~present_target() noexcept = default;
   virtual void begin() = 0;
@@ -147,6 +148,7 @@ struct vertex_draw_provider {
   uint32_t first_vertex;
   uint32_t first_instance;
   inline vertex_draw_provider() noexcept : vertex_count(0), instance_count(0), first_vertex(0), first_instance(0) {}
+  inline vertex_draw_provider(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex = 0, uint32_t first_instance = 0) noexcept : vertex_count(vertex_count), instance_count(instance_count), first_vertex(first_vertex), first_instance(first_instance) {}
 };
 
 struct indexed_draw_provider {

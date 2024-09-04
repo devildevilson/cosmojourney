@@ -11,7 +11,7 @@ simple_framebuffer::simple_framebuffer(VkDevice device, const struct render_pass
   this->render_pass_provider = render_pass_provider;
   this->attachments_provider = attachments_provider;
   framebuffers.resize(frame_acquisitor->max_images, VK_NULL_HANDLE);
-  recreate(0, 0);
+  //recreate(0, 0);
 }
 
 simple_framebuffer::~simple_framebuffer() noexcept {

@@ -13,7 +13,12 @@ namespace fs = std::filesystem;
 namespace devils_engine {
 namespace painter {
 
-system::system() {}
+system::system() : 
+  surface(VK_NULL_HANDLE),
+  recreating(nullptr),
+  recompiling_shaders(nullptr),
+  submiter_counter(0)
+{}
 system::~system() noexcept {}
 
 uint32_t system::recompile_shaders() {
@@ -30,6 +35,11 @@ void system::recreate(const uint32_t width, const uint32_t height) {
   for (auto p = recreating; p != nullptr; p = p->next(recreating)) {
     p->recreate(width, height);
   }
+}
+
+uint32_t system::wait_frame(const size_t timeout) const {
+  auto ptr = frames_presenters[submiter_counter].get();
+  return ptr->wait(timeout);
 }
 
 uint32_t system::compute_frame() {
@@ -104,7 +114,7 @@ const render_pass_data_t* system::get_render_pass_config(const std::string &name
 
 const std::vector<attachment_config_t> & system::get_attachments_config(const std::string &name) const {
   auto itr = attachments_configs.find(name);
-  if (itr == attachments_configs.end()) return {};
+  if (itr == attachments_configs.end()) return std::vector<attachment_config_t>();
   return itr->second;
 }
 

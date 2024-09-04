@@ -9,6 +9,7 @@ namespace devils_engine {
 namespace painter {
 
 // вообще у свопчейна может быть прилично настроек
+// у свопчейна провайдер поди должен быть
 class simple_swapchain : public frame_acquisitor, public recreate_target {
 public:
   simple_swapchain(VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface, const uint32_t buffering_target);
@@ -19,6 +20,7 @@ public:
   uint32_t frame_format(const uint32_t index) const override;
   void recreate(const uint32_t width, const uint32_t height) override;
   void destroy_swapchain();
+  VkSwapchainKHR get_swapchain() const;
 protected:
   VkDevice device;
   VkPhysicalDevice physical_device;

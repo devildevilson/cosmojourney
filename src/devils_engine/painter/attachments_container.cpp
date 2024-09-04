@@ -15,16 +15,18 @@ namespace painter {
 //  // allocator может быть тоже переделывать по размерам изображений? вообще возможно имеет смысл
 //}
 
-attachments_container::attachments_container(VkInstance instance, VkDevice device, VmaAllocator allocator, const class frame_acquisitor* frame_acquisitor, std::vector<attachment_config_t> attachments_config) :
-  instance(instance), device(device), allocator(allocator), frame_acquisitor(frame_acquisitor), attachments_config(std::move(attachments_config))
+//VkInstance instance, 
+attachments_container::attachments_container(VkDevice device, VmaAllocator allocator, const class frame_acquisitor* frame_acquisitor, std::vector<attachment_config_t> attachments_config) :
+  //instance(instance), 
+  device(device), allocator(allocator), frame_acquisitor(frame_acquisitor), attachments_config(std::move(attachments_config))
 {
   attachments.resize(frame_acquisitor->max_images);
   for (auto & arr : attachments) {
-    arr.resize(attachments_config.size());
+    arr.resize(this->attachments_config.size());
   }
 
-  attachments_provider::attachments_count = attachments_config.size();
-  attachments_provider::attachments = attachments_config.data();
+  attachments_provider::attachments_count = this->attachments_config.size();
+  attachments_provider::attachments = this->attachments_config.data();
 
   // размеры получим позже, уже через экран
 }
@@ -152,11 +154,12 @@ void attachments_container::recreate_images(const uint32_t width, const uint32_t
       auto &att = arr[i];
       const auto &config = attachments_config[i];
       att.format = config.format;
-      const auto vk_format = vk::Format(att.format);
+      auto vk_format = vk::Format(att.format);
       const auto format_name = vk::to_string(vk_format);
 
       if (i == 0) {
         att.image = frame_acquisitor->frame_storage(index);
+        //vk_format = vk::Format(frame_acquisitor->frame_format(index));
       }
 
       if (att.image == VK_NULL_HANDLE) {

@@ -39,6 +39,27 @@ storage_buffer_sync::storage_buffer_sync(const buffer_provider* provider) noexce
 storage_buffer_to_graphics::storage_buffer_to_graphics(const buffer_provider* provider) noexcept : buffer_memory_barrier(provider, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT) {}
 indirect_buffer_to_graphics::indirect_buffer_to_graphics(const buffer_provider* provider) noexcept : buffer_memory_barrier(provider, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT) {}
 
+change_image_layout::change_image_layout(VkImage img, const uint32_t old_layout, const uint32_t new_layout) :
+  img(img), old_layout(old_layout), new_layout(new_layout)
+{}
+
+void change_image_layout::begin() {}
+void change_image_layout::process(VkCommandBuffer buffer) {
+  vk::ImageSubresourceRange isr(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+  const auto &[bar, ss, ds] = make_image_memory_barrier(img, vk::ImageLayout(old_layout), vk::ImageLayout(new_layout), isr);
+  vk::CommandBuffer(buffer).pipelineBarrier(ss, ds, vk::DependencyFlagBits::eByRegion, nullptr, nullptr, bar);
+}
+void change_image_layout::clear() {}
+
+change_frame_image_layout::change_frame_image_layout(const frame_acquisitor* frm, const uint32_t old_layout, const uint32_t new_layout) : 
+  change_image_layout(VK_NULL_HANDLE, old_layout, new_layout), frm(frm)
+{}
+void change_frame_image_layout::process(VkCommandBuffer buffer) {
+  vk::ImageSubresourceRange isr(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+  const auto &[bar, ss, ds] = make_image_memory_barrier(frm->frame_storage(frm->current_image_index), vk::ImageLayout(old_layout), vk::ImageLayout(new_layout), isr);
+  vk::CommandBuffer(buffer).pipelineBarrier(ss, ds, vk::DependencyFlagBits::eByRegion, nullptr, nullptr, bar);
+}
+
 set_event::set_event(VkEvent event, const uint32_t stage_flags) noexcept : event(event), stage_flags(stage_flags) {}
 void set_event::begin() {}
 void set_event::process(VkCommandBuffer buffer) {

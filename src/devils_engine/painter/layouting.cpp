@@ -6,7 +6,7 @@
 namespace devils_engine {
 namespace painter {
 
-layouting::layouting(VkDevice device, const layouting_create_info &info) : device(device) {
+layouting::layouting(VkDevice device, const create_info &info) : device(device) {
   {
     sampler_maker sm(device);
     immutable_linear = sm.addressMode(vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat)

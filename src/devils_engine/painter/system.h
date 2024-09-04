@@ -86,14 +86,14 @@ public:
   }
 
   template <typename T, typename... Args>
-  T *add_stage(Args&&... args) {
+  T *create(Args&&... args) {
     auto ptr = std::make_unique<T>(std::forward<Args>(args)...);
     auto p = ptr.get();
     objects.push_back(std::move(ptr));
 
     if constexpr (std::derived_from<T, recreate_target>) {
       if (recreating == nullptr) recreating = p;
-      else recreating->add(p);
+      else recreating->set_next(p);
     } 
     
     /*if constexpr (std::derived_from<T, submit_target>) {
@@ -103,7 +103,7 @@ public:
     
     if constexpr (std::derived_from<T, recompile_shaders_target>) {
       if (recompiling_shaders == nullptr) recompiling_shaders = p;
-      else recompiling_shaders->add(p);
+      else recompiling_shaders->set_next(p);
     }
     
     return p;
@@ -123,8 +123,8 @@ public:
   }*/
 
   template <typename T, typename... Args>
-  T* add_frame_presenter(Args&&... args) {
-    auto std_ptr = std::make_unique(std::forward<Args>(args)...);
+  T* create_frame_presenter(Args&&... args) {
+    auto std_ptr = std::make_unique<T>(std::forward<Args>(args)...);
     auto ptr = std_ptr.get();
     frames_presenters.emplace_back(std::move(std_ptr));
     return ptr;
@@ -133,8 +133,9 @@ public:
   uint32_t recompile_shaders();
   void recreate(const uint32_t width, const uint32_t height);
 
-  // блин класс сильно зависит от того существует ли сюрфейс, 
+  // блин функция сильно зависит от того существует ли сюрфейс, 
   // было бы неплохо откуда то из вне получать размер окна
+  uint32_t wait_frame(const size_t timeout) const;
   uint32_t compute_frame();
 
   VkInstance get_instance() const;

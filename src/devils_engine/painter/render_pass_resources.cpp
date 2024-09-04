@@ -182,7 +182,7 @@ void simple_render_pass::create_render_pass_raw(const load_ops &load, const stor
     auto [src_stage, dst_stage] = stage_masks[s];
 
     const auto prev_subpass = s == 0 ? VK_SUBPASS_EXTERNAL : s-1;
-    const auto next_subpass = s == create_data->subpasses.size()-1 ? VK_SUBPASS_EXTERNAL : s-1;
+    const auto next_subpass = s == create_data->subpasses.size()-1 ? VK_SUBPASS_EXTERNAL : s;
     rpm.dependencyBegin(prev_subpass, next_subpass);
     rpm.dependencyDependencyFlags(vk::DependencyFlagBits::eByRegion);
     rpm.dependencySrcAccessMask(static_cast<vk::AccessFlags>(src_access));
