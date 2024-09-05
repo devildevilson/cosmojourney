@@ -8,9 +8,18 @@
 namespace devils_engine {
 namespace painter {
 
+class surface_container : public arbitrary_data {
+public:
+  VkInstance instance;
+  VkSurfaceKHR surface;
+
+  inline surface_container(VkInstance instance, VkSurfaceKHR surface) noexcept : instance(instance), surface(surface) {}
+  ~surface_container() noexcept;
+};
+
 // вообще у свопчейна может быть прилично настроек
 // у свопчейна провайдер поди должен быть
-class simple_swapchain : public frame_acquisitor, public recreate_target {
+class simple_swapchain : public swapchain_provider, public frame_acquisitor, public recreate_target {
 public:
   simple_swapchain(VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface, const uint32_t buffering_target);
   ~simple_swapchain() noexcept;
@@ -25,7 +34,6 @@ protected:
   VkDevice device;
   VkPhysicalDevice physical_device;
   VkSurfaceKHR surface;
-  VkSwapchainKHR swapchain;
   uint32_t format;
   std::vector<VkImage> images;
 };

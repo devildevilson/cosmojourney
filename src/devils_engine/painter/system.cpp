@@ -213,6 +213,7 @@ void system::reload_configs() {
   load_default_configs(sampler_configs, available_default_samplers_configs, get_default_sampler_config);
 
   // теперь попытаемся загрузить кофиги с диска
+  if (!file_io::exists(path_to_cached_folder)) return;
   for (const auto &entry : fs::directory_iterator(path_to_cached_folder)) {
     if (!entry.is_regular_file()) continue;
     const auto path = entry.path().generic_string();
@@ -221,7 +222,8 @@ void system::reload_configs() {
     if (format_index + json_format.size() != path.size()) continue;
 
     const auto content = file_io::read(path);
-    const auto file_name = std::string_view(path).substr(path.rfind('/')+1).substr(0, path.rfind('.'));
+    auto file_name = std::string_view(path).substr(path.rfind('/')+1);
+    file_name = file_name.substr(0, file_name.rfind('.'));
 
     check_and_load_config_from_json(graphics_pipeline_configs, file_name, graphics_pipeline_type, content);
     check_and_load_config_from_json(compute_pipeline_configs, file_name, compute_pipeline_type, content);

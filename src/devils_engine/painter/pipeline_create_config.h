@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <map>
 
 namespace devils_engine {
 namespace painter {
@@ -36,7 +37,7 @@ struct graphics_pipeline_create_config {
     std::string path;
     std::string func_name;
 
-    std::vector<std::pair<std::string, std::string>> defines;
+    std::map<std::string, std::string> defines;
   };
 
   struct constant_data_t {
@@ -98,7 +99,7 @@ struct compute_pipeline_create_config {
     std::string path;
     std::string func_name;
 
-    std::vector<std::pair<std::string, std::string>> defines;
+    std::map<std::string, std::string> defines;
   };
 
   std::string name;

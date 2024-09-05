@@ -27,7 +27,7 @@ const phmap::flat_hash_map<std::string, graphics_pipeline_create_config> default
       uint32_t(vk::PrimitiveTopology::eTriangleList), false,
 
       false, false, 
-      uint32_t(vk::PolygonMode::eFill), uint32_t(vk::CullModeFlagBits::eFrontAndBack), uint32_t(vk::FrontFace::eClockwise),
+      uint32_t(vk::PolygonMode::eFill), uint32_t(vk::CullModeFlagBits::eFrontAndBack), uint32_t(vk::FrontFace::eCounterClockwise),
       { false, 0.0f, 0.0f, 0.0f },
       1.0f,
 
@@ -65,8 +65,8 @@ const phmap::flat_hash_map<std::string, render_pass_data_t> default_render_pass_
         {subpass_data_t::attachment{
           subpass_attachment_type::intended,
           {
-            true, uint32_t(vk::BlendFactor::eSrcColor), uint32_t(vk::BlendFactor::eDstColor), uint32_t(vk::BlendOp::eAdd),
-                  uint32_t(vk::BlendFactor::eSrcAlpha), uint32_t(vk::BlendFactor::eDstAlpha), uint32_t(vk::BlendOp::eAdd),
+            false, uint32_t(vk::BlendFactor::eSrcColor), uint32_t(vk::BlendFactor::eDstColor), uint32_t(vk::BlendOp::eAdd),
+                   uint32_t(vk::BlendFactor::eSrcAlpha), uint32_t(vk::BlendFactor::eDstAlpha), uint32_t(vk::BlendOp::eAdd),
             default_color_component_flag
           }
         }}},
@@ -75,8 +75,8 @@ const phmap::flat_hash_map<std::string, render_pass_data_t> default_render_pass_
         {subpass_data_t::attachment{
           subpass_attachment_type::intended,
           {
-            true, uint32_t(vk::BlendFactor::eSrcColor), uint32_t(vk::BlendFactor::eDstColor), uint32_t(vk::BlendOp::eAdd),
-                  uint32_t(vk::BlendFactor::eSrcAlpha), uint32_t(vk::BlendFactor::eDstAlpha), uint32_t(vk::BlendOp::eAdd),
+            false, uint32_t(vk::BlendFactor::eSrcColor), uint32_t(vk::BlendFactor::eDstColor), uint32_t(vk::BlendOp::eAdd),
+                   uint32_t(vk::BlendFactor::eSrcAlpha), uint32_t(vk::BlendFactor::eDstAlpha), uint32_t(vk::BlendOp::eAdd),
             default_color_component_flag
           }
         }}}

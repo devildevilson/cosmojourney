@@ -89,7 +89,7 @@ class queue_present : public present_target, public semaphore_provider, public w
 public:
   static const size_t wait_targets_max_count = 8;
 
-  queue_present(VkDevice device, VkQueue queue, VkSwapchainKHR swapchain, frame_acquisitor* fram, queue_main* main);
+  queue_present(VkDevice device, VkQueue queue, const swapchain_provider* sw_p, frame_acquisitor* fram, queue_main* main);
   ~queue_present() noexcept;
 
   void begin() override;
@@ -105,7 +105,7 @@ public:
 protected:
   VkDevice device;
   VkQueue queue;
-  VkSwapchainKHR swapchain;
+  const swapchain_provider* sw_p;
   frame_acquisitor* fram;
   queue_main* main;
 

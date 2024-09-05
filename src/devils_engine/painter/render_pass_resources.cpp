@@ -83,7 +83,7 @@ static vk::AttachmentStoreOp make_store_op(const attachment_operation op) {
 simple_render_pass::simple_render_pass(VkDevice device, const render_pass_data_t* create_data, const attachments_provider* provider) :
   device(device), create_data(create_data), provider(provider)
 {
-  create_render_pass();
+  //create_render_pass();
 }
 
 simple_render_pass::~simple_render_pass() noexcept {
@@ -100,10 +100,11 @@ void simple_render_pass::create_render_pass() {
 void simple_render_pass::create_render_pass_raw(const load_ops &load, const store_ops &store) {
   render_pass_maker rpm(device);
 
+  // эту фигню в настройках пасса указать надо
   for (size_t i = 0; i < provider->attachments_count; ++i) {
     rpm.attachmentBegin(static_cast<vk::Format>(provider->attachments[i].format));
-    rpm.attachmentInitialLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-    rpm.attachmentFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+    rpm.attachmentInitialLayout(vk::ImageLayout::eUndefined);
+    rpm.attachmentFinalLayout(vk::ImageLayout::ePresentSrcKHR);
     rpm.attachmentLoadOp(make_load_op(load[i])); // если это первый рендер пасс, то нам бы его чистить
     rpm.attachmentStoreOp(make_store_op(store[i]));
     rpm.attachmentStencilLoadOp(make_load_op(load[i]));
@@ -120,7 +121,7 @@ void simple_render_pass::create_render_pass_raw(const load_ops &load, const stor
 
     if (s == 0) {
       src_access = static_cast<uint32_t>(vk::AccessFlagBits::eNone);
-      src_stage = static_cast<uint32_t>(vk::PipelineStageFlagBits2::eBottomOfPipe);
+      src_stage = static_cast<uint32_t>(vk::PipelineStageFlagBits2::eTopOfPipe);
     } else {
       auto [prev_src_access, prev_dst_access] = access_masks[s-1];
       auto [prev_src_stage, prev_dst_stage] = stage_masks[s-1];
@@ -152,6 +153,7 @@ void simple_render_pass::create_render_pass_raw(const load_ops &load, const stor
     }
 
     dst_stage = static_cast<uint32_t>(vk::PipelineStageFlagBits2::eAllGraphics);
+    //dst_stage = static_cast<uint32_t>(vk::PipelineStageFlagBits2::eTopOfPipe);
 
     access_masks[s] = std::make_tuple(src_access, dst_access);
     stage_masks[s] = std::make_tuple(src_stage, dst_stage);
@@ -163,7 +165,8 @@ void simple_render_pass::create_render_pass_raw(const load_ops &load, const stor
     const uint32_t src_access = prev_dst_access;
     const uint32_t src_stage = prev_dst_stage;
     uint32_t dst_access = 0;
-    uint32_t dst_stage = static_cast<uint32_t>(vk::PipelineStageFlagBits2::eAllGraphics);
+    //uint32_t dst_stage = static_cast<uint32_t>(vk::PipelineStageFlagBits2::eAllGraphics);
+    uint32_t dst_stage = static_cast<uint32_t>(vk::PipelineStageFlagBits2::eBottomOfPipe);
 
     const auto &arr = create_data->subpasses.back().attachments;
     for (size_t i = 0; i < arr.size(); ++i) {
@@ -172,6 +175,7 @@ void simple_render_pass::create_render_pass_raw(const load_ops &load, const stor
       dst_access = combine_access_masks(type, format, dst_access);
     }
 
+    dst_access = 0;
     access_masks.back() = std::make_tuple(src_access, dst_access);
     stage_masks.back() = std::make_tuple(src_stage, dst_stage);
   }

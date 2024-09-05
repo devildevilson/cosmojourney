@@ -144,6 +144,7 @@ public:
   ~common_buffer() noexcept;
   size_t orig_size() const;
   void* mapped_data();
+  void flush_memory() const;
 protected:
   VmaAllocator allocator;
   size_t _orig_size;

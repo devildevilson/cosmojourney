@@ -219,41 +219,39 @@ int main(int argc, char const *argv[]) {
 
   painter::system psys;
   psys.reload_configs();
-  auto gc = psys.create_main_container();
-  auto layout = psys.create<painter::layouting>(gc->device, painter::layouting::create_info{1, 1, 1, 1, 1, 1});
-  auto w = input::create_window(800, 600, "triangle"); // окно поди можно создать когда угодно ранее
-  auto surf = painter::create_surface(gc->instance, w);
-  psys.set_window_surface(surf);
-  auto sch = psys.create<painter::simple_swapchain>(gc->device, gc->physical_device, surf, 2);
+  psys.dump_configs_to_disk();
   auto conf = psys.get_attachments_config("default");
-  auto ac = psys.create<painter::attachments_container>(gc->device, gc->buffer_allocator, sch, std::move(conf));
   auto rp_conf = psys.get_render_pass_config("default");
-  auto rp = psys.create<painter::main_render_pass>(gc->device, rp_conf, ac);
-  auto fc = psys.create<painter::simple_framebuffer>(gc->device, rp, ac, sch);
   auto pl_conf = psys.get_graphics_pipeline_config("default");
-  auto pl = psys.create<painter::simple_graphics_pipeline>(gc->device, layout->pipeline_layout, gc->cache, &dsys);
+
+  auto gc     = psys.create_main_container();
+  auto layout = psys.create<painter::layouting>(gc->device, painter::layouting::create_info{1, 1, 1, 1, 1, 1});
+  auto w      = input::create_window(800, 600, "triangle"); // окно поди можно создать когда угодно ранее
+  auto surf   = painter::create_surface(gc->instance, w);
+  auto sch    = psys.create<painter::simple_swapchain>(gc->device, gc->physical_device, surf, 2);
+  auto scont  = psys.create<painter::surface_container>(gc->instance, surf);
+  auto ac     = psys.create<painter::attachments_container>(gc->device, gc->buffer_allocator, sch, std::move(conf));
+  auto rp     = psys.create<painter::main_render_pass>(gc->device, rp_conf, ac);
+  auto fc     = psys.create<painter::simple_framebuffer>(gc->device, rp, ac, sch);
+  auto pl     = psys.create<painter::simple_graphics_pipeline>(gc->device, layout->pipeline_layout, gc->cache, &dsys);
+  rp->create_render_pass();
   pl->init(rp->render_pass, 0, pl_conf, rp_conf->subpasses[0].attachments.size(), rp_conf->subpasses[0].attachments.data());
   auto t_buf = psys.create<painter::common_buffer>(gc->buffer_allocator, 5 * sizeof(glm::vec4), painter::usage::vertex, painter::reside::host);
   auto ptr = reinterpret_cast<glm::vec4*>(t_buf->mapped_data());
   ptr[0] = glm::vec4(0.0f, 1.0f, 0.0f, glm::uintBitsToFloat(glm::packUnorm4x8(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f))));
   ptr[1] = glm::vec4(0.5f, 0.0f, 0.0f, glm::uintBitsToFloat(glm::packUnorm4x8(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f))));
   ptr[2] = glm::vec4(1.0f, 1.0f, 0.0f, glm::uintBitsToFloat(glm::packUnorm4x8(glm::vec4(0.0f, 0.0f, 1.0f, 1.0f))));
+  t_buf->flush_memory();
 
   psys.recreate(800, 600);
 
   painter::do_command(gc->device, gc->transfer_command_pool, gc->graphics_queue, gc->transfer_fence, [sch] (VkCommandBuffer buf) {
-    vk::CommandBufferBeginInfo cbbi(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-    vk::CommandBuffer b(buf);
-    b.begin(cbbi);
-
     for (uint32_t i = 0; i < sch->max_images; ++i) {
       auto img = sch->frame_storage(i);
       vk::ImageSubresourceRange isr(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
       const auto &[bar, ss, ds] = painter::make_image_memory_barrier(img, vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR, isr);
       vk::CommandBuffer(buf).pipelineBarrier(ss, ds, vk::DependencyFlagBits::eByRegion, nullptr, nullptr, bar);
     }
-
-    b.end();
   });
 
   painter::vertex_draw_provider vdp{ 3, 1, 0, 0 };
@@ -263,14 +261,15 @@ int main(int argc, char const *argv[]) {
     auto cmd_bar2 = psys.create<painter::change_frame_image_layout>(sch, uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal), uint32_t(vk::ImageLayout::ePresentSrcKHR));
     auto cmd_bar1 = psys.create<painter::change_frame_image_layout>(sch, uint32_t(vk::ImageLayout::ePresentSrcKHR), uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal));
     auto cmd_draw = psys.create<painter::draw>(&vdp);
-    auto cmd_pl = psys.create<painter::pipeline_view>(pl);
-    auto cmd_vtx = psys.create<painter::bind_vertex_buffers>(0, std::vector{t_buf->buffer}, std::vector{size_t(0)});
-    auto cmd_rp = psys.create<painter::render_pass_main>(gc->device, fc);
-    auto cmd_qs = psys.create<painter::queue_main>(gc->device, gc->graphics_command_pool, gc->graphics_queue, std::initializer_list<VkSemaphore>{}, std::initializer_list<uint32_t>{});
-    auto cmd_p = psys.create_frame_presenter<painter::queue_present>(gc->device, gc->presentation_queue, sch->get_swapchain(), sch, cmd_qs);
-    cmd_vtx->set_next(cmd_pl); cmd_pl->set_next(cmd_draw); 
-    cmd_bar1->set_next(cmd_rp); cmd_rp->set_childs(cmd_vtx); cmd_rp->set_next(cmd_bar2);
-    cmd_qs->set_childs(cmd_bar1);
+    auto cmd_pl   = psys.create<painter::pipeline_view>(pl);
+    auto cmd_vtx  = psys.create<painter::bind_vertex_buffers>(0, std::vector{t_buf->buffer}, std::vector{size_t(0)});
+    auto cmd_rp   = psys.create<painter::render_pass_main>(gc->device, fc);
+    auto cmd_qs   = psys.create<painter::queue_main>(gc->device, gc->graphics_command_pool, gc->graphics_queue, std::initializer_list<VkSemaphore>{}, std::initializer_list<uint32_t>{});
+    auto cmd_p    = psys.create_frame_presenter<painter::queue_present>(gc->device, gc->presentation_queue, sch, sch, cmd_qs);
+    cmd_pl->set_next(cmd_vtx); cmd_vtx->set_next(cmd_draw);
+    cmd_rp->set_childs(cmd_pl); 
+    //cmd_bar1->set_next(cmd_rp); cmd_rp->set_next(cmd_bar2);
+    cmd_qs->set_childs(cmd_rp);
   }
   
   // второй рисовальщик фреймов
@@ -278,17 +277,18 @@ int main(int argc, char const *argv[]) {
     auto cmd_bar2 = psys.create<painter::change_frame_image_layout>(sch, uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal), uint32_t(vk::ImageLayout::ePresentSrcKHR));
     auto cmd_bar1 = psys.create<painter::change_frame_image_layout>(sch, uint32_t(vk::ImageLayout::ePresentSrcKHR), uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal));
     auto cmd_draw = psys.create<painter::draw>(&vdp);
-    auto cmd_pl = psys.create<painter::pipeline_view>(pl);
-    auto cmd_vtx = psys.create<painter::bind_vertex_buffers>(0, std::vector{t_buf->buffer}, std::vector{size_t(0)});
-    auto cmd_rp = psys.create<painter::render_pass_main>(gc->device, fc);
-    auto cmd_qs = psys.create<painter::queue_main>(gc->device, gc->graphics_command_pool, gc->graphics_queue, std::initializer_list<VkSemaphore>{}, std::initializer_list<uint32_t>{});
-    auto cmd_p = psys.create_frame_presenter<painter::queue_present>(gc->device, gc->presentation_queue, sch->get_swapchain(), sch, cmd_qs);
-    cmd_vtx->set_next(cmd_pl); cmd_pl->set_next(cmd_draw);
-    cmd_bar1->set_next(cmd_rp); cmd_rp->set_childs(cmd_vtx); cmd_rp->set_next(cmd_bar2);
-    cmd_qs->set_childs(cmd_bar1);
+    auto cmd_pl   = psys.create<painter::pipeline_view>(pl);
+    auto cmd_vtx  = psys.create<painter::bind_vertex_buffers>(0, std::vector{t_buf->buffer}, std::vector{size_t(0)});
+    auto cmd_rp   = psys.create<painter::render_pass_main>(gc->device, fc);
+    auto cmd_qs   = psys.create<painter::queue_main>(gc->device, gc->graphics_command_pool, gc->graphics_queue, std::initializer_list<VkSemaphore>{}, std::initializer_list<uint32_t>{});
+    auto cmd_p    = psys.create_frame_presenter<painter::queue_present>(gc->device, gc->presentation_queue, sch, sch, cmd_qs);
+    cmd_pl->set_next(cmd_vtx); cmd_vtx->set_next(cmd_draw);
+    cmd_rp->set_childs(cmd_pl); 
+    //cmd_bar1->set_next(cmd_rp); cmd_rp->set_next(cmd_bar2);
+    cmd_qs->set_childs(cmd_rp);
   }
 
-  const size_t target_fps = 1000000.0 / 500.0;
+  const size_t target_fps = 1000000.0 / 60.0;
 
   // чет все глючит и фреймы мне не показывает почему?
 
@@ -298,6 +298,8 @@ int main(int argc, char const *argv[]) {
     frame_counter += 1;
     const auto next_tp = tp + std::chrono::microseconds(frame_counter * target_fps);
 
+    input::poll_events();
+
     const size_t one_second = 1000ull * 1000ull * 1000ull;
     const auto res = vk::Result(psys.wait_frame(one_second));
     if (res != vk::Result::eSuccess) utils::error("Wait for prev frame returned '{}'", vk::to_string(res));
@@ -306,7 +308,12 @@ int main(int argc, char const *argv[]) {
     std::this_thread::sleep_until(next_tp);
   }
 
-  painter::destroy_surface(gc->instance, surf);
+  const size_t one_second = 1000ull * 1000ull * 1000ull;
+  const auto res = vk::Result(psys.wait_frame(one_second));
+  if (res != vk::Result::eSuccess) utils::error("Wait for prev frame returned '{}'", vk::to_string(res));
+
+  // блен надо свопчеин раньше чем сюрфейс удалять... сюрфейс надо просто передать в класс свопчейна
+  //painter::destroy_surface(gc->instance, surf);
   return 0;
 }
 

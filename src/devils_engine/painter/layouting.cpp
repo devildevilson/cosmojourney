@@ -52,7 +52,7 @@ layouting::layouting(VkDevice device, const create_info &info) : device(device) 
 
   {
     pipeline_layout_maker plm(device);
-    pipeline_layout = plm.addDescriptorLayout(set_layout).addPushConstRange(0, 200).create("default_pipeline_layout");
+    pipeline_layout = plm.addDescriptorLayout(set_layout).addPushConstRange(0, 128).create("default_pipeline_layout");
   }
 
   {

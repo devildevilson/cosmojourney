@@ -5,8 +5,14 @@
 
 namespace devils_engine {
 namespace painter {
+surface_container::~surface_container() noexcept {
+  vk::Instance(instance).destroySurfaceKHR(surface);
+  instance = VK_NULL_HANDLE;
+  surface = VK_NULL_HANDLE;
+}
+
 simple_swapchain::simple_swapchain(VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface, const uint32_t buffering_target) :
-  device(device), physical_device(physical_device), surface(surface), swapchain(VK_NULL_HANDLE), format(0)
+  device(device), physical_device(physical_device), surface(surface), format(0)
 {
   max_images = buffering_target;
   //recreate(0,0);
@@ -17,8 +23,8 @@ simple_swapchain::~simple_swapchain() noexcept {
 }
 
 uint32_t simple_swapchain::acquire_next_image(size_t timeout, VkSemaphore semaphore, VkFence fence) {
-  const auto [ res, index ] = vk::Device(device).acquireNextImageKHR(swapchain, timeout, semaphore, fence);
-  current_image_index = index;
+  const auto [ res, index ] = vk::Device(device).acquireNextImageKHR(swapchain_provider::swapchain, timeout, semaphore, fence);
+  frame_acquisitor::current_image_index = index;
   return uint32_t(res);
 }
 
@@ -62,32 +68,34 @@ void simple_swapchain::recreate(const uint32_t width, const uint32_t height) {
     image_count, surface_format.format, surface_format.colorSpace, 
     caps.currentExtent, 1, usage, vk::SharingMode::eExclusive, 0, nullptr, 
     caps.currentTransform, vk::CompositeAlphaFlagBitsKHR::eOpaque, 
-    mode, VK_TRUE, vk::SwapchainKHR(swapchain)//, &flist
+    mode, VK_TRUE, vk::SwapchainKHR(swapchain_provider::swapchain)//, &flist
   );
 
   auto new_swapchain = dev.createSwapchainKHR(inf);
 
   destroy_swapchain();
 
-  swapchain = new_swapchain;
+  swapchain_provider::swapchain = new_swapchain;
   set_name(device, vk::SwapchainKHR(swapchain), "window_swapchain");
 
-  const auto vk_images = dev.getSwapchainImagesKHR(swapchain);
+  const auto vk_images = dev.getSwapchainImagesKHR(swapchain_provider::swapchain);
   if (vk_images.size() != image_count) {
     utils::error("This vulkan device does not supports double buffering");
   }
 
   images.resize(vk_images.size(), VK_NULL_HANDLE);
   for (size_t i=0; i<vk_images.size();++i) { images[i] = vk_images[i]; }
+
+  // layout сменить
 }
 
 void simple_swapchain::destroy_swapchain() {
-  vk::Device(device).destroy(swapchain);
-  swapchain = VK_NULL_HANDLE;
+  vk::Device(device).destroy(swapchain_provider::swapchain);
+  swapchain_provider::swapchain = VK_NULL_HANDLE;
 }
 
 VkSwapchainKHR simple_swapchain::get_swapchain() const {
-  return swapchain;
+  return swapchain_provider::swapchain;
 }
 }
 }

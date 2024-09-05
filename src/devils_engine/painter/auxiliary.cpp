@@ -117,7 +117,10 @@ bool do_command(VkDevice device, VkCommandPool pool, VkQueue queue, VkFence fenc
   vk::CommandBufferAllocateInfo ai(pool, vk::CommandBufferLevel::ePrimary, 1);
   const auto buffer = std::move(d.allocateCommandBuffersUnique(ai)[0]);
 
+  vk::CommandBufferBeginInfo cbbi(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+  buffer->begin(cbbi);
   action(buffer.get());
+  buffer->end();
 
   const vk::SubmitInfo si(nullptr, nullptr, buffer.get(), nullptr);
   vk::Queue(queue).submit(si, fence);

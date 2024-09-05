@@ -2,6 +2,7 @@
 
 #include "vulkan_header.h"
 #include "utils/core.h"
+#include "utils/time.h"
 
 namespace devils_engine {
 namespace painter {
@@ -125,9 +126,10 @@ void queue_main::submit() const {
 
   const vk::Fence f(fence);
   const vk::Queue q(queue);
-  const vk::Semaphore s(signal);
   const vk::CommandBuffer b(buffer);
-  const vk::SubmitInfo inf(wait_semaphores_count, (vk::Semaphore*)wait_semaphores, (vk::PipelineStageFlags*)wait_flags, 1, &b, 1, &s);
+  const vk::Semaphore semaphores[] = { signal };
+  const size_t sem_size = sizeof(semaphores) / sizeof(semaphores[0]);
+  const vk::SubmitInfo inf(wait_semaphores_count, (vk::Semaphore*)wait_semaphores, (vk::PipelineStageFlags*)wait_flags, 1, &b, sem_size, semaphores);
   q.submit(inf, f);
 }
 
@@ -153,12 +155,12 @@ uint32_t queue_main::reset() const {
 }
 
 const size_t queue_present::wait_targets_max_count;
-queue_present::queue_present(VkDevice device, VkQueue queue, VkSwapchainKHR swapchain, frame_acquisitor* fram, queue_main* main) :
-  device(device), queue(queue), swapchain(swapchain), fram(fram), main(main), wait_count(0), wait_targets{VK_NULL_HANDLE}
+queue_present::queue_present(VkDevice device, VkQueue queue, const swapchain_provider* sw_p, frame_acquisitor* fram, queue_main* main) :
+  device(device), queue(queue), sw_p(sw_p), fram(fram), main(main), wait_count(0), wait_targets{VK_NULL_HANDLE}
 {
   signal = vk::Device(device).createSemaphore(vk::SemaphoreCreateInfo());
   signal_stage = uint32_t(vk::PipelineStageFlagBits::eBottomOfPipe);
-  fence = vk::Device(device).createFence(vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled));
+  fence = vk::Device(device).createFence({}); // vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled)
   this->main->add(signal, signal_stage);
 }
 
@@ -168,12 +170,7 @@ queue_present::~queue_present() noexcept {
 }
 
 void queue_present::begin() {
-  const size_t timeout = 1000ull * 1000ull * 1000ull; // 1 секунда
-
-  vk::Device d(device);
-  const auto res = d.waitForFences(vk::Fence(fence), VK_TRUE, timeout);
-  if (res != vk::Result::eSuccess) utils::error("Wait for frame fence took too long. Error: {}", vk::to_string(res));
-  d.resetFences(vk::Fence(fence));
+  
 
   // 1) это пробежать клир
   main->clear();
@@ -193,6 +190,16 @@ void queue_present::process() {
     if (res != 0) utils::error("Wait for too long. Error: {}", vk::to_string(vk::Result(res)));
   }
 
+  {
+    //utils::time_log tl("image fence");
+    const size_t timeout = 1000ull * 1000ull * 1000ull; // 1 секунда
+
+    vk::Device d(device);
+    const auto res = d.waitForFences(vk::Fence(fence), VK_TRUE, timeout);
+    if (res != vk::Result::eSuccess) utils::error("Wait for frame fence took too long. Error: {}", vk::to_string(res));
+    d.resetFences(vk::Fence(fence));
+  }
+
   // 2) это пробежать бегин 
   // нам с очень малой вероятностью потребуется знать какую картинку из свопчейна мы взяли
   main->begin();
@@ -206,10 +213,12 @@ uint32_t queue_present::present() const {
   main->submit();
 
   //signal
-  VkSemaphore semaphores[1]{ main->signal };
+  const vk::Semaphore semaphores[] = { main->signal };
+  const size_t sem_size = sizeof(semaphores) / sizeof(semaphores[0]);
   vk::Result local_res = vk::Result::eSuccess;
 
-  vk::PresentInfoKHR pi(1, (vk::Semaphore*)semaphores, 1, (vk::SwapchainKHR*)&swapchain, &fram->current_image_index, &local_res);
+  //utils::println("queue_present", reinterpret_cast<size_t>(this), "current_image_index", fram->current_image_index);
+  vk::PresentInfoKHR pi(sem_size, semaphores, 1, (vk::SwapchainKHR*)&sw_p->swapchain, &fram->current_image_index, nullptr); // &local_res
   const auto res = vk::Queue(queue).presentKHR(pi);
   return uint32_t(res);
 }

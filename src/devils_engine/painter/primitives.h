@@ -142,6 +142,11 @@ struct descriptor_set_provider {
   inline descriptor_set_provider() noexcept : set(VK_NULL_HANDLE) {}
 };
 
+struct swapchain_provider {
+  VkSwapchainKHR swapchain;
+  inline swapchain_provider() noexcept : swapchain(VK_NULL_HANDLE) {}
+};
+
 struct vertex_draw_provider {
   uint32_t vertex_count;
   uint32_t instance_count;

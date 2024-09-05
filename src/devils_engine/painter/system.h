@@ -9,6 +9,7 @@
 #include "vulkan_minimal.h"
 #include "primitives.h"
 #include "pipeline_create_config.h"
+#include "swapchain_resources.h"
 
 namespace devils_engine {
 namespace painter {
@@ -104,6 +105,10 @@ public:
     if constexpr (std::derived_from<T, recompile_shaders_target>) {
       if (recompiling_shaders == nullptr) recompiling_shaders = p;
       else recompiling_shaders->set_next(p);
+    }
+
+    if constexpr (std::is_same_v<T, surface_container>) {
+      surface = p->surface;
     }
     
     return p;

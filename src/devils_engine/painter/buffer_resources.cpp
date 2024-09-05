@@ -61,6 +61,9 @@ common_buffer::~common_buffer() noexcept {
 
 size_t common_buffer::orig_size() const { return _orig_size; }
 void* common_buffer::mapped_data() { return _mapped_data; }
+void common_buffer::flush_memory() const {
+  vma::Allocator(allocator).flushAllocation(allocation, 0, _orig_size);
+}
 
 size_t reduce(const std::initializer_list<size_t> &sizes, const size_t aligment) {
   size_t all_size = 0;
