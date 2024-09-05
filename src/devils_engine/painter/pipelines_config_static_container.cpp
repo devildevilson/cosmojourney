@@ -27,12 +27,12 @@ const phmap::flat_hash_map<std::string, graphics_pipeline_create_config> default
       uint32_t(vk::PrimitiveTopology::eTriangleList), false,
 
       false, false, 
-      uint32_t(vk::PolygonMode::eFill), uint32_t(vk::CullModeFlagBits::eFrontAndBack), uint32_t(vk::FrontFace::eCounterClockwise),
+      uint32_t(vk::PolygonMode::eFill), uint32_t(vk::CullModeFlagBits::eNone), uint32_t(vk::FrontFace::eCounterClockwise),
       { false, 0.0f, 0.0f, 0.0f },
       1.0f,
 
       uint32_t(vk::SampleCountFlagBits::e1),
-      { false, 0.0f, {0} },
+      { false, 1.0f, {} },
       { false, false },
 
       false, false, uint32_t(vk::CompareOp::eLess),

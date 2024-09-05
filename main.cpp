@@ -288,9 +288,15 @@ int main(int argc, char const *argv[]) {
     cmd_qs->set_childs(cmd_rp);
   }
 
-  const size_t target_fps = 1000000.0 / 60.0;
+  const size_t target_fps = 1000000.0 / 144.0;
 
   // чет все глючит и фреймы мне не показывает почему?
+  // короче говоря 2 проблемы: 
+  // vk::CullModeFlagBits::eFrontAndBack ЭТО КУЛЛИНГ ОБЕИХ СТОРОН ТРЕУГОЛЬНКА
+  // А ЗНАЧИТ НИЧЕГО РИСВАТЬСЯ НЕ БУДЕТ
+  // vkPipelineMultisampleStateCreateInfo - указываем количество семплов в изображении
+  // и можем указать маски для шейдера, ЕСЛИ УКАЗЫВАЕМ ТО МАСКА ДОЛЖНА БЫТЬ НЕ НОЛЬ
+  // ЧТОБЫ ХОТЬ ЧТО ТО УВИДЕТЬ
 
   size_t frame_counter = 0;
   auto tp = std::chrono::high_resolution_clock::now();
@@ -308,9 +314,9 @@ int main(int argc, char const *argv[]) {
     std::this_thread::sleep_until(next_tp);
   }
 
-  const size_t one_second = 1000ull * 1000ull * 1000ull;
-  const auto res = vk::Result(psys.wait_frame(one_second));
-  if (res != vk::Result::eSuccess) utils::error("Wait for prev frame returned '{}'", vk::to_string(res));
+  //const size_t one_second = 1000ull * 1000ull * 1000ull;
+  //const auto res = vk::Result(psys.wait_frame(one_second));
+  //if (res != vk::Result::eSuccess) utils::error("Wait for prev frame returned '{}'", vk::to_string(res));
 
   // блен надо свопчеин раньше чем сюрфейс удалять... сюрфейс надо просто передать в класс свопчейна
   //painter::destroy_surface(gc->instance, surf);

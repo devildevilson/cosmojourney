@@ -144,7 +144,7 @@ uint32_t simple_graphics_pipeline::recompile_shaders() {
   pm.lineWidth(conf->line_width);
 
   pm.rasterizationSamples(static_cast<vk::SampleCountFlagBits>(conf->rasterization_samples));
-  pm.sampleShading(conf->sample_shading.enable, conf->sample_shading.min_sample_shading, reinterpret_cast<const vk::SampleMask*>(conf->sample_shading.masks));
+  pm.sampleShading(conf->sample_shading.enable, conf->sample_shading.min_sample_shading, conf->sample_shading.masks.size() != 0 ? conf->sample_shading.masks.data() : nullptr);
   pm.multisampleCoverage(conf->multisample_coverage.alpha_to_coverage, conf->multisample_coverage.alpha_to_one);
 
   pm.depthTest(conf->depth_test);

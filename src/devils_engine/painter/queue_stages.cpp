@@ -170,7 +170,8 @@ queue_present::~queue_present() noexcept {
 }
 
 void queue_present::begin() {
-  
+  //const size_t timeout = 1000ull * 1000ull * 1000ull; // 1 секунда
+  //main->wait(timeout);
 
   // 1) это пробежать клир
   main->clear();
@@ -178,7 +179,8 @@ void queue_present::begin() {
 
 uint32_t queue_present::acquire_next_image() {
   const size_t timeout = 1000ull * 1000ull * 1000ull; // 1 секунда
-  return fram->acquire_next_image(timeout, signal, fence);
+  return fram->acquire_next_image(timeout, signal, VK_NULL_HANDLE);
+  //fence
 }
 
 void queue_present::process() {
@@ -192,12 +194,12 @@ void queue_present::process() {
 
   {
     //utils::time_log tl("image fence");
-    const size_t timeout = 1000ull * 1000ull * 1000ull; // 1 секунда
+    //const size_t timeout = 1000ull * 1000ull * 1000ull; // 1 секунда
 
-    vk::Device d(device);
-    const auto res = d.waitForFences(vk::Fence(fence), VK_TRUE, timeout);
-    if (res != vk::Result::eSuccess) utils::error("Wait for frame fence took too long. Error: {}", vk::to_string(res));
-    d.resetFences(vk::Fence(fence));
+    //vk::Device d(device);
+    //const auto res = d.waitForFences(vk::Fence(fence), VK_TRUE, timeout);
+    //if (res != vk::Result::eSuccess) utils::error("Wait for frame fence took too long. Error: {}", vk::to_string(res));
+    //d.resetFences(vk::Fence(fence));
   }
 
   // 2) это пробежать бегин 
@@ -215,11 +217,12 @@ uint32_t queue_present::present() const {
   //signal
   const vk::Semaphore semaphores[] = { main->signal };
   const size_t sem_size = sizeof(semaphores) / sizeof(semaphores[0]);
-  vk::Result local_res = vk::Result::eSuccess;
+  //vk::Result local_res = vk::Result::eSuccess;
 
   //utils::println("queue_present", reinterpret_cast<size_t>(this), "current_image_index", fram->current_image_index);
   vk::PresentInfoKHR pi(sem_size, semaphores, 1, (vk::SwapchainKHR*)&sw_p->swapchain, &fram->current_image_index, nullptr); // &local_res
   const auto res = vk::Queue(queue).presentKHR(pi);
+  //if (local_res != vk::Result::eSuccess) utils::error("{}", vk::to_string(local_res));
   return uint32_t(res);
 }
 

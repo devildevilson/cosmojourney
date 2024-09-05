@@ -107,8 +107,8 @@ void simple_render_pass::create_render_pass_raw(const load_ops &load, const stor
     rpm.attachmentFinalLayout(vk::ImageLayout::ePresentSrcKHR);
     rpm.attachmentLoadOp(make_load_op(load[i])); // если это первый рендер пасс, то нам бы его чистить
     rpm.attachmentStoreOp(make_store_op(store[i]));
-    rpm.attachmentStencilLoadOp(make_load_op(load[i]));
-    rpm.attachmentStencilStoreOp(make_store_op(store[i]));
+    rpm.attachmentStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    rpm.attachmentStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
   }
 
   std::vector<std::tuple<uint32_t, uint32_t>> access_masks(create_data->subpasses.size(), std::make_tuple(0,0));
@@ -189,6 +189,7 @@ void simple_render_pass::create_render_pass_raw(const load_ops &load, const stor
     const auto next_subpass = s == create_data->subpasses.size()-1 ? VK_SUBPASS_EXTERNAL : s;
     rpm.dependencyBegin(prev_subpass, next_subpass);
     rpm.dependencyDependencyFlags(vk::DependencyFlagBits::eByRegion);
+    //rpm.dependencyDependencyFlags(vk::DependencyFlagBits(0));
     rpm.dependencySrcAccessMask(static_cast<vk::AccessFlags>(src_access));
     rpm.dependencySrcStageMask(static_cast<vk::PipelineStageFlags>(src_stage));
     rpm.dependencyDstAccessMask(static_cast<vk::AccessFlags>(dst_access));

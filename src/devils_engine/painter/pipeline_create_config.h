@@ -80,7 +80,7 @@ struct graphics_pipeline_create_config {
   float line_width;
 
   uint32_t rasterization_samples;
-  struct sample_shading_t { bool enable; float min_sample_shading; uint32_t masks[16]; } sample_shading;
+  struct sample_shading_t { bool enable; float min_sample_shading; std::vector<uint32_t> masks; } sample_shading;
   struct multisample_coverage_t { bool alpha_to_coverage; bool alpha_to_one; } multisample_coverage;
   
   bool depth_test;

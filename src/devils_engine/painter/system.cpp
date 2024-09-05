@@ -19,7 +19,12 @@ system::system() :
   recompiling_shaders(nullptr),
   submiter_counter(0)
 {}
-system::~system() noexcept {}
+system::~system() noexcept {
+  const size_t timeout = 1000000000;
+  for (const auto &ptr : frames_presenters) {
+    ptr->wait(timeout);
+  }
+}
 
 uint32_t system::recompile_shaders() {
   uint32_t return_code = 0;

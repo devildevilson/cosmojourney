@@ -53,7 +53,7 @@ static uint32_t combine_access_masks(const subpass_attachment_type type, const u
 }
 
 static vk::ClearValue make_clear_value(const subpass_attachment_type type, const uint32_t format) {
-  return format_is_depth_or_stencil(format) ? vk::ClearValue(vk::ClearDepthStencilValue()) : vk::ClearValue(vk::ClearColorValue(0.0f, 1.0f, 0.0f, 1.0f));
+  return format_is_depth_or_stencil(format) ? vk::ClearValue(vk::ClearDepthStencilValue()) : vk::ClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f));
 }
 
 //render_pass_main::render_pass_main(VkDevice device, attachments_container* container, const render_pass_data_t &data) :
