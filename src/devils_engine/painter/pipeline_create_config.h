@@ -135,8 +135,18 @@ struct subpass_data_t {
   std::vector<attachment> attachments;
 };
 
+struct attachment_description_t {
+  std::string initial_state;
+  std::string final_state;
+  std::string load_op;
+  std::string store_op;
+  std::string stencil_load_op;
+  std::string stencil_store_op;
+};
+
 struct render_pass_data_t {
   std::string name;
+  std::vector<attachment_description_t> descriptions;
   // их должно быть минимум два, последний всегда внешний
   std::vector<subpass_data_t> subpasses;
 };

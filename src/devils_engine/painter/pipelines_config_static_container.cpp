@@ -60,6 +60,16 @@ const phmap::flat_hash_map<std::string, render_pass_data_t> default_render_pass_
     render_pass_data_t{
       "default",
       {
+        attachment_description_t{
+          "undefined",
+          "present",
+          "clear",
+          "keep",
+          "dont_care",
+          "dont_care",
+        }
+      },
+      {
         subpass_data_t{
         "main",
         {subpass_data_t::attachment{

@@ -6,12 +6,38 @@
 #include "utils/named_serializer.h"
 #include "utils/fileio.h"
 #include "pipelines_config_static_container.h"
+#include "common.h"
 
 #include <filesystem>
 namespace fs = std::filesystem;
 
 namespace devils_engine {
 namespace painter {
+
+const std::string_view image_target_strs[] = {
+#define X(name) #name ,
+  DEVILS_ENGINE_PAINTER_IMAGE_TARGET_LIST
+#undef X
+};
+const size_t image_target_strs_count = sizeof(image_target_strs) / sizeof(image_target_strs[0]);
+
+const phmap::flat_hash_map<std::string_view, image_target::values> image_target_map = {
+#define X(name) std::make_pair(#name, image_target::name),
+  DEVILS_ENGINE_PAINTER_IMAGE_TARGET_LIST
+#undef X
+};
+
+std::string_view image_target::to_string(const image_target::values val) {
+  if (uint32_t(val) >= image_target_strs_count) return std::string_view();
+  return image_target_strs[val];
+}
+
+image_target::values image_target::from_string(const std::string_view &str) {
+  const auto itr = image_target_map.find(str);
+  if (itr == image_target_map.end()) return image_target::invalid;
+  return itr->second;
+}
+
 
 system::system() : 
   surface(VK_NULL_HANDLE),
