@@ -1,4 +1,4 @@
-#include "system.h"
+#include "resource_system.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 
 namespace devils_engine {
   namespace demiurg {
-    system::type::type(
+    resource_system::type::type(
       std::string name,
       std::string ext,
       const size_t allocator_size,
@@ -31,7 +31,7 @@ namespace devils_engine {
       createf(std::move(create))
     {}
 
-    resource_interface *system::type::create() { 
+    resource_interface *resource_system::type::create() { 
       auto ptr = createf(allocator);
       ptr->type = name;
       if (type_list == nullptr) type_list = ptr;
@@ -39,25 +39,25 @@ namespace devils_engine {
       return ptr;
     }
 
-    void system::type::destroy(resource_interface *ptr) {
+    void resource_system::type::destroy(resource_interface *ptr) {
       if (type_list == ptr) type_list = type_list->exemplary_next(type_list);
       allocator.destroy(ptr);
     }
 
     // по умолчанию что можно в путь положить?
-    system::system() noexcept : root_path("./mods/"), modules_list_name() {}
-    system::system(std::string root) noexcept : root_path(std::move(root)), modules_list_name() {
+    resource_system::resource_system() noexcept : root_path("./mods/"), modules_list_name() {}
+    resource_system::resource_system(std::string root) noexcept : root_path(std::move(root)), modules_list_name() {
       if (root_path[root_path.size() - 1] != '/') root_path += '/';
     }
 
-    system::~system() noexcept { 
+    resource_system::~resource_system() noexcept { 
       clear();
       for (auto & [name, ptr] : types) {
         types_pool.destroy(ptr);
       }
     }
 
-    resource_interface *system::create_resource(const std::string_view &id, const std::string_view &extension) {
+    resource_interface *resource_system::create(const std::string_view &id, const std::string_view &extension) {
       auto t = find_proper_type(id, extension);
       if (t == nullptr) return nullptr;
       auto ptr = t->create();
@@ -65,18 +65,18 @@ namespace devils_engine {
       return ptr;
     }
 
-    system::type* system::find_type(const std::string_view &id, const std::string_view &extension) const { return find_proper_type(id, extension); }
+    //resource_system::type* resource_system::find_type(const std::string_view &id, const std::string_view &extension) const { return find_proper_type(id, extension); }
 
-    std::string_view system::root() const { return root_path; }
-    void system::set_root(std::string root) { root_path = std::move(root); }
-    std::string_view system::modules_list() const { return modules_list_name; }
-    void system::set_modules_list(std::string modules_list) { modules_list_name = std::move(modules_list); }
+    std::string_view resource_system::root() const { return root_path; }
+    void resource_system::set_root(std::string root) { root_path = std::move(root); }
+    std::string_view resource_system::modules_list() const { return modules_list_name; }
+    void resource_system::set_modules_list(std::string modules_list) { modules_list_name = std::move(modules_list); }
 
     static bool lazy_compare(const std::string_view &a, const std::string_view &b) {
       return a.substr(0, b.size()) == b;
     }
 
-    view<> system::find(const std::string_view &filter) const {
+    view<> resource_system::find(const std::string_view &filter) const {
       const auto span = raw_find(filter);
       return view<>(span.begin(), span.end());
     }
@@ -87,7 +87,7 @@ namespace devils_engine {
     // но потом люди могут захотеть сделать что угодно
     // это все равно удобно для тех кто знает иерархию
     // но и +м надо сделать чисто фильтр по типу
-    std::span<resource_interface * const> system::raw_find(const std::string_view &filter) const {
+    std::span<resource_interface * const> resource_system::raw_find(const std::string_view &filter) const {
       if (filter == "") return std::span(resources);
 
       const auto itr = std::lower_bound(resources.begin(), resources.end(), filter, [] (const resource_interface* const res, const std::string_view &value) {
@@ -144,7 +144,7 @@ namespace devils_engine {
     // 1) в рутовой папке мы ищем все файлы и папки
     // 2) файлы и папки это модули на основе которых мы построим дерево ресурсов
     // теперь нужно сделать загрузку через модули
-    void system::parse_file_tree() {
+    void resource_system::parse_file_tree() {
       clear();
 
       phmap::flat_hash_map<std::string_view, resource_interface *> loaded;
@@ -224,162 +224,162 @@ namespace devils_engine {
       }*/
     }
 
-    std::vector<system::list_entry> system::load_list(const std::string_view &list_name) const {
-      // лист по умолчанию (чист релизная папка или архив)
-      // нужно проверить... что берем по умолчанию? наверное файлик core.zip что то такое
-      if (list_name.empty()) {
-        const auto core_file = root_path + "core.zip";
-        const auto core_folder = root_path + "core/";
-        if (file_io::exists(core_file)) {
-          std::vector<list_entry> e{ list_entry{ core_file, "", "" } };
-          return e;
-        } else if (file_io::exists(core_folder)) {
-          std::vector<list_entry> e{ list_entry{ core_folder, "", "" } };
-          return e;
-        } 
-        
-        utils::error("'{}' is not exist???", core_file);
-      }
+    //std::vector<resource_system::list_entry> resource_system::load_list(const std::string_view &list_name) const {
+    //  // лист по умолчанию (чист релизная папка или архив)
+    //  // нужно проверить... что берем по умолчанию? наверное файлик core.zip что то такое
+    //  if (list_name.empty()) {
+    //    const auto core_file = root_path + "core.zip";
+    //    const auto core_folder = root_path + "core/";
+    //    if (file_io::exists(core_file)) {
+    //      std::vector<list_entry> e{ list_entry{ core_file, "", "" } };
+    //      return e;
+    //    } else if (file_io::exists(core_folder)) {
+    //      std::vector<list_entry> e{ list_entry{ core_folder, "", "" } };
+    //      return e;
+    //    } 
+    //    
+    //    utils::error("'{}' is not exist???", core_file);
+    //  }
 
-      const auto path = root_path + std::string(list_name) + ".json";
-      if (!file_io::exists(path)) utils::error("File '{}' not exists", path);
+    //  const auto path = root_path + std::string(list_name) + ".json";
+    //  if (!file_io::exists(path)) utils::error("File '{}' not exists", path);
 
-      const auto cont = file_io::read(path);
-      std::vector<list_entry> list_entries;
-      const auto ec = utils::from_json(list_entries, cont);
-      if (ec) {
-        utils::error("Could not parse json '{}' for struct '{}' (err code: {})", path, "std::vector<list_entry>", static_cast<size_t>(ec.ec));
-      }
+    //  const auto cont = file_io::read(path);
+    //  std::vector<list_entry> list_entries;
+    //  const auto ec = utils::from_json(list_entries, cont);
+    //  if (ec) {
+    //    utils::error("Could not parse json '{}' for struct '{}' (err code: {})", path, "std::vector<list_entry>", static_cast<size_t>(ec.ec));
+    //  }
 
-      return list_entries;
-    }
+    //  return list_entries;
+    //}
 
-    static std::tuple<std::string_view, std::string_view> get_name_ext(const std::string_view &path) {
-      const auto ext = path.substr(path.rfind('.'));
-      const auto name = path.substr(0, path.rfind('.')).substr(path.rfind('/')+1);
-      return std::make_tuple(name, ext);
-    }
+    //static std::tuple<std::string_view, std::string_view> get_name_ext(const std::string_view &path) {
+    //  const auto ext = path.substr(path.rfind('.'));
+    //  const auto name = path.substr(0, path.rfind('.')).substr(path.rfind('/')+1);
+    //  return std::make_tuple(name, ext);
+    //}
 
-    void system::load_modules(std::vector<list_entry> ms) {
-      modules.clear();
+    //void resource_system::load_modules(std::vector<list_entry> ms) {
+    //  modules.clear();
 
-      // примерно теже данные можно использовать для передачи информации о том
-      // какие моды используются при подключении к серверу
+    //  // примерно теже данные можно использовать для передачи информации о том
+    //  // какие моды используются при подключении к серверу
 
-      for (const auto &entry : ms) {
-        fs::directory_entry e(entry.path);
-        if (!e.exists()) {
-          // ошибка? не, попробуем все равно загрузиться
-          utils::warn("Could not find module '{}'", entry.path);
-          continue;
-        }
+    //  for (const auto &entry : ms) {
+    //    fs::directory_entry e(entry.path);
+    //    if (!e.exists()) {
+    //      // ошибка? не, попробуем все равно загрузиться
+    //      utils::warn("Could not find module '{}'", entry.path);
+    //      continue;
+    //    }
 
-        const auto ftime = utils::file_timestamp(e);
-        const auto datetime = utils::format_localtime(ftime, utils::ISO_datetime_format);
+    //    const auto ftime = utils::file_timestamp(e);
+    //    const auto datetime = utils::format_localtime(ftime, utils::ISO_datetime_format);
 
-        if (!e.is_directory()) {
-          const auto [name, ext] = get_name_ext(entry.path);
-          const auto cont = file_io::read<uint8_t>(entry.path);
-          const auto hash = utils::SHA256::easy(cont.data(), cont.size());
-          if (!entry.hash.empty() && hash != entry.hash) {
-            utils::warn("Module '{}' mismatch (path: {})\nCur hash: {}\nExp hash: {}\nCur date: {}\nExp date: {}", name, entry.path, hash, entry.hash, datetime, entry.file_date);
-          }
-        }
+    //    if (!e.is_directory()) {
+    //      const auto [name, ext] = get_name_ext(entry.path);
+    //      const auto cont = file_io::read<uint8_t>(entry.path);
+    //      const auto hash = utils::SHA256::easy(cont.data(), cont.size());
+    //      if (!entry.hash.empty() && hash != entry.hash) {
+    //        utils::warn("Module '{}' mismatch (path: {})\nCur hash: {}\nExp hash: {}\nCur date: {}\nExp date: {}", name, entry.path, hash, entry.hash, datetime, entry.file_date);
+    //      }
+    //    }
 
-        if (e.is_directory()) {
-          auto mem = std::make_unique<folder_module>(this, entry.path);
-          modules.push_back(std::move(mem));
-        } else {
-          const auto [name, ext] = get_name_ext(entry.path);
-          // тут надо проверить ext, в принципе наверное тут будет только .mod и .zip
-          if (ext == "mod" || ext == "zip") {
-            utils::error("Zip archive is not implemented yet");
-          } else {
-            // (сюда попасть мы никак не должны)
-            utils::warn("Module extension '{}' is not supported", ext);
-            continue;
-          }
-        }
-      }
-    }
+    //    if (e.is_directory()) {
+    //      auto mem = std::make_unique<folder_module>(this, entry.path);
+    //      modules.push_back(std::move(mem));
+    //    } else {
+    //      const auto [name, ext] = get_name_ext(entry.path);
+    //      // тут надо проверить ext, в принципе наверное тут будет только .mod и .zip
+    //      if (ext == "mod" || ext == "zip") {
+    //        utils::error("Zip archive is not implemented yet");
+    //      } else {
+    //        // (сюда попасть мы никак не должны)
+    //        utils::warn("Module extension '{}' is not supported", ext);
+    //        continue;
+    //      }
+    //    }
+    //  }
+    //}
 
-    void system::load_default_modules() {
-      auto list = load_list(modules_list_name);
-      load_modules(std::move(list));
-    }
+    //void resource_system::load_default_modules() {
+    //  auto list = load_list(modules_list_name);
+    //  load_modules(std::move(list));
+    //}
 
-    void system::parse_resources() {
-      clear();
+    //void resource_system::parse_resources() {
+    //  clear();
 
-      for (const auto &m : modules) { m->open(); }
-      for (const auto &m : modules) { m->resources_list(all_resources); }
-      for (const auto &m : modules) { m->close(); }
+    //  for (const auto &m : modules) { m->open(); }
+    //  for (const auto &m : modules) { m->resources_list(all_resources); }
+    //  for (const auto &m : modules) { m->close(); }
 
-      phmap::flat_hash_map<std::string_view, resource_interface *> loaded;
-      for (const auto &res : all_resources) {
-        auto t = find_proper_type(res->id, res->ext);
-        if (t == nullptr) {
-          utils::warn("Could not find proper type for resource '{}' extension '{}'. Skip", res->id, res->ext);
-          continue;
-        }
+    //  phmap::flat_hash_map<std::string_view, resource_interface *> loaded;
+    //  for (const auto &res : all_resources) {
+    //    auto t = find_proper_type(res->id, res->ext);
+    //    if (t == nullptr) {
+    //      utils::warn("Could not find proper type for resource '{}' extension '{}'. Skip", res->id, res->ext);
+    //      continue;
+    //    }
 
-        // проверим загружали ли мы уже вещи
-        auto itr = loaded.find(res->id);
-        if (itr == loaded.end()) {
-          loaded[res->id] = res;
-          resources.push_back(res);
-        } else {
-          auto other_ptr = itr->second;
-          for (; other_ptr != nullptr &&
-                 other_ptr->module_name != res->module_name;
-               other_ptr = other_ptr->replacement_next(itr->second)) {}
+    //    // проверим загружали ли мы уже вещи
+    //    auto itr = loaded.find(res->id);
+    //    if (itr == loaded.end()) {
+    //      loaded[res->id] = res;
+    //      resources.push_back(res);
+    //    } else {
+    //      auto other_ptr = itr->second;
+    //      for (; other_ptr != nullptr &&
+    //             other_ptr->module_name != res->module_name;
+    //           other_ptr = other_ptr->replacement_next(itr->second)) {}
 
-          // тут мы реплейсмент меняем и с ним уходит сапплиментари
-          utils::println("res", res->module_name, res->id, "other_ptr", other_ptr != nullptr);
-          if (other_ptr != nullptr) {
-            // модули совпали, найдем у кого меньший индекс среди расширений
-            const size_t other_place = t->ext.find(other_ptr->ext);
-            const size_t res_place = t->ext.find(res->ext);
-            if (res_place < other_place) {
-              if (other_ptr == itr->second) {
-                auto arr_itr = std::find(resources.begin(), resources.end(), other_ptr);
-                (*arr_itr) = res;
-              }
+    //      // тут мы реплейсмент меняем и с ним уходит сапплиментари
+    //      utils::println("res", res->module_name, res->id, "other_ptr", other_ptr != nullptr);
+    //      if (other_ptr != nullptr) {
+    //        // модули совпали, найдем у кого меньший индекс среди расширений
+    //        const size_t other_place = t->ext.find(other_ptr->ext);
+    //        const size_t res_place = t->ext.find(res->ext);
+    //        if (res_place < other_place) {
+    //          if (other_ptr == itr->second) {
+    //            auto arr_itr = std::find(resources.begin(), resources.end(), other_ptr);
+    //            (*arr_itr) = res;
+    //          }
 
-              auto old_repl = other_ptr->replacement_next(other_ptr);
-              other_ptr->replacement_remove();
-              res->replacement_radd(old_repl);
+    //          auto old_repl = other_ptr->replacement_next(other_ptr);
+    //          other_ptr->replacement_remove();
+    //          res->replacement_radd(old_repl);
 
-              res->supplementary_radd(other_ptr);
+    //          res->supplementary_radd(other_ptr);
 
-              // забыл поменять указатель в хеш мапе
-              itr->second = res;
-            } else {
-              other_ptr->supplementary_radd(res);
-            }
-          } else {
-            // новый ресурс по модулю
-            // тут теперь нужно определить у кого меньший индекс 
-            // примерно так же как и в случае с расширениями
-            itr->second->replacement_radd(res);
-          }
-        }
-      }
+    //          // забыл поменять указатель в хеш мапе
+    //          itr->second = res;
+    //        } else {
+    //          other_ptr->supplementary_radd(res);
+    //        }
+    //      } else {
+    //        // новый ресурс по модулю
+    //        // тут теперь нужно определить у кого меньший индекс 
+    //        // примерно так же как и в случае с расширениями
+    //        itr->second->replacement_radd(res);
+    //      }
+    //    }
+    //  }
 
-      std::sort(resources.begin(), resources.end(), [] (auto a, auto b) {
-        std::less<std::string_view> l;
-        return l(a->id, b->id);
-      });
+    //  std::sort(resources.begin(), resources.end(), [] (auto a, auto b) {
+    //    std::less<std::string_view> l;
+    //    return l(a->id, b->id);
+    //  });
 
-      for (const auto ptr : resources) {
-        utils::println(ptr->module_name, ptr->id, ptr->ext);
-      }
-    }
+    //  for (const auto ptr : resources) {
+    //    utils::println(ptr->module_name, ptr->id, ptr->ext);
+    //  }
+    //}
 
-    void system::open_modules() { for (const auto &m : modules) { m->open(); } }
-    void system::close_modules() { for (const auto &m : modules) { m->close(); } }
+    //void resource_system::open_modules() { for (const auto &m : modules) { m->open(); } }
+    //void resource_system::close_modules() { for (const auto &m : modules) { m->close(); } }
 
-    void system::clear() {
+    void resource_system::clear() {
       for (auto ptr : all_resources) {
         const auto itr = types.find(ptr->type);
         assert(itr != types.end());
@@ -389,12 +389,12 @@ namespace devils_engine {
       all_resources.clear();
     }
 
-    size_t system::resources_count() const noexcept { return resources.size(); }
-    size_t system::all_resources_count() const noexcept { return all_resources.size(); }
+    size_t resource_system::resources_count() const noexcept { return resources.size(); }
+    size_t resource_system::all_resources_count() const noexcept { return all_resources.size(); }
 
     // if type is models/monster1
     // then something/somesome/abc/models/monster1 is prior over models/monster1/something/somesome/abc
-    system::type * system::find_proper_type(const std::string_view &id, const std::string_view &extension) const {
+    resource_system::type * resource_system::find_proper_type(const std::string_view &id, const std::string_view &extension) const {
       type *t = nullptr;
       std::string_view current_full_str = id;
       while (current_full_str.size() > 0 && t == nullptr) {
@@ -524,10 +524,10 @@ namespace devils_engine {
       return static_cast<state::values>(_state);
     }
 
-    void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type) {
+    /*void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type) {
       std::ifstream file(file_name, std::ios_base::openmode(type));
       if (!file) utils::error("Could not load file {}", file_name);
       buffer = std::vector<char>((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    }
+    }*/
   }
 }

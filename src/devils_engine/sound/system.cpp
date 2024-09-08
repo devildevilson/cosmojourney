@@ -8,15 +8,9 @@
 #include "AL/alext.h"
 #include "al_helper.h"
 
-#include "sound/mp3_decoder.h"
-#include "sound/ogg_decoder.h"
-#include "sound/wav_decoder.h"
-#include "sound/flac_decoder.h"
-#include "sound/pcm_decoder.h"
 #include "utils/core.h"
 
 #define SOUND_LOADING_COEFFICIENT 1.0f
-#define SMALL_SOUND_COEFFICIENT 5.0f
 
 namespace devils_engine {
   namespace sound {
@@ -345,50 +339,6 @@ namespace devils_engine {
     {}
 
     const size_t system::volume_set::sound_types_count;
-    const std::string_view type_names[] = {
-#define X(name) #name ,
-      SOUND_SYSTEM_EXTENCION_LIST
-#undef X
-
-      "undefined"
-    };
-    std::string_view system::resource::type_to_string(const size_t index) {
-      return type_names[index];
-    }
-
-    system::resource::resource() : type(type::undefined) {}
-    system::resource::resource(std::string id, enum type type, std::vector<char> buffer) :
-      id(std::move(id)),
-      type(type),
-      buffer(std::move(buffer))
-    {
-      if (type == type::mp3) {
-        sound.reset(new  mp3_decoder(this->id, this->buffer.data(), this->buffer.size()));
-      } else if (type == type::wav) {
-        sound.reset(new  wav_decoder(this->id, this->buffer.data(), this->buffer.size()));
-      } else if (type == type::ogg) {
-        sound.reset(new  ogg_decoder(this->id, this->buffer.data(), this->buffer.size()));
-      } else if (type == type::flac) {
-        sound.reset(new flac_decoder(this->id, this->buffer.data(), this->buffer.size()));
-      } else {
-        utils::error("Invalid sound resource type {}", size_t(type));
-      }
-
-      const size_t frames_treshold = second_to_pcm_frames(SMALL_SOUND_COEFFICIENT, sound->sample_rate()); // , sound->channels()
-      if (sound->frames_count() < frames_treshold) {
-        auto dec = new pcm_decoder(sound.get());
-        sound.reset(dec);
-        this->type = type::pcm;
-      }
-    }
-
-    system::resource::~resource() noexcept {
-      //sound->~decoder();
-    }
-
-    double system::resource::duration() const {
-      return pcm_frames_to_seconds(sound->frames_count(), sound->sample_rate());
-    }
 
     system::sound_processing_data::sound_processing_data() noexcept
       : res(nullptr), time(0), loaded_frames(0), processed_frames(0), id(0) {}

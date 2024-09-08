@@ -2,7 +2,7 @@
 
 #include "utils/core.h"
 
-#include "system.h"
+#include "resource_system.h"
 
 #include "utils/mz.h"
 #include "utils/mz_zip.h"
@@ -11,7 +11,7 @@
 
 namespace devils_engine {
 namespace demiurg {
-zip_module::zip_module(system* sys, std::string root) noexcept : module_interface(sys, std::move(root)), native_handle(nullptr) {
+zip_module::zip_module(std::string root) noexcept : module_interface(std::move(root)), native_handle(nullptr) {
   const auto view = std::string_view(_path);
   module_name = view.substr(view.rfind('/')+1).substr(0, view.rfind('.'));
 }
@@ -52,7 +52,45 @@ static std::tuple<std::string_view, std::string_view, std::string_view> parse_pa
 // зачем я массив передаю? черт его знает я все равно завишу от указателя на систему
 // как будто как раз тут нужно передавать указатель на систему, где мы и создадим новый ресурс...
 // ну да выглядит как недостаток интерфейса
-void zip_module::resources_list(std::vector<resource_interface*> &arr) const {
+//void zip_module::resources_list(std::vector<resource_interface*> &arr) const {
+//  int32_t err = MZ_OK;
+//  err = mz_zip_reader_goto_first_entry(native_handle);
+//  while (err == MZ_OK) {
+//    const int32_t is_dir = mz_zip_reader_entry_is_dir(native_handle);
+//
+//    if (is_dir == MZ_OK) {
+//      err = mz_zip_reader_goto_next_entry(native_handle);
+//      continue;
+//    }
+//
+//    mz_zip_file *file_info = nullptr;
+//    auto cur = mz_zip_reader_entry_get_info(native_handle, &file_info);
+//    if (cur != MZ_OK) utils::error("Could not get entry from archive '{}'", _path);
+//
+//    utils::println(file_info->filename, file_info->uncompressed_size);
+//    std::string file_path = file_info->filename;
+//
+//    const auto [ id, name, ext ] = parse_path(file_path);
+//    if (name == "." || name == "..") continue;
+//
+//    auto t = sys->find_type(id, ext);
+//
+//    if (t == nullptr) {
+//      utils::warn("Could not find proper resource type for file '{}'. Skip", file_path);
+//      continue;
+//    }
+//
+//    auto res = t->create();
+//    res->set(std::move(file_path), module_name, id, ext);
+//    res->module = this;
+//    res->raw_size = file_info->uncompressed_size;
+//    arr.push_back(res);
+//
+//    err = mz_zip_reader_goto_next_entry(native_handle);
+//  }
+//}
+
+void zip_module::resources_list(resource_system* s) const {
   int32_t err = MZ_OK;
   err = mz_zip_reader_goto_first_entry(native_handle);
   while (err == MZ_OK) {
@@ -73,18 +111,10 @@ void zip_module::resources_list(std::vector<resource_interface*> &arr) const {
     const auto [ id, name, ext ] = parse_path(file_path);
     if (name == "." || name == "..") continue;
 
-    auto t = sys->find_type(id, ext);
-
-    if (t == nullptr) {
-      utils::warn("Could not find proper resource type for file '{}'. Skip", file_path);
-      continue;
-    }
-
-    auto res = t->create();
+    auto res = s->create(id, ext);
     res->set(std::move(file_path), module_name, id, ext);
     res->module = this;
     res->raw_size = file_info->uncompressed_size;
-    arr.push_back(res);
 
     err = mz_zip_reader_goto_next_entry(native_handle);
   }

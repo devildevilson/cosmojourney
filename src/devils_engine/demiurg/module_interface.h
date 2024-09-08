@@ -9,13 +9,13 @@
 namespace devils_engine {
 namespace demiurg {
   class resource_interface;
-  class system;
+  class resource_system;
 
   // название, размер и проч полезное
   class module_interface {
   public:
     // нужен чтобы найти подходящий тип объекта
-    inline module_interface(system *sys, std::string path) noexcept : sys(sys), _path(std::move(path)) {}
+    inline module_interface(std::string path) noexcept : _path(std::move(path)) {}
     virtual ~module_interface() noexcept = default;
 
     inline std::string_view path() const { return _path; }
@@ -23,7 +23,8 @@ namespace demiurg {
     virtual void open() = 0;
     virtual void close() = 0;
     virtual bool is_openned() const = 0;
-    virtual void resources_list(std::vector<resource_interface*> &arr) const = 0;
+    //virtual void resources_list(std::vector<resource_interface*> &arr) const = 0;
+    virtual void resources_list(resource_system* system) const = 0;
     // может быть потребуется индекс, нет индекс не потребуется
     // нужно заменить на обычный стринг, в минизипе нужно указать c_str
     // в этой строке нужно отправлять относительный путь до файла, но с именем файла и расширением
@@ -43,7 +44,7 @@ namespace demiurg {
       return mem;
     }
   protected:
-    system *sys; // указать путь тут? имеет смысл
+    //system *sys; // указать путь тут? имеет смысл
     std::string _path; // если папка то обязательно нужно добавить '/' на конце
   };
 }

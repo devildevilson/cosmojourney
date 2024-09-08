@@ -1,7 +1,7 @@
 #include "folder_module.h"
 #include "utils/fileio.h"
 #include "utils/core.h"
-#include "demiurg/system.h"
+#include "resource_system.h"
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -47,7 +47,7 @@ namespace demiurg {
     return std::make_tuple(id, name, ext);
   }
 
-  folder_module::folder_module(system* sys, std::string root) noexcept : module_interface(sys, std::move(root))
+  folder_module::folder_module(std::string root) noexcept : module_interface(std::move(root))
   {
       if (_path[_path.size() - 1] != '/') _path += '/';
       const size_t index = _path.rfind('/', _path.size()-1);
@@ -60,36 +60,37 @@ namespace demiurg {
   void folder_module::open() {}
   void folder_module::close() {}
   bool folder_module::is_openned() const { return true; }
-  void folder_module::resources_list(std::vector<resource_interface*> &arr) const {
-    for (const auto &entry : fs::recursive_directory_iterator(_path)) {
-      if (!entry.is_regular_file()) continue;
-      std::string entry_path = entry.path().generic_string();
-      auto file_path = entry_path.substr(_path.size());
 
-      // module_name мы теперь знаем и тут он нам не нужен
-      //std::string_view file_name, ext, id;
-      //parse_path(entry_path, _path, file_name, ext, id);
-      const auto [ id, name, ext ] = parse_path(file_path);
-      if (name == "." || name == "..") continue;
+  //void folder_module::resources_list(std::vector<resource_interface*> &arr) const {
+  //  for (const auto &entry : fs::recursive_directory_iterator(_path)) {
+  //    if (!entry.is_regular_file()) continue;
+  //    std::string entry_path = entry.path().generic_string();
+  //    auto file_path = entry_path.substr(_path.size());
 
-      auto t = sys->find_type(id, ext);
+  //    // module_name мы теперь знаем и тут он нам не нужен
+  //    //std::string_view file_name, ext, id;
+  //    //parse_path(entry_path, _path, file_name, ext, id);
+  //    const auto [ id, name, ext ] = parse_path(file_path);
+  //    if (name == "." || name == "..") continue;
 
-      if (t == nullptr) {
-        utils::warn("Could not find proper resource type for file '{}'. Skip", entry_path);
-        continue;
-      }
+  //    auto t = sys->find_type(id, ext);
 
-      auto res = t->create();
-      // указание пути тоже нужно переделывать
-      // наверное просто самостоятельно положить данные какие нужны
-      //res->set_path(entry_path, _root);
-      // скорее всего тут нужно указать только путь а id и ext вывести из него на месте во избежание проблем
-      res->set(std::move(file_path), module_name, id, ext);
-      res->module = this;
-      res->raw_size = entry.file_size();
-      arr.push_back(res);
-    }
-  }
+  //    if (t == nullptr) {
+  //      utils::warn("Could not find proper resource type for file '{}'. Skip", entry_path);
+  //      continue;
+  //    }
+
+  //    auto res = t->create();
+  //    // указание пути тоже нужно переделывать
+  //    // наверное просто самостоятельно положить данные какие нужны
+  //    //res->set_path(entry_path, _root);
+  //    // скорее всего тут нужно указать только путь а id и ext вывести из него на месте во избежание проблем
+  //    res->set(std::move(file_path), module_name, id, ext);
+  //    res->module = this;
+  //    res->raw_size = entry.file_size();
+  //    arr.push_back(res);
+  //  }
+  //}
 
   // полный путь? тут как будто полный путь передать неполучится, придется собирать строку
   // тут вообще не нужно передавать полный путь !!! ТОЛЬКО относительный
@@ -99,6 +100,28 @@ namespace demiurg {
   // скорее всего реквайр просто закинет путь в поиск в демиурге и если какой то путь будет бредовый то не найдет ничего
   // так нам нужно еще сделать что то вроде require_list("abc/def/asd"), в нем указываем неполный путь
   // require_list вернет массив объектов и должен автоматом преобразовать их в нужные юзертипы
+
+  void folder_module::resources_list(resource_system* s) const {
+    for (const auto &entry : fs::recursive_directory_iterator(_path)) {
+      if (!entry.is_regular_file()) continue;
+      std::string entry_path = entry.path().generic_string();
+      auto file_path = entry_path.substr(_path.size());
+
+      // module_name мы теперь знаем и тут он нам не нужен
+      const auto [ id, name, ext ] = parse_path(file_path);
+      if (name == "." || name == "..") continue;
+
+      auto res = s->create(id, ext);
+      if (res == nullptr) {
+        utils::warn("Could not find proper resource type for file '{}'. Skip", entry_path);
+        continue;
+      }
+
+      res->set(std::move(file_path), module_name, id, ext);
+      res->module = this;
+      res->raw_size = entry.file_size();
+    }
+  }
 
   void folder_module::load_binary(const std::string &path, std::vector<uint8_t> &mem) const {
     mem = file_io::read<uint8_t>(_path+path);
