@@ -8,7 +8,7 @@
 #include "module_interface.h"
 #include "folder_module.h"
 #include "zip_module.h"
-#include "system.h"
+#include "resource_system.h"
 
 #include <filesystem>
 namespace fs = std::filesystem;
@@ -20,6 +20,14 @@ module_system::~module_system() noexcept {}
 
 std::string module_system::path() const {
   return _path;
+}
+
+std::string_view module_system::modules_list() const {
+  return modules_list_name;
+}
+
+void module_system::set_modules_list(std::string modules_list) {
+  modules_list_name = std::move(modules_list);
 }
 
 static std::tuple<std::string_view, std::string_view> get_name_ext(const std::string_view &path) {
@@ -58,7 +66,7 @@ std::vector<module_system::list_entry> module_system::load_list(const std::strin
   return list_entries;
 }
 
-void module_system::load_list(std::vector<list_entry> paths) {
+void module_system::load_modules(std::vector<list_entry> paths) {
   modules.clear();
 
   // как быть с путями
@@ -98,6 +106,11 @@ void module_system::load_list(std::vector<list_entry> paths) {
       }
     }
   }
+}
+
+void module_system::load_default_modules() {
+  auto list = load_list(modules_list_name);
+  load_modules(std::move(list));
 }
 
 void module_system::open_modules() {

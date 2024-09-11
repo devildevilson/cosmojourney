@@ -24,14 +24,18 @@ public:
   ~module_system() noexcept;
 
   std::string path() const;
+  std::string_view modules_list() const;
+  void set_modules_list(std::string modules_list);
 
   std::vector<list_entry> load_list(const std::string_view &list_name) const;
-  void load_list(std::vector<list_entry> paths);
+  void load_modules(std::vector<list_entry> paths);
+  void load_default_modules();
   void open_modules();
   void close_modules();
   void parse_resources(resource_system* sys);
 private:
   std::string _path;
+  std::string modules_list_name;
   std::vector<std::unique_ptr<module_interface>> modules;
 };
 }

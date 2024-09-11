@@ -21,7 +21,8 @@
 #include "utils/bitstream.h"
 #include "utils/string.h"
 #include "utils/fileio.h"
-#include "demiurg/system.h"
+#include "demiurg/module_system.h"
+#include "demiurg/resource_system.h"
 #include "demiurg/modules_listing.h"
 #include "sound_resource.h"
 #include "utils/dice.h"
@@ -200,13 +201,17 @@ int main(int argc, char const *argv[]) {
 
   input::init i(&err_handler);
 
-  demiurg::system dsys(utils::project_folder() + "folder1/");
+  demiurg::module_system msys(utils::project_folder() + "folder1/");
+  demiurg::resource_system dsys(utils::project_folder() + "folder1/");
   // НЕ УКАЗЫВАТЬ ПОСЛЕДНИЙ СЛЕШ (то есть не делать как папки)
   dsys.register_type<painter::shader_source_file>("shaders", "vert,frag");
   dsys.register_type<painter::glsl_source_file>("include", "glsl");
 
-  dsys.load_default_modules();
-  dsys.parse_resources();
+  msys.load_default_modules();
+  msys.parse_resources(&dsys);
+
+  //dsys.load_default_modules();
+  //dsys.parse_resources();
 
   {
     std::vector<demiurg::resource_interface*> resources;
@@ -287,6 +292,14 @@ int main(int argc, char const *argv[]) {
     //cmd_bar1->set_next(cmd_rp); cmd_rp->set_next(cmd_bar2);
     cmd_qs->set_childs(cmd_rp);
   }
+
+  // полезных стандартных лэйаутов на самом деле не очень много
+  // для них можно сделать мэп, другое дело нужно ли повторять один к одному?
+  // возможно имеет смысл сделать image_target
+
+  // наверное имеет смысл подключать VK_KHR_MAINTENANCE1 ?
+  // так можно перевернуть Y координату просто изменив настройки вьюпорта
+  // или использовать Vulkan 1.1
 
   const size_t target_fps = 1000000.0 / 144.0;
 
