@@ -132,7 +132,7 @@ namespace devils_engine {
       return (bytes / channels) / (bits_per_sample/8);
     }
 
-    size_t second_to_pcm_frames(const size_t seconds, const size_t sample_rate) { // , const uint16_t channels
+    size_t second_to_pcm_frames(const double seconds, const size_t sample_rate) { // , const uint16_t channels
       return seconds * sample_rate;
     }
 

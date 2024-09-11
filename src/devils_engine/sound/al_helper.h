@@ -112,7 +112,7 @@ namespace devils_engine {
     uint32_t adjust_bits_per_channel(const uint32_t bits_per_channel);
     size_t pcm_frames_to_bytes(const size_t pcm_frames, const uint16_t channels, const uint32_t bits_per_sample);
     size_t bytes_to_pcm_frames(const size_t bytes, const uint16_t channels, const uint32_t bits_per_sample);
-    size_t second_to_pcm_frames(const size_t seconds, const size_t sample_rate); // , const uint16_t channels
+    size_t second_to_pcm_frames(const double seconds, const size_t sample_rate); // , const uint16_t channels
     //size_t second_to_pcm_frames_mono(const size_t seconds, const size_t sample_rate);
     double pcm_frames_to_seconds(const size_t pcm_frames, const size_t sample_rate);
 

@@ -35,6 +35,8 @@
 
 namespace devils_engine {
 namespace demiurg {
+class module_system;
+
 template <typename T = resource_interface *const>
 class view_iterator : public std::span<resource_interface *const>::iterator {
 public:
@@ -98,7 +100,7 @@ public:
   };*/
 
   resource_system() noexcept;
-  resource_system(std::string root) noexcept;
+  //resource_system(std::string root) noexcept;
   ~resource_system() noexcept;
 
   // ext - укажем через запятую или другой знак, например png,bmp,jpg, то что первое будет считать за основной ресурс
@@ -127,10 +129,10 @@ public:
 
   //resource_system::type* find_type(const std::string_view &id, const std::string_view &extension) const;
 
-  std::string_view root() const;
+  /*std::string_view root() const;
   void set_root(std::string root);
   std::string_view modules_list() const;
-  void set_modules_list(std::string modules_list);
+  void set_modules_list(std::string modules_list);*/
 
   // не указывать расширение файла!
   // поиск по отсортированному массиву поди O(logN + N)
@@ -168,13 +170,13 @@ public:
   // при загрузке ресурсов нужно открыть все модули (ну или по крайней мере модули ресурсов)
 
   // наверное все удалим и заново прочитаем дерево файлов (логично)
-  void parse_file_tree();
+  //void parse_file_tree();
 
   // конфиг сохраняем в другом месте, здесь уже сразу подгружаем созданный конфиг
   //std::vector<list_entry> load_list(const std::string_view &list_name) const;
   //void load_modules(std::vector<list_entry> ms);
   //void load_default_modules();
-  //void parse_resources();
+  void parse_resources(module_system* sys);
 
   //// как я ранее уже упоминал, имеет смысл вынести отсюда модули и оставить это дело только заниматься ресурсами
   //void open_modules();
@@ -185,8 +187,8 @@ public:
   size_t resources_count() const noexcept;
   size_t all_resources_count() const noexcept;
 private:
-  std::string root_path;
-  std::string modules_list_name;
+  //std::string root_path;
+  //std::string modules_list_name;
 
   utils::memory_pool<type, sizeof(type)*100> types_pool;
   phmap::flat_hash_map<std::string_view, type *> types;

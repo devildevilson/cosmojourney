@@ -202,13 +202,13 @@ int main(int argc, char const *argv[]) {
   input::init i(&err_handler);
 
   demiurg::module_system msys(utils::project_folder() + "folder1/");
-  demiurg::resource_system dsys(utils::project_folder() + "folder1/");
+  demiurg::resource_system dsys;
   // НЕ УКАЗЫВАТЬ ПОСЛЕДНИЙ СЛЕШ (то есть не делать как папки)
   dsys.register_type<painter::shader_source_file>("shaders", "vert,frag");
   dsys.register_type<painter::glsl_source_file>("include", "glsl");
 
   msys.load_default_modules();
-  msys.parse_resources(&dsys);
+  dsys.parse_resources(&msys);
 
   //dsys.load_default_modules();
   //dsys.parse_resources();

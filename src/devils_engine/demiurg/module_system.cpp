@@ -40,12 +40,12 @@ std::vector<module_system::list_entry> module_system::load_list(const std::strin
   // лист по умолчанию (чист релизная папка или архив)
   // нужно проверить... что берем по умолчанию? наверное файлик core.zip что то такое
   if (list_name.empty()) {
-    const auto core_file = path() + "core.zip";
-    const auto core_folder = path() + "core/";
-    if (file_io::exists(core_file)) {
+    const auto core_file = "core.zip";
+    const auto core_folder = "core/";
+    if (file_io::exists(path() + core_file)) {
       std::vector<list_entry> e{ list_entry{ core_file, "", "" } };
       return e;
-    } else if (file_io::exists(core_folder)) {
+    } else if (file_io::exists(path() + core_folder)) {
       std::vector<list_entry> e{ list_entry{ core_folder, "", "" } };
       return e;
     } 
@@ -53,10 +53,10 @@ std::vector<module_system::list_entry> module_system::load_list(const std::strin
     utils::error("'{}' is not exist???", core_file);
   }
 
-  const auto list_path = path() + std::string(list_name) + ".json";
-  if (!file_io::exists(list_path)) utils::error("File '{}' not exists", list_path);
+  const auto list_path = std::string(list_name) + ".json";
+  if (!file_io::exists(path() + list_path)) utils::error("File '{}' not exists", list_path);
 
-  const auto cont = file_io::read(list_path);
+  const auto cont = file_io::read(path() + list_path);
   std::vector<list_entry> list_entries;
   const auto ec = utils::from_json(list_entries, cont);
   if (ec) {
@@ -71,7 +71,8 @@ void module_system::load_modules(std::vector<list_entry> paths) {
 
   // как быть с путями
   for (const auto &entry : paths) {
-    const auto e = fs::directory_entry(path() + entry.path);
+    const auto full_entry_path = path() + entry.path;
+    const auto e = fs::directory_entry(full_entry_path);
     if (!e.exists()) {
       // ошибка? не, попробуем все равно загрузиться
       utils::warn("Could not find module '{}'", entry.path);
@@ -82,8 +83,8 @@ void module_system::load_modules(std::vector<list_entry> paths) {
     const auto datetime = utils::format_localtime(ftime, utils::ISO_datetime_format);
 
     if (!e.is_directory()) {
-      const auto [name, ext] = get_name_ext(entry.path);
-      const auto cont = file_io::read<uint8_t>(entry.path);
+      const auto [name, ext] = get_name_ext(full_entry_path);
+      const auto cont = file_io::read<uint8_t>(full_entry_path);
       const auto hash = utils::SHA256::easy(cont.data(), cont.size());
       if (!entry.hash.empty() && hash != entry.hash) {
         utils::warn("Module '{}' mismatch (path: {})\nCur hash: {}\nExp hash: {}\nCur date: {}\nExp date: {}", name, entry.path, hash, entry.hash, datetime, entry.file_date);
@@ -91,13 +92,13 @@ void module_system::load_modules(std::vector<list_entry> paths) {
     }
 
     if (e.is_directory()) {
-      auto mem = std::make_unique<folder_module>(this, entry.path);
+      auto mem = std::make_unique<folder_module>(full_entry_path);
       modules.push_back(std::move(mem));
     } else {
-      const auto [name, ext] = get_name_ext(entry.path);
+      const auto [name, ext] = get_name_ext(full_entry_path);
       // тут надо проверить ext, в принципе наверное тут будет только .mod и .zip
       if (ext == "mod" || ext == "zip") {
-        auto mem = std::make_unique<zip_module>(this, entry.path);
+        auto mem = std::make_unique<zip_module>(full_entry_path);
         modules.push_back(std::move(mem));
       } else {
         // (сюда попасть мы никак не должны)

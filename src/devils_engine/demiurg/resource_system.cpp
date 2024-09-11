@@ -5,6 +5,7 @@
 #include <fstream>
 #include <cassert>
 #include "module_interface.h"
+#include "module_system.h"
 #include "folder_module.h"
 #include "utils/time.h"
 #include "utils/named_serializer.h"
@@ -45,10 +46,10 @@ namespace devils_engine {
     }
 
     // по умолчанию что можно в путь положить?
-    resource_system::resource_system() noexcept : root_path("./mods/"), modules_list_name() {}
-    resource_system::resource_system(std::string root) noexcept : root_path(std::move(root)), modules_list_name() {
-      if (root_path[root_path.size() - 1] != '/') root_path += '/';
-    }
+    resource_system::resource_system() noexcept {} //: root_path("./mods/"), modules_list_name() {}
+    //resource_system::resource_system(std::string root) noexcept : root_path(std::move(root)), modules_list_name() {
+    //  if (root_path[root_path.size() - 1] != '/') root_path += '/';
+    //}
 
     resource_system::~resource_system() noexcept { 
       clear();
@@ -67,10 +68,10 @@ namespace devils_engine {
 
     //resource_system::type* resource_system::find_type(const std::string_view &id, const std::string_view &extension) const { return find_proper_type(id, extension); }
 
-    std::string_view resource_system::root() const { return root_path; }
+    /*std::string_view resource_system::root() const { return root_path; }
     void resource_system::set_root(std::string root) { root_path = std::move(root); }
     std::string_view resource_system::modules_list() const { return modules_list_name; }
-    void resource_system::set_modules_list(std::string modules_list) { modules_list_name = std::move(modules_list); }
+    void resource_system::set_modules_list(std::string modules_list) { modules_list_name = std::move(modules_list); }*/
 
     static bool lazy_compare(const std::string_view &a, const std::string_view &b) {
       return a.substr(0, b.size()) == b;
@@ -97,13 +98,17 @@ namespace devils_engine {
 
       if (itr == resources.end()) return std::span<resource_interface *const>();
 
-      auto start = resources.begin();
+      //auto start = resources.begin();
+      auto start = itr;
+      auto prev = itr;
       auto end = itr;
       // (*start)->id.substr(0, filter.size()) != filter
       // (*end)->id.substr(0, filter.size()) == filter
-      for (; start != end && !lazy_compare((*start)->id, filter); ++start) {}
+      for (; start != resources.begin() && lazy_compare((*start)->id, filter); prev = start, --start) {}
+      if (lazy_compare((*start)->id, filter)) prev = start;
+
       for (; end != resources.end() && lazy_compare((*end)->id, filter); ++end) {}
-      return std::span(start, end);
+      return std::span(prev, end);
     }
 
     static void parse_path(
@@ -144,85 +149,85 @@ namespace devils_engine {
     // 1) в рутовой папке мы ищем все файлы и папки
     // 2) файлы и папки это модули на основе которых мы построим дерево ресурсов
     // теперь нужно сделать загрузку через модули
-    void resource_system::parse_file_tree() {
-      clear();
-
-      phmap::flat_hash_map<std::string_view, resource_interface *> loaded;
-
-      for (const auto &entry : fs::recursive_directory_iterator(root_path)) {
-        if (!entry.is_regular_file()) continue;
-        std::string entry_path = entry.path().generic_string();
-        //utils::println(entry_path);
-        // generic_string уже сразу переводит строку в стандартный формат 
-        // и значит скорее всего можно ожидать что и вся строка будет UTF-8 ?
-//#ifdef _WIN32
-//        make_forward_slash(entry_path);
-//#endif
-
-        std::string_view module_name, file_name, ext, id;
-        parse_path(entry_path, root_path, module_name, file_name, ext, id);
-        if (file_name == "." || file_name == "..") continue;
-
-        auto t = find_proper_type(id, ext);
-
-        if (t == nullptr) continue;
-
-        auto res = t->create();
-        res->set_path(entry_path, root_path);
-        all_resources.push_back(res);
-
-        // проверим загружали ли мы уже вещи
-        auto itr = loaded.find(res->id);
-        if (itr == loaded.end()) {
-          loaded[res->id] = res;
-          resources.push_back(res);
-        } else {
-          auto other_ptr = itr->second;
-          for (; other_ptr != nullptr &&
-                 other_ptr->module_name != res->module_name;
-               other_ptr = other_ptr->replacement_next(itr->second)) {}
-
-          // тут мы реплейсмент меняем и с ним уходит сапплиментари
-          utils::println("res", res->module_name, res->id, "other_ptr", other_ptr != nullptr);
-          if (other_ptr != nullptr) {
-            // модули совпали, найдем у кого меньший индекс среди расширений
-            const size_t other_place = t->ext.find(other_ptr->ext);
-            const size_t res_place = t->ext.find(res->ext);
-            if (res_place < other_place) {
-              if (other_ptr == itr->second) {
-                auto arr_itr = std::find(resources.begin(), resources.end(), other_ptr);
-                (*arr_itr) = res;
-              }
-
-              auto old_repl = other_ptr->replacement_next(other_ptr);
-              other_ptr->replacement_remove();
-              res->replacement_radd(old_repl);
-
-              res->supplementary_radd(other_ptr);
-
-              // забыл поменять указатель в хеш мапе
-              itr->second = res;
-            } else {
-              other_ptr->supplementary_radd(res);
-            }
-          } else {
-            // новый ресурс по модулю
-            // тут теперь нужно определить у кого меньший индекс 
-            // примерно так же как и в случае с расширениями
-            itr->second->replacement_radd(res);
-          }
-        }
-      }
-
-      std::sort(resources.begin(), resources.end(), [] (auto a, auto b) {
-        std::less<std::string_view> l;
-        return l(a->id, b->id);
-      });
-
-      /*for (const auto ptr : resources) {
-        utils::println(ptr->module_name, ptr->id, ptr->ext);
-      }*/
-    }
+//    void resource_system::parse_file_tree() {
+//      clear();
+//
+//      phmap::flat_hash_map<std::string_view, resource_interface *> loaded;
+//
+//      for (const auto &entry : fs::recursive_directory_iterator(root_path)) {
+//        if (!entry.is_regular_file()) continue;
+//        std::string entry_path = entry.path().generic_string();
+//        //utils::println(entry_path);
+//        // generic_string уже сразу переводит строку в стандартный формат 
+//        // и значит скорее всего можно ожидать что и вся строка будет UTF-8 ?
+////#ifdef _WIN32
+////        make_forward_slash(entry_path);
+////#endif
+//
+//        std::string_view module_name, file_name, ext, id;
+//        parse_path(entry_path, root_path, module_name, file_name, ext, id);
+//        if (file_name == "." || file_name == "..") continue;
+//
+//        auto t = find_proper_type(id, ext);
+//
+//        if (t == nullptr) continue;
+//
+//        auto res = t->create();
+//        res->set_path(entry_path, root_path);
+//        all_resources.push_back(res);
+//
+//        // проверим загружали ли мы уже вещи
+//        auto itr = loaded.find(res->id);
+//        if (itr == loaded.end()) {
+//          loaded[res->id] = res;
+//          resources.push_back(res);
+//        } else {
+//          auto other_ptr = itr->second;
+//          for (; other_ptr != nullptr &&
+//                 other_ptr->module_name != res->module_name;
+//               other_ptr = other_ptr->replacement_next(itr->second)) {}
+//
+//          // тут мы реплейсмент меняем и с ним уходит сапплиментари
+//          utils::println("res", res->module_name, res->id, "other_ptr", other_ptr != nullptr);
+//          if (other_ptr != nullptr) {
+//            // модули совпали, найдем у кого меньший индекс среди расширений
+//            const size_t other_place = t->ext.find(other_ptr->ext);
+//            const size_t res_place = t->ext.find(res->ext);
+//            if (res_place < other_place) {
+//              if (other_ptr == itr->second) {
+//                auto arr_itr = std::find(resources.begin(), resources.end(), other_ptr);
+//                (*arr_itr) = res;
+//              }
+//
+//              auto old_repl = other_ptr->replacement_next(other_ptr);
+//              other_ptr->replacement_remove();
+//              res->replacement_radd(old_repl);
+//
+//              res->supplementary_radd(other_ptr);
+//
+//              // забыл поменять указатель в хеш мапе
+//              itr->second = res;
+//            } else {
+//              other_ptr->supplementary_radd(res);
+//            }
+//          } else {
+//            // новый ресурс по модулю
+//            // тут теперь нужно определить у кого меньший индекс 
+//            // примерно так же как и в случае с расширениями
+//            itr->second->replacement_radd(res);
+//          }
+//        }
+//      }
+//
+//      std::sort(resources.begin(), resources.end(), [] (auto a, auto b) {
+//        std::less<std::string_view> l;
+//        return l(a->id, b->id);
+//      });
+//
+//      /*for (const auto ptr : resources) {
+//        utils::println(ptr->module_name, ptr->id, ptr->ext);
+//      }*/
+//    }
 
     //std::vector<resource_system::list_entry> resource_system::load_list(const std::string_view &list_name) const {
     //  // лист по умолчанию (чист релизная папка или архив)
@@ -308,73 +313,73 @@ namespace devils_engine {
     //  load_modules(std::move(list));
     //}
 
-    //void resource_system::parse_resources() {
-    //  clear();
+void resource_system::parse_resources(module_system* sys) {
+  clear();
 
-    //  for (const auto &m : modules) { m->open(); }
-    //  for (const auto &m : modules) { m->resources_list(all_resources); }
-    //  for (const auto &m : modules) { m->close(); }
+  sys->open_modules();
+  sys->parse_resources(this);
+  sys->close_modules();
 
-    //  phmap::flat_hash_map<std::string_view, resource_interface *> loaded;
-    //  for (const auto &res : all_resources) {
-    //    auto t = find_proper_type(res->id, res->ext);
-    //    if (t == nullptr) {
-    //      utils::warn("Could not find proper type for resource '{}' extension '{}'. Skip", res->id, res->ext);
-    //      continue;
-    //    }
+  phmap::flat_hash_map<std::string_view, resource_interface *> loaded;
+  for (const auto &res : all_resources) {
+    auto t = find_proper_type(res->id, res->ext);
+    if (t == nullptr) {
+      utils::warn("Could not find proper type for resource '{}' extension '{}'. Skip", res->id, res->ext);
+      continue;
+    }
 
-    //    // проверим загружали ли мы уже вещи
-    //    auto itr = loaded.find(res->id);
-    //    if (itr == loaded.end()) {
-    //      loaded[res->id] = res;
-    //      resources.push_back(res);
-    //    } else {
-    //      auto other_ptr = itr->second;
-    //      for (; other_ptr != nullptr &&
-    //             other_ptr->module_name != res->module_name;
-    //           other_ptr = other_ptr->replacement_next(itr->second)) {}
+    // проверим загружали ли мы уже вещи
+    auto itr = loaded.find(res->id);
+    if (itr == loaded.end()) {
+      loaded[res->id] = res;
+      resources.push_back(res);
+    } else {
+      auto other_ptr = itr->second;
+      for (; other_ptr != nullptr &&
+            other_ptr->module_name != res->module_name;
+          other_ptr = other_ptr->replacement_next(itr->second)) {}
 
-    //      // тут мы реплейсмент меняем и с ним уходит сапплиментари
-    //      utils::println("res", res->module_name, res->id, "other_ptr", other_ptr != nullptr);
-    //      if (other_ptr != nullptr) {
-    //        // модули совпали, найдем у кого меньший индекс среди расширений
-    //        const size_t other_place = t->ext.find(other_ptr->ext);
-    //        const size_t res_place = t->ext.find(res->ext);
-    //        if (res_place < other_place) {
-    //          if (other_ptr == itr->second) {
-    //            auto arr_itr = std::find(resources.begin(), resources.end(), other_ptr);
-    //            (*arr_itr) = res;
-    //          }
+      // тут мы реплейсмент меняем и с ним уходит сапплиментари
+      utils::println("res", res->module_name, res->id, "other_ptr", other_ptr != nullptr);
+      if (other_ptr != nullptr) {
+        // модули совпали, найдем у кого меньший индекс среди расширений
+        const size_t other_place = t->ext.find(other_ptr->ext);
+        const size_t res_place = t->ext.find(res->ext);
+        if (res_place < other_place) {
+          if (other_ptr == itr->second) {
+            auto arr_itr = std::find(resources.begin(), resources.end(), other_ptr);
+            (*arr_itr) = res;
+          }
 
-    //          auto old_repl = other_ptr->replacement_next(other_ptr);
-    //          other_ptr->replacement_remove();
-    //          res->replacement_radd(old_repl);
+          auto old_repl = other_ptr->replacement_next(other_ptr);
+          other_ptr->replacement_remove();
+          res->replacement_radd(old_repl);
 
-    //          res->supplementary_radd(other_ptr);
+          res->supplementary_radd(other_ptr);
 
-    //          // забыл поменять указатель в хеш мапе
-    //          itr->second = res;
-    //        } else {
-    //          other_ptr->supplementary_radd(res);
-    //        }
-    //      } else {
-    //        // новый ресурс по модулю
-    //        // тут теперь нужно определить у кого меньший индекс 
-    //        // примерно так же как и в случае с расширениями
-    //        itr->second->replacement_radd(res);
-    //      }
-    //    }
-    //  }
+          // забыл поменять указатель в хеш мапе
+          itr->second = res;
+        } else {
+          other_ptr->supplementary_radd(res);
+        }
+      } else {
+        // новый ресурс по модулю
+        // тут теперь нужно определить у кого меньший индекс 
+        // примерно так же как и в случае с расширениями
+        itr->second->replacement_radd(res);
+      }
+    }
+  }
 
-    //  std::sort(resources.begin(), resources.end(), [] (auto a, auto b) {
-    //    std::less<std::string_view> l;
-    //    return l(a->id, b->id);
-    //  });
+  std::sort(resources.begin(), resources.end(), [] (auto a, auto b) {
+    std::less<std::string_view> l;
+    return l(a->id, b->id);
+  });
 
-    //  for (const auto ptr : resources) {
-    //    utils::println(ptr->module_name, ptr->id, ptr->ext);
-    //  }
-    //}
+  for (const auto ptr : resources) {
+    utils::println(ptr->module_name, ptr->id, ptr->ext);
+  }
+}
 
     //void resource_system::open_modules() { for (const auto &m : modules) { m->open(); } }
     //void resource_system::close_modules() { for (const auto &m : modules) { m->close(); } }

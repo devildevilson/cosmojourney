@@ -1,8 +1,9 @@
 #include "sound_resource.h"
 #include <utils/core.h>
 #include <fstream>
-#include <demiurg/system.h>
+#include <demiurg/resource_system.h>
 #include "demiurg/module_interface.h"
+#include "sound/resource.h"
 
 //void load_file(const std::string &file_name, std::vector<char> &buffer, const int32_t type = std::ios::binary) {
 //  std::ifstream file(file_name, type);
@@ -49,15 +50,15 @@ namespace cosmojourney {
   void sound_resource::unload_hot(const utils::safe_handle_t&) {}
 
   void sound_resource::load_cold(const utils::safe_handle_t& handle) {
-    auto sound_type = sound::system::resource::type::undefined;
-    for (size_t i = 0; i < static_cast<size_t>(sound::system::resource::type::undefined); ++i) {
-      if (ext == sound::system::resource::type_to_string(i)) {
+    auto sound_type = sound::resource::type::undefined;
+    for (size_t i = 0; i < static_cast<size_t>(sound::resource::type::undefined); ++i) {
+      if (ext == sound::resource::type_to_string(i)) {
         sound_type = static_cast<decltype(sound_type)>(i);
         break;
       }
     }
 
-    if (sound_type == sound::system::resource::type::undefined) {
+    if (sound_type == sound::resource::type::undefined) {
       utils::error("Sound format '{}' is not supported, path: {}", ext, path);
     }
 
@@ -65,7 +66,7 @@ namespace cosmojourney {
     //demiurg::load_file(path, file_memory, std::ios::binary);
     module->load_binary(path, file_memory); // как то нужно подгрузить зип модуль а потом его выгрузить
     raw_size = file_memory.size();
-    res = std::make_unique<sound::system::resource>(path, sound_type, std::move(file_memory));
+    res = std::make_unique<sound::resource>(path, sound_type, std::move(file_memory));
     file_memory.clear();
     file_memory.shrink_to_fit();
     //set_flag(demiurg::resource_flags::underlying_owner_of_raw_memory, true);

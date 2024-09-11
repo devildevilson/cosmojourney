@@ -11,6 +11,9 @@
 namespace devils_engine {
 namespace sound {
 
+// тут не помешает наследоваться от demiurg resource_interface
+// ну или придумать как то иначе, чтобы не хранить лишние строки
+
 #define SOUND_SYSTEM_EXTENSION_LIST \
   X(mp3)  \
   X(flac) \
@@ -28,15 +31,14 @@ struct resource {
   };
 
   static std::string_view type_to_string(const size_t index);
-        
-  // теперь не нужно
+  
   std::string id;
   enum type type;
   std::unique_ptr<sound::decoder> sound;
-  std::vector<char> buffer;
+  std::vector<char> buffer; // буфер обязательно должен присустсвовать для некоторых декодеров
 
   resource();
-  // некоторые ресурсы нужно перевести сразу в pcm формат
+  // звуки меньше 5сек переводятся в pcm автоматически
   resource(std::string id, enum type type, std::vector<char> buffer);
   ~resource() noexcept;
 

@@ -7,13 +7,14 @@
 
 namespace devils_engine {
 namespace sound {
+
 // данные по обработке звука тут?
 struct sound_processing_data {
   size_t time;
   size_t loaded_frames;
   size_t processed_frames;
-  uint32_t fast_source;
-  inline sound_processing_data() noexcept : time(0), loaded_frames(0), processed_frames(0), fast_source(0) {}
+  struct source source;
+  inline sound_processing_data() noexcept : time(0), loaded_frames(0), processed_frames(0) {}
 };
 
 struct basic_sound_data {
@@ -41,29 +42,10 @@ struct full_sound_data {
   inline full_sound_data() noexcept : pos(0.0f, 0.0f, 0.0f), dir(0.0f, 0.0f, 0.0f), vel(0.0f, 0.0f, 0.0f) {}
 };
 
-struct source {
-  uint32_t source;
-  uint32_t buffers[2];
-};
-
-enum class processing_state { initial, waiting_source, processing, paused, finished };
-
-// мы должны как то понять что отсюда нужно забрать сорс? processing_state::finished
-// как положить и как обратно добавить?
-// сорс наверное нужно проинициализировать 
-class source_processing {
-public:
-  virtual ~source_processing() noexcept = default;
-  virtual processing_state state() const = 0;
-  virtual float distance(const glm::vec3 &listener_pos) const = 0;
-  virtual void update(const size_t time) = 0;
-  virtual void setup_source(const struct source &source) = 0;
-  virtual struct source release_source() = 0;
-};
-
 // будет один стерео источник
-class background_source : public virtual_source, public sound_processing_data, public basic_sound_data {
+class background_source : public virtual_source, public source_processing, public sound_processing_data, public basic_sound_data {
 public:
+  virtual ~background_source() noexcept = default;
   void set_resource(const resource* res) override;
   bool is_valid() const override;
   const resource* currently_playing() const override;
@@ -84,6 +66,20 @@ public:
   double stat() const override;
   // после этого как то надо переинициализировать обработку наверное?
   bool set_stat(const double place) override;
+
+  processing_state state() const override;
+  float distance(const glm::vec3 &listener_pos) const override;
+  void update(const size_t time) override;
+  void setup_source(const struct source &source) override;
+  struct source release_source() override;
+  bool has_source() const override;
+  void invalidate() override;
+protected:
+  size_t compute_frames_to_load(const size_t expected);
+  size_t load_next(const uint32_t buffer_handle, const size_t offset, const size_t amount, const uint16_t channels);
+
+  virtual void setup_source_stats();
+  void _update(const size_t time, const uint16_t channels);
 };
 
 // несколкьо меню звуокв наверное должны иметь возможность играть одновременно
@@ -93,13 +89,19 @@ class menu_source : public background_source, public advanced_sound_data {
 public:
   void set(float speed, float volume = 1.0f, float rnd_pitch = 0.0f, bool is_loop = false) override;
   void set_relative(const bool relative) override;
+  void update(const size_t time) override;
+protected:
+  void setup_source_stats() override;
 };
 
 // их может быть штук 10, наверное для них должны быть эксклюзивные сорсы
 // это что то важное в геймплее, например высказывание персонажа или важный игровой скилл
 class special_source : public menu_source, public full_sound_data {
 public:
+  float distance(const glm::vec3 &listener_pos) const override;
   void set_transform(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &vel) override;
+protected:
+  void setup_source_stats() override;
 };
 
 // основные игровые звуки, будет по количеству объектов даже больше

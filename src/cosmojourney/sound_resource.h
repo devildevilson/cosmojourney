@@ -6,7 +6,8 @@
 #include <memory>
 #include <functional>
 #include <demiurg/resource_base.h>
-#include <sound/system.h>
+#include <sound/resource.h>
+
 using namespace devils_engine;
 
 namespace cosmojourney {
@@ -65,7 +66,7 @@ namespace cosmojourney {
     void unload_warm(const utils::safe_handle_t& handle) override;
     void unload_hot(const utils::safe_handle_t& handle) override;
   private:
-    std::unique_ptr<sound::system::resource> res;
+    std::unique_ptr<sound::resource> res;
   };
 }
 

@@ -64,12 +64,12 @@ namespace devils_engine {
     public:
       using handle_t = uint32_t;
 
-      struct source {
+      /*struct source {
         handle_t handle;
         handle_t buffers[2];
 
         inline source() : handle(0), buffers{0, 0} {}
-      };
+      };*/
 
 //      struct resource {
 //        enum class type {
@@ -104,13 +104,13 @@ namespace devils_engine {
       system & operator=(const system &) noexcept = delete;
       system & operator=(system &&) noexcept = default;
 
-      size_t setup_sound(const resource *res, const settings &info = settings());
-      bool remove_sound(const size_t source_id);
-      bool play_sound(const size_t source_id); // мы не хотим этим пользоваться нигде кроме музыки
-      bool stop_sound(const size_t source_id); // мы не хотим этим пользоваться нигде кроме музыки (наверное хотим приостановить все звуки в меню)
-      double stat_sound(const size_t source_id) const; // [0,1]
-      bool set_sound(const size_t source_id, const double place); // [0,1]
-      bool set_sound(const size_t source_id, const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &vel);
+      //size_t setup_sound(const resource *res, const settings &info = settings());
+      //bool remove_sound(const size_t source_id);
+      //bool play_sound(const size_t source_id); // мы не хотим этим пользоваться нигде кроме музыки
+      //bool stop_sound(const size_t source_id); // мы не хотим этим пользоваться нигде кроме музыки (наверное хотим приостановить все звуки в меню)
+      //double stat_sound(const size_t source_id) const; // [0,1]
+      //bool set_sound(const size_t source_id, const double place); // [0,1]
+      //bool set_sound(const size_t source_id, const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &vel);
 
       bool set_listener_pos(const glm::vec3 &pos);
       bool set_listener_ori(const glm::vec3 &look_at, const glm::vec3 &up);
@@ -131,7 +131,7 @@ namespace devils_engine {
         auto p = ptr.get();
         vsources.push_back(std::move(ptr));
 
-        if constexpr (std::is_base_of_v<background_source, T>) {
+        /*if constexpr (std::is_base_of_v<background_source, T>) {
           if (background != nullptr) utils::error("More background sounds?");
           background = p;
         } else if constexpr (std::is_base_of_v<menu_source, T>) {
@@ -140,7 +140,7 @@ namespace devils_engine {
           special_sources.push_back(p);
         } else if constexpr (std::is_base_of_v<game_source, T>) {
           game_sources.push_back(p);
-        }
+        }*/
 
         return p;
       }
@@ -160,44 +160,44 @@ namespace devils_engine {
         volume_set() noexcept;
       };
 
-      struct sound_processing_data {
-        struct settings info; // возможно не все настройки нам отсюда нужны
-        const resource *res;
-        size_t time;
-        size_t loaded_frames;
-        size_t processed_frames;
-        size_t id;
+      //struct sound_processing_data {
+      //  struct settings info; // возможно не все настройки нам отсюда нужны
+      //  const resource *res;
+      //  size_t time;
+      //  size_t loaded_frames;
+      //  size_t processed_frames;
+      //  size_t id;
 
-        sound_processing_data() noexcept;
-        void init(const size_t id, const resource *res, const struct settings &info) noexcept;
-        void reset() noexcept;
-        size_t load_next(const uint32_t buffer, const size_t frames_count, const uint16_t channels);
-      };
+      //  sound_processing_data() noexcept;
+      //  void init(const size_t id, const resource *res, const struct settings &info) noexcept;
+      //  void reset() noexcept;
+      //  size_t load_next(const uint32_t buffer, const size_t frames_count, const uint16_t channels);
+      //};
 
-      struct source_data {
-        struct source source;
-        sound_processing_data *queue;
+      //struct source_data {
+      //  struct source source;
+      //  sound_processing_data *queue;
 
-        inline source_data() noexcept : queue(nullptr) {}
-        source_data(const struct source &source, sound_processing_data *queue) noexcept;
-        void init(const float volume, const size_t frames_count);
-        void update(const float volume, const size_t frames_count);
-      };
+      //  inline source_data() noexcept : queue(nullptr) {}
+      //  source_data(const struct source &source, sound_processing_data *queue) noexcept;
+      //  void init(const float volume, const size_t frames_count);
+      //  void update(const float volume, const size_t frames_count);
+      //};
 
-      // теперь тут вместо queue будет virtual_source
-      // но при этом сюда все равно нужно передать source
-      struct source_data2 {
-        struct source source;
-        virtual_source *vsource;
-        size_t time;
-        size_t loaded_frames;
-        size_t processed_frames;
+      //// теперь тут вместо queue будет virtual_source
+      //// но при этом сюда все равно нужно передать source
+      //struct source_data2 {
+      //  struct source source;
+      //  virtual_source *vsource;
+      //  size_t time;
+      //  size_t loaded_frames;
+      //  size_t processed_frames;
 
-        source_data2() noexcept;
-        void init(virtual_source *vsource) noexcept;
-        void reset() noexcept;
-        size_t load_next(const uint32_t buffer, const size_t frames_count, const uint16_t channels);
-      };
+      //  source_data2() noexcept;
+      //  void init(virtual_source *vsource) noexcept;
+      //  void reset() noexcept;
+      //  size_t load_next(const uint32_t buffer, const size_t frames_count, const uint16_t channels);
+      //};
 
       ALCdevice* device;
       ALCcontext* ctx;
@@ -207,18 +207,24 @@ namespace devils_engine {
 
       volume_set volume;
 
-      std::vector<source_data> sources;
-      std::unique_ptr<sound_processing_data[]> proc_array;
+      //std::vector<source_data> sources;
+      std::vector<sound::source> sources;
+      //std::unique_ptr<sound_processing_data[]> proc_array;
       std::vector<std::unique_ptr<virtual_source>> vsources;
+      std::vector<source_processing*> static_processors;
+      std::vector<source_processing*> processors;
 
-      background_source *background;
+      /*background_source *background;
       std::vector<menu_source*> menu_sources;
       std::vector<special_source*> special_sources;
-      std::vector<game_source*> game_sources;
+      std::vector<game_source*> game_sources;*/
+      // тут у нас сорсы поделятся скорее на эксклюзивные и виртуальные
+      // где эксклюзивным выдадут сорс с самого начала
+      // а виртуальные будут его ожидать по ходу дела
 
-      size_t get_new_id();
-      std::tuple<size_t, size_t> find_source_id(const size_t source_id) const;
-      void remove_from_queue(sound_processing_data *queue, const size_t index);
+      //size_t get_new_id();
+      //std::tuple<size_t, size_t> find_source_id(const size_t source_id) const;
+      //void remove_from_queue(sound_processing_data *queue, const size_t index);
     };
   }
 }

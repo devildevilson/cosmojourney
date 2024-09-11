@@ -3,7 +3,7 @@
 #include "vulkan_header.h"
 #include "makers.h"
 #include "demiurg/resource_base.h"
-#include "demiurg/system.h"
+#include "demiurg/resource_system.h"
 #include "auxiliary.h"
 #include "shader_crafter.h"
 
@@ -29,7 +29,7 @@ static vk::StencilOpState cast(const graphics_pipeline_create_config::stencil_op
   );
 }
 
-simple_graphics_pipeline::simple_graphics_pipeline(VkDevice device, VkPipelineLayout pipeline_layout, VkPipelineCache cache, const demiurg::system* system) : 
+simple_graphics_pipeline::simple_graphics_pipeline(VkDevice device, VkPipelineLayout pipeline_layout, VkPipelineCache cache, const demiurg::resource_system* system) : 
   device(device), cache(cache), system(system), render_pass(VK_NULL_HANDLE), subpass(0), conf(nullptr), attachments_count(0), atts(nullptr)
 {
   this->pipeline_layout = pipeline_layout;
@@ -69,6 +69,7 @@ uint32_t simple_graphics_pipeline::recompile_shaders() {
   shader_res.clear();
   for (const auto &sdr : conf->shaders) {
     auto count = system->find(sdr.path, shader_res);
+    if (shader_res.empty()) utils::error("Could not find shader file '{}'", sdr.path);
     auto res = shader_res[0];
     shader_res.clear();
 
@@ -179,7 +180,7 @@ uint32_t simple_graphics_pipeline::recompile_shaders() {
   return 0;
 }
 
-simple_compute_pipeline::simple_compute_pipeline(VkDevice device, VkPipelineLayout pipeline_layout, VkPipelineCache cache, const demiurg::system* system) :
+simple_compute_pipeline::simple_compute_pipeline(VkDevice device, VkPipelineLayout pipeline_layout, VkPipelineCache cache, const demiurg::resource_system* system) :
   device(device), cache(cache), system(system), conf(nullptr)
 {
   this->pipeline_layout = pipeline_layout;
