@@ -55,7 +55,7 @@ set(SRC_LIST
   ogg_decoder.cpp
   pcm_decoder.cpp
   system.cpp
- "resource.cpp")
+ "resource.cpp" "basic_sources.cpp")
 
 set(HDR_LIST
   al_helper.h
@@ -66,7 +66,7 @@ set(HDR_LIST
   pcm_decoder.h
   decoder.h
   system.h
- "virtual_source.h" "resource.h")
+ "virtual_source.h" "resource.h" "basic_sources.h")
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(${DEVILS_LIBRARY_NAME} ${OPENAL_LIBRARY_NAME}) # openal

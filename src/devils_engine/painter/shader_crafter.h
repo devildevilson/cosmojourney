@@ -8,13 +8,13 @@
 
 namespace devils_engine {
 namespace demiurg {
-class system;
+class resource_system;
 }
 
 namespace painter {
 class shader_crafter {
 public:
-  shader_crafter(const demiurg::system* sys);
+  shader_crafter(const demiurg::resource_system* sys);
 
   // здесь бы мы хотели принять на вход текст шейдера
   // и получить на выход бинарник готовый к употреблению
@@ -30,7 +30,7 @@ public:
   uint32_t err_type() const;
   const std::string & err_msg() const;
 private:
-  const demiurg::system* _sys;
+  const demiurg::resource_system* _sys;
   bool _opt;
   uint32_t _type;
   uint32_t _err_type;

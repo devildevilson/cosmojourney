@@ -59,100 +59,45 @@ public:
   // стартует звук, потом обнуляет указатель
   // либо его нужно будет обнулить если это залупленный звук
   virtual void set_resource(const resource* res) = 0;
-  virtual bool is_playing() const = 0;
-  virtual resource* currently_playing() const = 0;
+  virtual bool is_valid() const = 0;
+  virtual const resource* currently_playing() const = 0;
 
   //virtual void set(const settings &s) = 0;
   // наверное чаще нам придется задавать скорость нежели чем громкость звука
   // громкость определяется типом звука и настраивается через настроечки
   // мы дополнительно можем ее уменьшить
   virtual void set(float speed, float volume = 1.0f, float rnd_pitch = 0.0f, bool is_loop = false) = 0;
+  // dir здесь это не НАПРАВЛЕНИЕ ДВИЖЕНИЯ это НАПРАВЛЕНИЕ ЗВУКА !!!
+  // направление движения берется из скорости, направленный звук нужен для эффектов
+  // надо чутка переработать это дело
   virtual void set_transform(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &vel) = 0;
   virtual void set_relative(const bool relative) = 0;
+
+  virtual bool play() = 0;
+  virtual bool pause() = 0;
+  virtual bool is_playing() const = 0;
+  virtual bool is_paused() const = 0;
+
+  // тут мы легко можем возвращать текущее место в звуке
+  // и устанавливать положение с которого звук стартанет
+  virtual double stat() const = 0;
+  virtual bool set_stat(const double place) = 0;
 };
 
-struct basic_sound_data {
-  const resource* res;
-  float* type_volume;
-  float volume;
-  inline basic_sound_data() noexcept : res(nullptr), type_volume(nullptr), volume(1.0f) {}
-};
 
-struct advanced_sound_data : public basic_sound_data {
-  float speed; 
-  float rnd_pitch; 
-  bool is_loop;
-  bool is_mono;
-  inline advanced_sound_data() noexcept : speed(1.0f), rnd_pitch(0.0f), is_loop(false), is_mono(true) {}
-};
-
-// relative?
-struct full_sound_data : public advanced_sound_data {
-  glm::vec3 pos;
-  glm::vec3 dir;
-  glm::vec3 vel;
-  inline full_sound_data() noexcept : pos(0.0f, 0.0f, 0.0f), dir(0.0f, 0.0f, 0.0f), vel(0.0f, 0.0f, 0.0f) {}
-};
-
-// будет один стерео источник
-class background_source : public basic_sound_data, public virtual_source {
-public:
-  
-  void set_resource(const resource* res) override;
-  bool is_playing() const override;
-  resource* currently_playing() const override;
-  void set(float speed, float volume = 1.0f, float rnd_pitch = 0.0f, bool is_loop = false) override;
-  void set_transform(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &vel) override;
-  void set_relative(const bool relative) override;
-};
-
-// несколкьо меню звуокв наверное должны иметь возможность играть одновременно
-// они все скорее всего будут мелкими, наверное для меню нужно будет создать типа 3-5 сорвсов
-// и менять их просто друг за другом в очереди
-class menu_source : public advanced_sound_data, public virtual_source {
-public:
-  void set_resource(const resource* res) override;
-  bool is_playing() const override;
-  resource* currently_playing() const override;
-  void set(float speed, float volume = 1.0f, float rnd_pitch = 0.0f, bool is_loop = false) override;
-  void set_transform(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &vel) override;
-  void set_relative(const bool relative) override;
-};
-
-// их может быть штук 10, наверное для них должны быть эксклюзивные сорсы
-// это что то важное в геймплее, например высказывание персонажа или важный игровой скилл
-class special_source : public full_sound_data, public virtual_source {
-public:
-  void set_resource(const resource* res) override;
-  bool is_playing() const override;
-  resource* currently_playing() const override;
-  void set(float speed, float volume = 1.0f, float rnd_pitch = 0.0f, bool is_loop = false) override;
-  void set_transform(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &vel) override;
-  void set_relative(const bool relative) override;
-};
-
-// основные игровые звуки, будет по количеству объектов даже больше
-// в большинстве случаев будут простаивать либо по причине отсутсвия ресурса
-// либо по причине сильной удаленности звука
-// ищем валидные сорсы которые относительно недалеко от слушателя
-// и закидываем туда реальные сорсы, после того как звук прекратился
-// выкидываем сорс, у нас теоретически может быть ситуация когда сорсов 
-// не хватит на все звуки в сцене и тогда я пока не понимаю что делать
-// эти звуки тоже должны быть относительно мелкими
-class game_source : public full_sound_data, public virtual_source {
-public:
-  void set_resource(const resource* res) override;
-  bool is_playing() const override;
-  resource* currently_playing() const override;
-  void set(float speed, float volume = 1.0f, float rnd_pitch = 0.0f, bool is_loop = false) override;
-  void set_transform(const glm::vec3 &pos, const glm::vec3 &dir, const glm::vec3 &vel) override;
-  void set_relative(const bool relative) override;
-};
 
 // имеет смысл еще поверх этого дела написать класс который положит в очередь 
 // звуки и предоставит какую то обратную связь, например
 // нам имеет смысл проверить когда закачивается тот или иной специальный звук
 // его приостановить и начать какой нибудь другой
+// как эти сорсы сюда передать?
+class queue {
+public:
+  void set_resource(const resource* res);
+private:
+  size_t counter;
+  std::vector<virtual_source*> sources;
+};
 }
 }
 

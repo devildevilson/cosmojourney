@@ -11,6 +11,7 @@
 
 #include "utils/memory_pool.h"
 #include "resource.h"
+#include "basic_sources.h"
 
 // надо бы добавить сюда поддержку opus формата наверное
 
@@ -124,6 +125,31 @@ namespace devils_engine {
 
       //void load_resource(std::string id, const enum resource::type type, std::vector<char> buffer);
 
+      template <typename T, typename... Args>
+      T* create(Args&&... args) {
+        auto ptr = std::make_unique<T>(std::forward<Args>(args)...);
+        auto p = ptr.get();
+        vsources.push_back(std::move(ptr));
+
+        if constexpr (std::is_base_of_v<background_source, T>) {
+          if (background != nullptr) utils::error("More background sounds?");
+          background = p;
+        } else if constexpr (std::is_base_of_v<menu_source, T>) {
+          menu_sources.push_back(p);
+        } else if constexpr (std::is_base_of_v<special_source, T>) {
+          special_sources.push_back(p);
+        } else if constexpr (std::is_base_of_v<game_source, T>) {
+          game_sources.push_back(p);
+        }
+
+        return p;
+      }
+
+      background_source *create_background_source();
+      menu_source *create_menu_source();
+      special_source *create_special_source();
+      game_source *create_game_source();
+
       size_t available_sources_count() const;
     private:
       struct volume_set {
@@ -158,6 +184,21 @@ namespace devils_engine {
         void update(const float volume, const size_t frames_count);
       };
 
+      // теперь тут вместо queue будет virtual_source
+      // но при этом сюда все равно нужно передать source
+      struct source_data2 {
+        struct source source;
+        virtual_source *vsource;
+        size_t time;
+        size_t loaded_frames;
+        size_t processed_frames;
+
+        source_data2() noexcept;
+        void init(virtual_source *vsource) noexcept;
+        void reset() noexcept;
+        size_t load_next(const uint32_t buffer, const size_t frames_count, const uint16_t channels);
+      };
+
       ALCdevice* device;
       ALCcontext* ctx;
       size_t counter;
@@ -168,10 +209,12 @@ namespace devils_engine {
 
       std::vector<source_data> sources;
       std::unique_ptr<sound_processing_data[]> proc_array;
+      std::vector<std::unique_ptr<virtual_source>> vsources;
 
-      // тут нужно создать несколько виртуальных источников
-      // например у нас точно будет бекграунд, звуки меню, важные звуки и все остальные звуки
-      // как бы не получилось как в киберпанке - несколько звуков все одновременно
+      background_source *background;
+      std::vector<menu_source*> menu_sources;
+      std::vector<special_source*> special_sources;
+      std::vector<game_source*> game_sources;
 
       size_t get_new_id();
       std::tuple<size_t, size_t> find_source_id(const size_t source_id) const;

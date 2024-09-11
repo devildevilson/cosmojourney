@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cassert>
+#include <glm/glm.hpp>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -23,7 +24,9 @@ namespace devils_engine {
       return frames;
     }
 
-    system::system(const size_t queue_size) : device(nullptr), ctx(nullptr), counter(1), queue_size(queue_size), sources_offset(1) {
+    system::system(const size_t queue_size) : 
+      device(nullptr), ctx(nullptr), counter(1), queue_size(queue_size), sources_offset(1), background(nullptr)
+    {
       ALCenum error = AL_NO_ERROR;
 
       char *devices = (char *)alcGetString(NULL, ALC_DEVICE_SPECIFIER);
@@ -264,6 +267,39 @@ namespace devils_engine {
     void system::update(const size_t time) {
       al_call(alListenerf, AL_GAIN, volume.master);
 
+      // в чем заключается update? нужно отсортировать по дальности все вирутальные источники
+      std::sort(special_sources.begin(), special_sources.end(), [](auto a, auto b){
+        if (!a->is_valid()) return false;
+        if (!b->is_valid()) return true;
+
+        // может быть всегда задавать относительные координаты?
+        glm::vec3 lpos;
+        al_call(alGetListenerfv, AL_POSITION, (float*)&lpos);
+        const float d1 = glm::distance(lpos, a->pos);
+        const float d2 = glm::distance(lpos, b->pos);
+        return d1 < d2;
+      });
+
+      std::sort(game_sources.begin(), game_sources.end(), [](auto a, auto b){
+        if (!a->is_valid()) return false;
+        if (!b->is_valid()) return true;
+
+        // может быть всегда задавать относительные координаты?
+        glm::vec3 lpos;
+        al_call(alGetListenerfv, AL_POSITION, (float*)&lpos);
+        const float d1 = glm::distance(lpos, a->pos);
+        const float d2 = glm::distance(lpos, b->pos);
+        return d1 < d2;
+      });
+
+      for (auto m : menu_sources) {
+        // нет стоп
+        // нам нужно составить несколько source_data2, но по типам
+        // и вот их пройти
+        // так чет вместо того чтобы быть проще стало сложнее
+        // нам тип по большому счету нужен при инициализации
+      }
+
       for (auto &data : sources) {
         if (data.queue->id == 0) continue;
 
@@ -298,6 +334,31 @@ namespace devils_engine {
       auto res = resource_pool.create(std::move(id), type, std::move(buffer));
       resources.emplace(res->id, res);
     }*/
+
+    background_source *system::create_background_source() {
+      auto s = create<background_source>();
+      s->type_volume = &volume.source[0];
+      // что то еще нужно? наверное нет
+      return s;
+    }
+
+    menu_source *system::create_menu_source() {
+      auto s = create<menu_source>();
+      s->type_volume = &volume.source[1];
+      return s;
+    }
+
+    special_source *system::create_special_source() {
+      auto s = create<special_source>();
+      s->type_volume = &volume.source[2];
+      return s;
+    }
+
+    game_source *system::create_game_source() {
+      auto s = create<game_source>();
+      s->type_volume = &volume.source[3];
+      return s;
+    }
 
     size_t system::available_sources_count() const {
       return sources.size();

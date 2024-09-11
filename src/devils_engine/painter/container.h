@@ -9,6 +9,7 @@
 namespace devils_engine {
 namespace painter {
 
+// имеет смысл переназвать этот класс в палитра
 struct container {
   static const size_t max_features_count = 256;
   static const size_t multi_draw_indirect;
