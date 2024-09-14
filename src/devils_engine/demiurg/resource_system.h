@@ -11,6 +11,7 @@
 #include <array>
 #include <span>
 #include <functional>
+#include <concepts>
 #include <demiurg/resource_base.h>
 #include <utils/block_allocator.h>
 #include <utils/memory_pool.h>
@@ -32,6 +33,12 @@
 // разделить систему и модули, систему переназвать
 // тогда в модулях можно будет удачно указать дефолтные источники ресурсов
 // + разгрузить этот класс
+
+// вопрос с компиляцией шейдеров открытый: 
+// нужно задать дефайны + константы
+// где их определить?
+// скорее всего им самое место в конфиге пайплайна
+// по всей видимости придется оставить как есть текущий класс с шейдером
 
 namespace devils_engine {
 namespace demiurg {
@@ -114,6 +121,24 @@ public:
     ) -> resource_interface * {
       auto ptr = std::apply(&utils::block_allocator::create<T>, std::tuple_cat(std::make_tuple(std::ref(allocator)), args));
       ptr->loading_type_id = utils::type_id<T>();
+      ptr->loading_type = utils::type_name<T>();
+      return ptr;
+    };
+
+    auto type = types_pool.create(std::move(name), std::move(ext), sizeof(T) * 100, sizeof(T), alignof(T), std::move(constructor));
+        
+    types[type->name] = type;
+  }
+
+  // как раз было бы неплохо использовать концепт
+  template <typename BaseT, typename T, typename... Args>
+    requires(std::derived_from<T, BaseT>)
+  void register_type(std::string name, std::string ext, Args&&... args) {
+    auto constructor = [args = std::make_tuple(std::forward<Args>(args)...)](
+            utils::block_allocator &allocator
+    ) -> resource_interface * {
+      auto ptr = std::apply(&utils::block_allocator::create<T>, std::tuple_cat(std::make_tuple(std::ref(allocator)), args));
+      ptr->loading_type_id = utils::type_id<BaseT>();
       ptr->loading_type = utils::type_name<T>();
       return ptr;
     };

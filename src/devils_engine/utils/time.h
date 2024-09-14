@@ -22,6 +22,7 @@ namespace utils {
 
     time_log(const std::string_view &str) noexcept;
     ~time_log() noexcept;
+    void update_tp();
 
     time_log(const time_log &copy) noexcept = delete;
     time_log(time_log &&move) noexcept = delete;
