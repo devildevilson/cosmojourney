@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <reflect>
 #include <string>
 #include "utils/core.h"
 #include "lua_header.h"

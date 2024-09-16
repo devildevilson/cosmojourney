@@ -80,6 +80,7 @@ include_directories(
   include/parallel-hashmap/
   include/VulkanMemoryAllocator-Hpp/include/
   include/dynamic_bitset/include
+  include/Nuklear/
   src/devils_engine/
   src/cosmojourney/
 )
@@ -121,7 +122,7 @@ add_subdirectory(src/devils_engine/painter/)
 add_subdirectory(include/dynamic_bitset)
 
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp")
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/visage/header.h" "src/devils_engine/visage/header.cpp" "src/devils_engine/visage/system.h" "src/devils_engine/bindings/nuklear.h" "src/devils_engine/bindings/nuklear.cpp" "src/devils_engine/visage/font.h")
 target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input devils_painter lua54 sul::dynamic_bitset)
 
 foreach (library_path IN LISTS DYN_LIBRARIES_LIST)

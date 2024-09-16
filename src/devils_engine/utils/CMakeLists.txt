@@ -64,7 +64,7 @@ set(HDR_LIST
   ../utf/utf.hpp
   density_api.h
   compression.h
- "load_stage.h" "loader.h")
+ "load_stage.h" "loader.h" "prng_string.h")
 
 include_directories(
   include/spdlog/include/

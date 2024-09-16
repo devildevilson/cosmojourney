@@ -11,7 +11,7 @@ class load_stage {
 public:
   std::string name;
 
-  load_stage(std::string name) noexcept : name(std::move(name)) {}
+  inline load_stage(std::string name) noexcept : name(std::move(name)) {}
   virtual ~load_stage() noexcept = default;
   virtual void process() const = 0;
 };

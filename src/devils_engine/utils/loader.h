@@ -13,34 +13,51 @@
 namespace devils_engine {
 namespace utils {
 
-class loader : public thread::semaphore_interface {
+// надо упаковать весь процесс загрузки в эти классы
+// их можно расположить в цепочку которая буфет считывать данные с семафоры
+// в том числе можно так же оформить дозагрузку контента во время игры
+// по максимуму использовать лоадеры в разных потоках
+// лоадеры поди должны представлять собой очереди 
+// где текущий считает состояние предыдущего и только тогда запустит вычисления
+
+class loader : public load_stage, public thread::semaphore_interface {
 public:
-  std::string name;
-  
+  static constexpr size_t max_waiters = 8;
+
   loader(std::string name) noexcept;
   virtual ~loader() noexcept = default;
   
-  // не синхронизировано
+  // NOT THREAD SYNC
   template <typename T, typename... Args>
   T* add(Args&&... args) {
-    _stages.push_back(std::make_unique<T>(std::forward<Args>(args)...));
-    return _stages.back().get();
+    auto ptr = std::make_unique<T>(std::forward<Args>(args)...);
+    auto p = ptr.get();
+    _stages.push_back(std::move(ptr));
+    return p;
   }
 
-  void process();
+  // NOT THREAD SYNC
+  void add_waiter(thread::semaphore_interface* inter);
+
+  // _tp and _counter is changing
+  void process() const override;
 
   size_t counter() const noexcept;
   size_t size() const noexcept;
   bool finished() const noexcept;
-  // здесь мы не должны выпасть за пределы массива
   std::string_view stage_name() const noexcept;
+  tp start_time() const noexcept;
 
   void reset() override;
   thread::semaphore_state::values state() const override;
   bool wait_until(tp t, const size_t tolerance_in_ns = 1) const override;
 protected:
-  std::atomic<size_t> _counter;
+  // unfortunately looks very ugly
+  mutable std::atomic<size_t> _counter;
+  mutable std::atomic<size_t> _tp;
   std::vector<std::unique_ptr<load_stage>> _stages;
+  size_t waiters_count;
+  thread::semaphore_interface* waiters[max_waiters];
 };
 
 class loader2 {
