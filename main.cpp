@@ -50,6 +50,7 @@
 #include "painter/common_stages.h"
 #include "painter/render_pass_stages.h"
 #include "bindings/lua_header.h"
+#include "visage/font.h"
 
 using namespace devils_engine;
 
@@ -369,7 +370,7 @@ int main(int argc, char const *argv[]) {
   // блен надо свопчеин раньше чем сюрфейс удалять... сюрфейс надо просто передать в класс свопчейна
   //painter::destroy_surface(gc->instance, surf);
 
-  sol::state lua;
+  /*sol::state lua;
   lua.open_libraries(
     sol::lib::debug,
     sol::lib::base, 
@@ -392,7 +393,7 @@ int main(int argc, char const *argv[]) {
             (info.name ? info.name : "<unknown>"), info.what);
         ++level;
     }
-  };
+  };*/
 
   /*const auto lam = [] (sol::this_state s) {
     char buffer_name[512]{0};
@@ -425,17 +426,17 @@ int main(int argc, char const *argv[]) {
     utils::println(2, len == 0 ? "(no name)" : ar.name, ar.currentline);
   };*/
 
-  const auto lam = [] (sol::this_state s) {
-    lua_Debug info;
-    lua_getstack(s.L, 1, &info);
-    lua_getinfo(s.L, "nSl", &info);
-    auto src = info.source; // общая строка функции которая вызывает
-    auto name = info.name; // кто вызывает
-    auto line = info.currentline; // где вызывается
+  //const auto lam = [] (sol::this_state s) {
+  //  lua_Debug info;
+  //  lua_getstack(s.L, 1, &info);
+  //  lua_getinfo(s.L, "nSl", &info);
+  //  auto src = info.source; // общая строка функции которая вызывает
+  //  auto name = info.name; // кто вызывает
+  //  auto line = info.currentline; // где вызывается
 
-    // тут мы еще можем взять как называется текущая функция, но ее уже сложно будет "вмешать в хеш"
-    utils::println(std::string(src, info.srclen), name != nullptr ? name : "<no name>", line);
-  };
+  //  // тут мы еще можем взять как называется текущая функция, но ее уже сложно будет "вмешать в хеш"
+  //  utils::println(std::string(src, info.srclen), name != nullptr ? name : "<no name>", line);
+  //};
 
   //const auto inc = [] (sol::object o) {
   //  int x = o.as<int>();
@@ -444,16 +445,30 @@ int main(int argc, char const *argv[]) {
   //  //o.
   //};
   
-  lua.set_function("lambda1", lam);
+  /*lua.set_function("lambda1", lam);
   lua.set_function("lambda2", lam);
   lua.set_function("lam2353", lam);
-  lua.set_function("stack_print", stack_print);
+  lua.set_function("stack_print", stack_print);*/
   //lua.set_function("inc", inc);
 
   //lua.script("function abc() \nstack_print(); \nend; \nfunction abcabc() \nabc(); \nstack_print(); \nend; \nabcabc()");
   //lua.script("function abc() \nlam2353(); \nend; \nfunction abcabc() \nabc(); \nlambda2(); \nend; \nabcabc()");
   //lua.script("abcabc()");
   //lua.script("local x = 0; print(x); inc(x); print(x);");
+
+  // координаты тут приходят с перевернутой Y координатой
+  // но пока что как сопоставить с Наклир фонтом я так и не понял
+
+  const auto f = visage::load_font(utils::project_folder() + "font.ttf");
+  utils::println(f->width, f->height);
+  for (const auto &g : f->glyphs2) {
+    utils::println("codepoint:", g.codepoint);
+    utils::println("xadvance:", g.xadvance, "scale:", g.scale, "gscale:", g.gscale);
+    utils::println("rect:",g.x,g.y,g.w,g.h);
+    utils::println("atlas:",g.al,g.ab,g.ar,g.at);
+    utils::println("plane:",g.pl,g.pb,g.pr,g.pt);
+  }
+
   return 0;
 }
 

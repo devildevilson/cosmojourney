@@ -81,6 +81,9 @@ include_directories(
   include/VulkanMemoryAllocator-Hpp/include/
   include/dynamic_bitset/include
   include/Nuklear/
+  include/msdf-atlas-gen/
+  include/msdfgen/
+  include/
   src/devils_engine/
   src/cosmojourney/
 )
@@ -91,6 +94,9 @@ link_directories(libs/glfw34)
 link_directories(libs/ktx)
 link_directories(libs/openal)
 link_directories(libs/vulkan)
+link_directories(libs/libpng16)
+link_directories(libs/brotli)
+link_directories(libs/freetype)
 
 if(MSVC)
   set(DYN_LIBRARIES_LIST
@@ -100,6 +106,11 @@ if(MSVC)
     libs/glfw34/glfw3.dll
     libs/ktx/ktx.dll
     libs/vulkan/shaderc_shared.dll
+    libs/freetype/freetype.dll
+    libs/libpng16/libpng16.dll
+    libs/brotli/brotlicommon.dll
+    libs/brotli/brotlidec.dll
+    libs/brotli/brotlienc.dll
   )
 else()
   set(DYN_LIBRARIES_LIST
@@ -122,8 +133,10 @@ add_subdirectory(src/devils_engine/painter/)
 add_subdirectory(include/dynamic_bitset)
 
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/visage/header.h" "src/devils_engine/visage/header.cpp" "src/devils_engine/visage/system.h" "src/devils_engine/bindings/nuklear.h" "src/devils_engine/bindings/nuklear.cpp" "src/devils_engine/visage/font.h")
-target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input devils_painter lua54 sul::dynamic_bitset)
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/visage/header.h" "src/devils_engine/visage/header.cpp" "src/devils_engine/visage/system.h" "src/devils_engine/bindings/env.cpp" "src/devils_engine/bindings/nuklear.h" "src/devils_engine/bindings/nuklear.cpp" "src/devils_engine/visage/font.h" "src/devils_engine/visage/font.cpp")
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input devils_painter lua54 sul::dynamic_bitset msdf-atlas-gen msdfgen-core msdfgen-ext freetype libpng16)
+set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+#set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 
 foreach (library_path IN LISTS DYN_LIBRARIES_LIST)
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 

@@ -837,7 +837,7 @@ struct nk {
 
   // color_picker
   
-  static bool color_picker(sol::table &t, const uint32_t frm) {
+  static bool color_picker(sol::table t, const uint32_t frm) {
     nk_colorf c = {};
     c.r = t.get_or(1, 0.0f);
     c.g = t.get_or(2, 0.0f);

@@ -55,3 +55,9 @@
 [submodule "include/Nuklear"]
 	path = include/Nuklear
 	url = https://github.com/Immediate-Mode-UI/Nuklear.git
+[submodule "include/msdfgen"]
+	path = include/msdfgen
+	url = https://github.com/Chlumsky/msdfgen.git
+[submodule "include/msdf-atlas-gen"]
+	path = include/msdf-atlas-gen
+	url = https://github.com/Chlumsky/msdf-atlas-gen.git
