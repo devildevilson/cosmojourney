@@ -22,6 +22,7 @@ std::unique_ptr<font_t> load_font(const std::string &path) {
 
   msdf_atlas::Charset set; // ???
 
+  // мы можем наверное составить чарсеты сразу из нескольких фонтов
   fontGeometry.loadCharset(font, 1.0, msdf_atlas::Charset::ASCII);
 
   const double max_corner_angle = 3.0; // ???
@@ -31,8 +32,8 @@ std::unique_ptr<font_t> load_font(const std::string &path) {
 
   msdf_atlas::TightAtlasPacker packer;
   packer.setDimensionsConstraint(msdf_atlas::DimensionsConstraint::SQUARE);
-  packer.setMinimumScale(24.0); // ???
-  packer.setPixelRange(2.0); // ???
+  packer.setMinimumScale(24.0); // ??? (размеры бокса для глифа?)
+  packer.setPixelRange(2.0); // ??? (похоже что делает переходы более плавными)
   packer.setMiterLimit(1.0); // ???
   packer.pack(glyphs.data(), glyphs.size());
   int width = 0, height = 0;
@@ -60,9 +61,16 @@ std::unique_ptr<font_t> load_font(const std::string &path) {
   msdfgen::savePng(atlas_storage, "font.png");
 
   auto f = std::make_unique<font_t>();
-  f->glyphs2.reserve(glyphs.size());
   f->width = width;
   f->height = height;
+  f->scale = packer.getScale();
+  f->metrics.em_size = fontGeometry.getMetrics().emSize;
+  f->metrics.ascender_y = fontGeometry.getMetrics().ascenderY;
+  f->metrics.descender_y = fontGeometry.getMetrics().descenderY;
+  f->metrics.line_height = fontGeometry.getMetrics().lineHeight;
+  f->metrics.underline_y = fontGeometry.getMetrics().underlineY;
+  f->metrics.underline_thickness = fontGeometry.getMetrics().underlineThickness;
+  f->glyphs2.reserve(glyphs.size());
   for (const auto &glyph : glyphs) {
     f->glyphs2.emplace_back();
     auto &g = f->glyphs2.back();

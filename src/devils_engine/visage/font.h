@@ -37,7 +37,19 @@ struct font_t {
     double pl,pb,pr,pt; // plane
   };
 
+  struct metrics_t {
+    // The size of one EM.
+    double em_size;
+    // The vertical position of the ascender and descender relative to the baseline.
+    double ascender_y, descender_y;
+    // The vertical difference between consecutive baselines.
+    double line_height;
+    // The vertical position and thickness of the underline.
+    double underline_y, underline_thickness;
+  };
+
   double scale;
+  struct metrics_t metrics;
   struct glyph_t *glyphs; // отсортированный массив?
   std::vector<glyph_t> glyphs2;
   const struct glyph_t *fallback;

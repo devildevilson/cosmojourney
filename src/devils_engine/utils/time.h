@@ -64,7 +64,7 @@ namespace utils {
   template <typename F, typename... Args>
   auto perf(const std::string_view &msg, F f, Args &&...args) {
     time_log l(msg);
-    return f(std::forward<Args>(args)...);
+    return std::invoke(f, std::forward<Args>(args)...);
   }
 
   // при этом в игре у нас потенциально могут быть заданы иные правила для игрового дня

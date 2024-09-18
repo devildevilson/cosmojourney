@@ -459,14 +459,72 @@ int main(int argc, char const *argv[]) {
   // координаты тут приходят с перевернутой Y координатой
   // но пока что как сопоставить с Наклир фонтом я так и не понял
 
-  const auto f = visage::load_font(utils::project_folder() + "font.ttf");
-  utils::println(f->width, f->height);
+  // где g.x,g.y,g.w,g.h - позиция X, позиция перевернутый Y, размер W, размер H
+  // g.al,g.ab,g.ar,g.at - MIN X, MIN Y, MAX X, MAX Y (бокс)
+  // g.pl,g.pb,g.pr,g.pt - не понятно
+  // xadvance - непонятно правильный или нет, он в каких то долях приходит?
+  // для наклира я так понимаю нужен бокс + UV по боксу + размеры отдельно
+  // короче я понял что такое плэйн: это то как расположен глиф
+  // относительно "бокса в котором он рендерился" (то есть сейчас по умолчанию взят размер 24 setMinimumScale)
+  // 
+
+  // мне нужно заполнить вот это nk_user_font_glyph из данных ниже
+  // тут скорее всего uv понятно откуда брать (размер на атласе / размер фонта)
+  // offset - это отступ от левого верхнего угла до глифа (то есть значения plane с обратным Y)
+  // width, height - размер глифа (атлас макс - атлас мин, а ну или просто размер в инте)
+  // xadvance - это отступ до следущего глифа
+  //struct nk_user_font_glyph {
+  //  struct nk_vec2 uv[2];
+  //  /* texture coordinates */
+  //  struct nk_vec2 offset;
+  //  /* offset between top left and glyph */
+  //  float width, height;
+  //  /* size of the glyph  */
+  //  float xadvance;
+  //  /* offset to the next glyph */
+  //};
+  // похоже что НК считает все глифики слева сверху
+  // а тут они записаны снизу слева и надо бы перевычислить значения
+
+  const auto f = utils::perf("load_font", visage::load_font, utils::project_folder() + "font.ttf");
+  utils::println(f->width, f->height, f->scale, f->metrics.em_size, f->metrics.line_height);
   for (const auto &g : f->glyphs2) {
+    // примерно вот так
+    const int ny = f->height - (g.y + g.h);
+    const double nab = double(f->height) - g.at;
+    const double nat = double(ny + g.h) - 0.5;
+    const double npb = 1.0 - g.pt;
+    const double npt = 1.0 - g.pb;
+
+    // расчет данных для НК глифа
+    double uvminx = g.al / double(f->width);
+    double uvminy =  nab / double(f->height);
+    double uvmaxx = g.ar / double(f->width);
+    double uvmaxy =  nat / double(f->height);
+
+    double offsetx = g.pl * f->scale;
+    double offsety =  npb * f->scale;
+
+    // сомневаюсь что я должен брать эти значения
+    // точнее я поди должен брать полный размер и вычитать субпиксель?
+    // .... возможно, видимо выясню только отрендерив картинку
+    //double width  = (g.pr - g.pl) * f->scale;
+    //double height = (npt - npb) * f->scale;
+    // или так?
+    double width  = g.w;
+    double height = g.h;
+
+    double xadvance = g.xadvance * f->scale;
+
     utils::println("codepoint:", g.codepoint);
-    utils::println("xadvance:", g.xadvance, "scale:", g.scale, "gscale:", g.gscale);
-    utils::println("rect:",g.x,g.y,g.w,g.h);
-    utils::println("atlas:",g.al,g.ab,g.ar,g.at);
-    utils::println("plane:",g.pl,g.pb,g.pr,g.pt);
+    utils::println("xadvance:", g.xadvance, "advances:", f->scale*g.xadvance, "scale:", g.scale, "gscale:", g.gscale);
+    utils::println("rect  :",g.x,ny,g.w,g.h);
+    utils::println("atlas :",g.al,nab,g.ar,nat);
+    utils::println("plane :",g.pl,npb,g.pr,npt);
+    //utils::println("planex:",f->scale*g.pl,f->scale*g.pb,f->scale*g.pr,f->scale*g.pt);
+    utils::println("uv    :",uvminx,uvminy,uvmaxx,uvmaxy);
+    utils::println("offset:",offsetx,offsety);
+    utils::println("size  :",width,height);
   }
 
   return 0;
