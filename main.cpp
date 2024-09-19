@@ -370,7 +370,7 @@ int main(int argc, char const *argv[]) {
   // блен надо свопчеин раньше чем сюрфейс удалять... сюрфейс надо просто передать в класс свопчейна
   //painter::destroy_surface(gc->instance, surf);
 
-  /*sol::state lua;
+  sol::state lua;
   lua.open_libraries(
     sol::lib::debug,
     sol::lib::base, 
@@ -393,9 +393,9 @@ int main(int argc, char const *argv[]) {
             (info.name ? info.name : "<unknown>"), info.what);
         ++level;
     }
-  };*/
+  };
 
-  /*const auto lam = [] (sol::this_state s) {
+  const auto lam = [] (sol::this_state s) {
     char buffer_name[512]{0};
     char buffer[4096]{0};
     char buffer2[20]{0};
@@ -424,7 +424,7 @@ int main(int argc, char const *argv[]) {
     len = strlen(ar.name);
     src = std::string(ar.source, ar.srclen);
     utils::println(2, len == 0 ? "(no name)" : ar.name, ar.currentline);
-  };*/
+  };
 
   //const auto lam = [] (sol::this_state s) {
   //  lua_Debug info;
@@ -444,17 +444,23 @@ int main(int argc, char const *argv[]) {
   //  //o = sol::make_object(o.lua_state(), x);
   //  //o.
   //};
+
+  const auto fx = [] (sol::table t) {
+    t[1] = t[1].get<double>() + 1;
+  };
   
-  /*lua.set_function("lambda1", lam);
+  lua.set_function("lambda1", lam);
   lua.set_function("lambda2", lam);
   lua.set_function("lam2353", lam);
-  lua.set_function("stack_print", stack_print);*/
+  lua.set_function("stack_print", stack_print);
+  lua.set_function("fx", fx);
   //lua.set_function("inc", inc);
 
   //lua.script("function abc() \nstack_print(); \nend; \nfunction abcabc() \nabc(); \nstack_print(); \nend; \nabcabc()");
   //lua.script("function abc() \nlam2353(); \nend; \nfunction abcabc() \nabc(); \nlambda2(); \nend; \nabcabc()");
   //lua.script("abcabc()");
-  //lua.script("local x = 0; print(x); inc(x); print(x);");
+  //lua.script("local x = 0; print(x); inc(x); print(x);"); // это так в луа не работает
+  //lua.script("local x = {0}; print(x[1]); fx(x); print(x[1]);"); // да действительно это сработало
 
   // координаты тут приходят с перевернутой Y координатой
   // но пока что как сопоставить с Наклир фонтом я так и не понял
@@ -486,46 +492,46 @@ int main(int argc, char const *argv[]) {
   // похоже что НК считает все глифики слева сверху
   // а тут они записаны снизу слева и надо бы перевычислить значения
 
-  const auto f = utils::perf("load_font", visage::load_font, utils::project_folder() + "font.ttf");
-  utils::println(f->width, f->height, f->scale, f->metrics.em_size, f->metrics.line_height);
-  for (const auto &g : f->glyphs2) {
-    // примерно вот так
-    const int ny = f->height - (g.y + g.h);
-    const double nab = double(f->height) - g.at;
-    const double nat = double(ny + g.h) - 0.5;
-    const double npb = 1.0 - g.pt;
-    const double npt = 1.0 - g.pb;
+  //const auto f = utils::perf("load_font", visage::load_font, utils::project_folder() + "font.ttf");
+  //utils::println(f->width, f->height, f->scale, f->metrics.em_size, f->metrics.line_height);
+  //for (const auto &g : f->glyphs2) {
+  //  // примерно вот так
+  //  const int ny = f->height - (g.y + g.h);
+  //  const double nab = double(f->height) - g.at;
+  //  const double nat = double(ny + g.h) - 0.5;
+  //  const double npb = 1.0 - g.pt;
+  //  const double npt = 1.0 - g.pb;
 
-    // расчет данных для НК глифа
-    double uvminx = g.al / double(f->width);
-    double uvminy =  nab / double(f->height);
-    double uvmaxx = g.ar / double(f->width);
-    double uvmaxy =  nat / double(f->height);
+  //  // расчет данных для НК глифа
+  //  double uvminx = g.al / double(f->width);
+  //  double uvminy =  nab / double(f->height);
+  //  double uvmaxx = g.ar / double(f->width);
+  //  double uvmaxy =  nat / double(f->height);
 
-    double offsetx = g.pl * f->scale;
-    double offsety =  npb * f->scale;
+  //  double offsetx = g.pl * f->scale;
+  //  double offsety =  npb * f->scale;
 
-    // сомневаюсь что я должен брать эти значения
-    // точнее я поди должен брать полный размер и вычитать субпиксель?
-    // .... возможно, видимо выясню только отрендерив картинку
-    //double width  = (g.pr - g.pl) * f->scale;
-    //double height = (npt - npb) * f->scale;
-    // или так?
-    double width  = g.w;
-    double height = g.h;
+  //  // сомневаюсь что я должен брать эти значения
+  //  // точнее я поди должен брать полный размер и вычитать субпиксель?
+  //  // .... возможно, видимо выясню только отрендерив картинку
+  //  //double width  = (g.pr - g.pl) * f->scale;
+  //  //double height = (npt - npb) * f->scale;
+  //  // или так?
+  //  double width  = g.w;
+  //  double height = g.h;
 
-    double xadvance = g.xadvance * f->scale;
+  //  double xadvance = g.xadvance * f->scale;
 
-    utils::println("codepoint:", g.codepoint);
-    utils::println("xadvance:", g.xadvance, "advances:", f->scale*g.xadvance, "scale:", g.scale, "gscale:", g.gscale);
-    utils::println("rect  :",g.x,ny,g.w,g.h);
-    utils::println("atlas :",g.al,nab,g.ar,nat);
-    utils::println("plane :",g.pl,npb,g.pr,npt);
-    //utils::println("planex:",f->scale*g.pl,f->scale*g.pb,f->scale*g.pr,f->scale*g.pt);
-    utils::println("uv    :",uvminx,uvminy,uvmaxx,uvmaxy);
-    utils::println("offset:",offsetx,offsety);
-    utils::println("size  :",width,height);
-  }
+  //  utils::println("codepoint:", g.codepoint);
+  //  utils::println("xadvance:", g.xadvance, "advances:", f->scale*g.xadvance, "scale:", g.scale, "gscale:", g.gscale);
+  //  utils::println("rect  :",g.x,ny,g.w,g.h);
+  //  utils::println("atlas :",g.al,nab,g.ar,nat);
+  //  utils::println("plane :",g.pl,npb,g.pr,npt);
+  //  //utils::println("planex:",f->scale*g.pl,f->scale*g.pb,f->scale*g.pr,f->scale*g.pt);
+  //  utils::println("uv    :",uvminx,uvminy,uvmaxx,uvmaxy);
+  //  utils::println("offset:",offsetx,offsety);
+  //  utils::println("size  :",width,height);
+  //}
 
   return 0;
 }

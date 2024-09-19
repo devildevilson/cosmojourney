@@ -538,6 +538,8 @@ struct nk {
     return std::make_tuple(ret, sel);
   }
 
+  // надо переделать с nil аргументом
+
   // list view ???
 
   //nk_widget_layout_states
@@ -689,7 +691,7 @@ struct nk {
       const auto img = o.as<const struct nk_image*>();
       ret = nk_button_image(ctx_ptr, *img);
     } else {
-      utils::error("nk.button input must be either string, table, symbol or image");
+      utils::error("'nk.button' input must be either string, table, symbol or image");
     }
     return ret;
   }
@@ -706,7 +708,7 @@ struct nk {
         const auto img = o.as<const struct nk_image*>();
         ret = nk_button_image_text(ctx_ptr, *img, txt.data(), txt.size(), flags);
       } else {
-        utils::error("First argument must be either symbol or image");
+        utils::error("'nk.button' first argument must be either symbol or image");
       }
     }
 
@@ -778,6 +780,27 @@ struct nk {
     return nk_check_flags_text(ctx_ptr, txt, strlen(txt), flags, value);
   }
 
+  static bool check2(const char* txt, sol::table val) {
+    nk_bool active = val.get_or(1, false);
+    const bool ret = nk_checkbox_text(ctx_ptr, txt, strlen(txt), &active);
+    val[1] = bool(active);
+    return ret;
+  }
+
+  static bool check_align2(const char* txt, sol::table val, const uint32_t widget_align, const uint32_t text_align) {
+    nk_bool active = val.get_or(1, false);
+    const bool ret = nk_checkbox_text_align(ctx_ptr, txt, strlen(txt), &active, widget_align, text_align);
+    val[1] = bool(active);
+    return ret;
+  }
+
+  static bool check_flags2(const char* txt, sol::table val, const uint32_t value) {
+    uint32_t flags = val.get_or(1, 0u);
+    const bool ret = nk_checkbox_flags_text(ctx_ptr, txt, strlen(txt), &flags, value);
+    val[1] = flags;
+    return ret;
+  }
+
   // option
 
   static bool option(const char* txt, const bool active) {
@@ -786,6 +809,20 @@ struct nk {
 
   static bool option_align(const char* txt, const bool active, const uint32_t widget_align, const uint32_t text_align) {
     return nk_option_text_align(ctx_ptr, txt, strlen(txt), active, widget_align, text_align);
+  }
+
+  static bool radio(const char* txt, sol::table val) {
+    nk_bool active = val.get_or(1, false);
+    const bool ret = nk_radio_text(ctx_ptr, txt, strlen(txt), &active);
+    val[1] = bool(active);
+    return ret;
+  }
+
+  static bool radio_align(const char* txt, sol::table val, const uint32_t widget_align, const uint32_t text_align) {
+    nk_bool active = val.get_or(1, false);
+    const bool ret = nk_radio_text_align(ctx_ptr, txt, strlen(txt), &active, widget_align, text_align);
+    val[1] = bool(active);
+    return ret;
   }
 
   // select
@@ -802,6 +839,44 @@ struct nk {
     return nk_select_symbol_text(ctx_ptr, nk_symbol_type(symb), txt, strlen(txt), align, value);
   }
 
+  static bool select2(const sol::object &o, const char* txt, const uint32_t align, const bool value) {
+    bool ret = false;
+    if (o.valid()) {
+      if (o.is<uint32_t>()) {
+        const uint32_t symb = o.as<uint32_t>();
+        ret = nk_select_symbol_text(ctx_ptr, nk_symbol_type(symb), txt, strlen(txt), align, value);
+      } else if (o.is<const struct nk_image*>()) {
+        const struct nk_image* img = o.as<const struct nk_image*>();
+        ret = nk_select_image_text(ctx_ptr, *img, txt, strlen(txt), align, value);
+      } else {
+        utils::error("Function 'nk.select' expects symbol or image as first argument");
+      }
+    } else {
+      ret = nk_select_text(ctx_ptr, txt, strlen(txt), align, value);
+    }
+    return ret;
+  }
+
+  static bool selectable(const sol::object &o, const char* txt, const uint32_t align, sol::table val) {
+    nk_bool value = val.get_or(1, false);
+    bool ret = false;
+    if (o.valid()) {
+      if (o.is<uint32_t>()) {
+        const uint32_t symb = o.as<uint32_t>();
+        ret = nk_selectable_symbol_text(ctx_ptr, nk_symbol_type(symb), txt, strlen(txt), align, &value);
+      } else if (o.is<const struct nk_image*>()) {
+        const struct nk_image* img = o.as<const struct nk_image*>();
+        ret = nk_selectable_image_text(ctx_ptr, *img, txt, strlen(txt), align, &value);
+      } else {
+        utils::error("Function 'nk.selectable' expects symbol or image as first argument");
+      }
+    } else {
+      ret = nk_selectable_text(ctx_ptr, txt, strlen(txt), align, &value);
+    }
+    val[1] = bool(value);
+    return ret;
+  }
+
   // slider
   
   // нужен ли мне еще один слайдер?
@@ -813,10 +888,22 @@ struct nk {
     return nk_slide_int(ctx_ptr, min, val, max, step);
   }
 
+  static bool slider_float2(const double min, sol::table val, const double max, const double step) {
+    float cur = val.get_or(1, min); // min ?
+    const bool ret = nk_slider_float(ctx_ptr, min, &cur, max, step);
+    val[1] = cur;
+    return ret;
+  }
+
+  static bool slider_int2(const int64_t min, sol::table val, const int64_t max, const int64_t step) {
+    int32_t cur = val.get_or(1, min); // min ?
+    const bool ret = nk_slider_int(ctx_ptr, min, &cur, max, step);
+    val[1] = cur;
+    return ret;
+  }
+
   // knob
 
-//NK_API nk_bool nk_knob_float(struct nk_context*, float min, float *val, float max, float step, enum nk_heading zero_direction, float dead_zone_degrees);
-//NK_API nk_bool nk_knob_int(struct nk_context*, int min, int *val, int max, int step, enum nk_heading zero_direction, float dead_zone_degrees);
   static float knob_float(const float min, float val, const float max, const float step, const uint32_t zero_direction, const float dead_zone_degrees) {
     const bool ret = nk_knob_float(ctx_ptr, min, &val, max, step, nk_heading(zero_direction), dead_zone_degrees);
     (void)ret; // че делать с этим?
@@ -829,10 +916,34 @@ struct nk {
     return val;
   }
 
+  static bool knob_float2(const float min, sol::table val, const float max, const float step, const uint32_t zero_direction, const float dead_zone_degrees) {
+    float cur = val.get_or(1, min); // min ?
+    const bool ret = nk_knob_float(ctx_ptr, min, &cur, max, step, nk_heading(zero_direction), dead_zone_degrees);
+    val[1] = cur;
+    return ret;
+  }
+
+  static int32_t knob_int2(const int32_t min, sol::table val, const int32_t max, const int32_t step, const uint32_t zero_direction, const float dead_zone_degrees) {
+    int32_t cur = val.get_or(1, min); // min ?
+    const bool ret = nk_knob_int(ctx_ptr, min, &cur, max, step, nk_heading(zero_direction), dead_zone_degrees);
+    val[1] = cur;
+    return ret;
+  }
+
   // progressbar
 
-  static size_t progress(const size_t cur, const size_t max, const bool modifyable) {
-    return nk_prog(ctx_ptr, cur, max, modifyable);
+  // все функции в которых изменяется аргумент
+  // могут принимать таблицу в которой первым слотом сидит этот аргумент
+  // тогда можно легко повторить все наклир функции нормально
+  static size_t progress(const size_t cur, const size_t max, const sol::optional<bool> modifyable) {
+    return nk_prog(ctx_ptr, cur, max, modifyable.has_value() && modifyable.value());
+  }
+
+  static bool progress2(sol::table cur, const size_t max, const sol::optional<bool> modifyable) {
+    size_t val = cur.get_or(1, 0ull);
+    const auto ret = nk_progress(ctx_ptr, &val, max, modifyable.has_value() && modifyable.value());
+    cur[1] = val;
+    return ret;
   }
 
   // color_picker
@@ -855,6 +966,12 @@ struct nk {
 
   static double property(const char* title, const double min, const double val, const double max, const double step, const double inc_per_pixel) {
     return nk_propertyd(ctx_ptr, title, min, val, max, step, inc_per_pixel);
+  }
+
+  static void property2(const char* title, const double min, sol::table val, const double max, const double step, const double inc_per_pixel) {
+    double cur = val.get_or(1, min);
+    nk_property_double(ctx_ptr, title, min, &cur, max, step, inc_per_pixel);
+    val[1] = cur;
   }
 
   // editor
@@ -888,7 +1005,7 @@ struct nk {
       text_edit_filter = fil;
       f = &custom_filter;
     } else {
-      utils::error("Unsupported text editor filter type");
+      utils::error("'nk.edit_string' unsupported text editor filter type");
     }
 
     nk_edit_string(ctx_ptr, flags, default_text_editor_buffer.data(), &size, max, f);
@@ -897,6 +1014,44 @@ struct nk {
     text_edit_filter = sol::nil;
 
     return final_str;
+  }
+
+  static uint32_t edit_string2(sol::table t, const size_t max, const uint32_t flags, sol::object filter) {
+    //auto str = t.get_or(1, std::string()); // блин очень плохо =(
+    //str.resize(std::max(str.size(), max));
+    auto str = t.get_or(1, std::string_view());
+    default_text_editor_buffer.resize(max, '\0');
+    if (!str.empty()) memcpy(default_text_editor_buffer.data(), str.data(), str.size());
+
+    nk_plugin_filter f = nullptr;
+    if (!filter.valid()) {
+      f = &nk_filter_default;
+    } else if (filter.is<std::string_view>()) {
+      const auto name = filter.as<std::string_view>();
+           if (name == "default") f = &nk_filter_default;
+      else if (name == "ascii") f = &nk_filter_ascii;
+      else if (name == "float") f = &nk_filter_float;
+      else if (name == "decimal") f = &nk_filter_decimal;
+      else if (name == "hex") f = &nk_filter_hex;
+      else if (name == "oct") f = &nk_filter_oct;
+      else if (name == "binary") f = &nk_filter_binary;
+      else utils::error("Could not find filter by name '{}'", name);
+    } else if (filter.is<sol::function>()) {
+      const auto fil = filter.as<sol::function>();
+      text_edit_filter = fil;
+      f = &custom_filter;
+    } else {
+      utils::error("'nk.edit_string2' unsupported text editor filter type");
+    }
+
+    int32_t size = default_text_editor_buffer.size();
+    const uint32_t flags = nk_edit_string(ctx_ptr, flags, default_text_editor_buffer.data(), &size, max, f);
+    std::string final_str(default_text_editor_buffer.data(), size);
+    default_text_editor_buffer.clear();
+    text_edit_filter = sol::nil;
+    t[1] = final_str;
+
+    return flags;
   }
 
   static void edit_focus(const uint32_t flags) {
@@ -961,7 +1116,7 @@ struct nk {
       auto f = v.as<sol::function>();
       nk_plot_function(ctx_ptr, nk_chart_type(type), &f, &get_plot_value_from_function, count, offset);
     } else {
-      utils::error("Nuklear plot function expects table of function as input");
+      utils::error("'nk.plot' expects table or function as input");
     }
   }
 
@@ -1016,7 +1171,7 @@ struct nk {
       auto f = o.as<sol::function>();
       ret = nk_combo_callback(ctx_ptr, &get_combobox_value_from_function, &f, selected, count, item_size, v);
     } else {
-      utils::error("Nuklear combobox function expects table of function as input");
+      utils::error("'nk.combobox' expects table of function as input");
     }
 
     return ret;
@@ -1045,14 +1200,14 @@ struct nk {
           ret = nk_combo_begin_symbol(ctx_ptr, nk_symbol_type(s), v);
         }
       } else {
-        utils::error("Either nil, img or symbol must be provided as second argument");
+        utils::error("'nk.combo.begin' either nil, img or symbol must be provided as second argument");
       }
     } else {
       if (name.has_value()) {
         auto n = name.value();
         ret = nk_combo_begin_text(ctx_ptr, n, strlen(n), v);
       } else {
-        utils::error("First argument must be valid if second is nil");
+        utils::error("'nk.combo.begin' first argument must be valid if second is nil");
       }
     }
 
@@ -1082,7 +1237,7 @@ struct nk {
         const auto s = symbol_or_img.as<uint32_t>();
         ret = nk_combo_item_symbol_text(ctx_ptr, nk_symbol_type(s), name, strlen(name), flags);
       } else {
-        utils::error("Either nil, img or symbol must be provided as first argument");
+        utils::error("'nk.combo.item' either nil, img or symbol must be provided as first argument");
       }
     } else {
       ret = nk_combo_item_text(ctx_ptr, name, strlen(name), flags);
@@ -1117,7 +1272,7 @@ struct nk {
         const auto s = symbol_or_img.as<uint32_t>();
         ret = nk_contextual_item_symbol_text(ctx_ptr, nk_symbol_type(s), name, strlen(name), aligment);
       } else {
-        utils::error("Either nil, img or symbol must be provided as second argument");
+        utils::error("'nk.contextual.item' either nil, img or symbol must be provided as second argument");
       }
     } else {
       ret = nk_contextual_item_text(ctx_ptr, name, strlen(name), aligment);
@@ -1169,7 +1324,7 @@ struct nk {
         const auto s = symbol_or_img.as<uint32_t>();
         ret = nk_menu_begin_symbol_text(ctx_ptr, name, strlen(name), align, nk_symbol_type(s), v1);
       } else {
-        utils::error("Either nil, img or symbol must be provided as second argument");
+        utils::error("'nk.menu.begin_text' either nil, img or symbol must be provided as second argument");
       }
     } else {
       ret = nk_menu_begin_text(ctx_ptr, name, strlen(name), align, v1);
@@ -1188,7 +1343,7 @@ struct nk {
       const auto s = symbol_or_img.as<uint32_t>();
       ret = nk_menu_begin_symbol(ctx_ptr, name, nk_symbol_type(s), v1);
     } else {
-      utils::error("Either img or symbol must be provided as second argument");
+      utils::error("'nk.menu.begin' either img or symbol must be provided as second argument");
     }
 
     return ret;
@@ -1204,7 +1359,7 @@ struct nk {
         const auto s = symbol_or_img.as<uint32_t>();
         ret = nk_menu_item_symbol_text(ctx_ptr, nk_symbol_type(s), name, strlen(name), align);
       } else {
-        utils::error("Either nil, img or symbol must be provided as second argument");
+        utils::error("'nk.menu.item' either nil, img or symbol must be provided as second argument");
       }
     } else {
       ret = nk_menu_item_text(ctx_ptr, name, strlen(name), align);
@@ -1468,20 +1623,32 @@ void nk_functions(sol::table t) {
   nk.set_function("checkbox", &nk::check);
   nk.set_function("checkbox_align", &nk::check_align);
   nk.set_function("checkbox_flags", &nk::check_flags);
+  nk.set_function("checkbox2", &nk::check2);
+  nk.set_function("checkbox_align2", &nk::check_align2);
+  nk.set_function("checkbox_flags2", &nk::check_flags2);
   nk.set_function("option", &nk::option);
   nk.set_function("option_align", &nk::option_align);
+  nk.set_function("radio", &nk::radio);
+  nk.set_function("radio_align", &nk::radio_align);
   nk.set_function("slider", &nk::slider_float);
+  nk.set_function("slider2", &nk::slider_float2);
   nk.set_function("progress", &nk::progress);
+  nk.set_function("progress2", &nk::progress2);
   nk.set_function("color_picker", &nk::color_picker);
   nk.set_function("property", &nk::property);
+  nk.set_function("property2", &nk::property2);
   nk.set_function("knob", &nk::knob_float);
+  nk.set_function("knob2", &nk::knob_float2);
 
   // селект напрашивается на отдельную штуку
-  nk.set_function("select", &nk::select);
-  nk.set_function("select_image", &nk::select_image);
-  nk.set_function("select_symbol", &nk::select_symbol);
+  //nk.set_function("select", &nk::select);
+  //nk.set_function("select_image", &nk::select_image);
+  //nk.set_function("select_symbol", &nk::select_symbol);
+  nk.set_function("select", &nk::select2);
+  nk.set_function("selectable", &nk::selectable);
 
   nk.set_function("edit_string", &nk::edit_string);
+  nk.set_function("edit_string2", &nk::edit_string2);
   nk.set_function("edit_focus", &nk::edit_focus);
   nk.set_function("edit_unfocus", &nk::edit_unfocus);
 

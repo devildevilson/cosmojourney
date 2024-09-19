@@ -7,6 +7,9 @@
 #include <string>
 #include <vector>
 
+struct nk_user_font_glyph;
+typedef uint32_t nk_rune;
+
 namespace devils_engine {
 namespace visage {
 // из чего состоит шрифт? шрифт это атлас в котором все элементы имет миллиард данных по расположению
@@ -26,7 +29,7 @@ struct font_t {
 
   struct glyph_t {
     uint32_t codepoint;
-    double xadvance;
+    double advance;
     //double x0, y0, x1, y1, w, h;
     //double u0, v0, u1, v1;
     double scale;
@@ -57,9 +60,14 @@ struct font_t {
   int32_t width, height;
   void* texture;
   struct config *config; // конфиг тут хранить?
+
+  const glyph_t *find_glyph(const uint32_t codepoint) const;
+  void query_font_glyph(float font_height, struct nk_user_font_glyph *glyph, nk_rune codepoint, nk_rune next_codepoint) const;
+  double text_width(double height, const std::string_view &txt) const;
 };
 
 // должна быть какая то конфигурация для шрифта, откуда брать данные?
+// тут может быть сразу пачка шрифтов
 std::unique_ptr<font_t> load_font(const std::string &path);
 }
 }
