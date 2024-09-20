@@ -1,5 +1,7 @@
 #include "prng.h"
 
+// надеюсь я все правильно записал и у меня не будет глупых проблем со случацными числами
+
 namespace devils_engine {
   namespace utils {
     double prng_normalize(const uint64_t value) {
@@ -13,6 +15,40 @@ namespace devils_engine {
       const uint32_t float_mask = 0x7f << 23;
       u.i = float_mask | (value >> 9);
       return u.f - 1.0f;
+    }
+
+    // предполагаем что числа не 0? имеет смысл
+
+    uint64_t mix(const uint64_t v1, const uint64_t v2) {
+      xoroshiro128starstar::state s{ { v1, v2 } };
+      return xoroshiro128starstar::value(xoroshiro128starstar::next(s));
+    }
+
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3) {
+      // в таких функциях было бы неплохо миксовать случайное число
+      return mix(v1, mix(v2, v3));
+    }
+
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3, const uint64_t v4) {
+      xoshiro256starstar::state s{ { v1, v2, v3, v4 } };
+      return xoshiro256starstar::value(xoshiro256starstar::next(s));
+    }
+
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3, const uint64_t v4, const uint64_t v5) {
+      return mix(v1, v2, v3, mix(v4, v5));
+    }
+
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3, const uint64_t v4, const uint64_t v5, const uint64_t v6) {
+      return mix(mix(v1, v6), v2, v3, v4, v5);
+    }
+
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3, const uint64_t v4, const uint64_t v5, const uint64_t v6, const uint64_t v7) {
+      return mix(v1, mix(v2, v7), v3, v4, v5, v6);
+    }
+
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3, const uint64_t v4, const uint64_t v5, const uint64_t v6, const uint64_t v7, const uint64_t v8) {
+      xoshiro512starstar::state s{ { v1, v2, v3, v4, v5, v6, v7, v8 } };
+      return xoshiro512starstar::value(xoshiro512starstar::next(s));
     }
     
     static inline uint64_t rotl(const uint64_t x, int k) {

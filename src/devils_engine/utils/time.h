@@ -67,6 +67,12 @@ namespace utils {
     return std::invoke(f, std::forward<Args>(args)...);
   }
 
+  template <typename T1, typename T2>
+  int64_t count_mcs(const T1 &tp1, const T2 &tp2) {
+    const auto dur = std::chrono::clock_cast<std::chrono::high_resolution_clock>(tp2) - std::chrono::clock_cast<std::chrono::high_resolution_clock>(tp1);
+    return std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
+  }
+
   // при этом в игре у нас потенциально могут быть заданы иные правила для игрового дня
   struct date {
     int32_t year;

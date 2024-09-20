@@ -12,6 +12,17 @@ namespace devils_engine {
     double prng_normalize(const uint64_t value);  // или сделать через темлейт
     float prng_normalizef(const uint32_t value);
 
+    // используем xoshiro
+    // можно было бы сделать через шаблоны, но мне лень
+    // ХОТЯ БЫ ОДНО ЧИСЛО ДОЛЖНО БЫТЬ НЕ 0
+    uint64_t mix(const uint64_t v1, const uint64_t v2);
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3);
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3, const uint64_t v4);
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3, const uint64_t v4, const uint64_t v5);
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3, const uint64_t v4, const uint64_t v5, const uint64_t v6);
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3, const uint64_t v4, const uint64_t v5, const uint64_t v6, const uint64_t v7);
+    uint64_t mix(const uint64_t v1, const uint64_t v2, const uint64_t v3, const uint64_t v4, const uint64_t v5, const uint64_t v6, const uint64_t v7, const uint64_t v8);
+
     struct mulberry32 {  // используется для инициализации
       static const size_t state_size = 1;
       struct state { 

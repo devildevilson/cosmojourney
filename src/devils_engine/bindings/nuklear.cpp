@@ -1045,13 +1045,13 @@ struct nk {
     }
 
     int32_t size = default_text_editor_buffer.size();
-    const uint32_t flags = nk_edit_string(ctx_ptr, flags, default_text_editor_buffer.data(), &size, max, f);
+    const uint32_t ret_flags = nk_edit_string(ctx_ptr, flags, default_text_editor_buffer.data(), &size, max, f);
     std::string final_str(default_text_editor_buffer.data(), size);
     default_text_editor_buffer.clear();
     text_edit_filter = sol::nil;
     t[1] = final_str;
 
-    return flags;
+    return ret_flags;
   }
 
   static void edit_focus(const uint32_t flags) {
@@ -1146,6 +1146,8 @@ struct nk {
   }
 
   // combobox
+
+  // тут по идее наклир скопирует строчку к себе, а значит скорее всего она будет существовать без проблем в памяти
 
   static void get_combobox_value_from_table(void* user, int32_t index, const char** ptr) {
     const auto t_p = reinterpret_cast<sol::table*>(user);
@@ -1383,6 +1385,10 @@ nk_context* nk::ctx_ptr = nullptr;
 std::unique_ptr<nk_text_edit> nk::default_editor;
 std::string nk::default_text_editor_buffer;
 sol::function nk::text_edit_filter;
+
+void setup_nk_context(nk_context* ptr) {
+  nk::ctx_ptr = ptr;
+}
 
 void nk_functions(sol::table t) {
   auto nk = t.create_named("nk");

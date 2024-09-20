@@ -6,6 +6,7 @@
 #include "utils/prng.h"
 #include "utils/dice.h"
 #include "utils/time.h"
+#include "utils/core.h"
 #include "shared.h"
 
 namespace devils_engine {
@@ -140,8 +141,9 @@ static int64_t prng64(const int64_t val) {
 static int64_t prng64_2(const int64_t value1, const int64_t value2) {
   const auto val1 = s64_to_u64(value1);
   const auto val2 = s64_to_u64(value2);
-  auto s = utils::xoroshiro128starstar::state{ { prng64_raw(val1), prng64_raw(val2) } };
-  return u64_to_s64(utils::xoroshiro128starstar::value(s));
+  //auto s = utils::xoroshiro128starstar::state{ { prng64_raw(val1), prng64_raw(val2) } };
+  //return u64_to_s64(utils::xoroshiro128starstar::value(s));
+  return u64_to_s64(utils::mix(prng64_raw(val1), prng64_raw(val2)));
 }
 
 static double prng64_normalize(const int64_t value) {
@@ -280,7 +282,7 @@ static std::string_view platform() {
 }
 
 static std::string_view project() {
-  return std::string_view(DEVILS_ENGINE_PROJECT_NAME); // дефайн с названием проекта
+  return std::string_view(DEVILS_ENGINE_PROJECT_NAME);
 }
 
 static sol::variadic_results perf(const sol::function &f, const sol::variadic_args &args, sol::this_state s) {
@@ -294,20 +296,65 @@ static sol::variadic_results perf(const sol::function &f, const sol::variadic_ar
   return final_res;
 }
 
+// возможно для этих двух функций использовать другой prng?
+static std::tuple<int64_t, int64_t> interval(const int64_t max, const int64_t state) {
+  //auto s = utils::splitmix64::state{{s64_to_u64(state)}};
+  auto s = utils::xoshiro256starstar::init(s64_to_u64(state));
+  const auto res = utils::interval(max, s);
+  // поправить индекс для Луа ??? да интервал я использую исключительно для массивов ... имеет смысл
+  return std::make_tuple(DEVILS_ENGINE_TO_LUA_INDEX(res), u64_to_s64(s.s[0]));
+}
+
 static std::tuple<double, int64_t> dice(const double count, const double upper_bound, const int64_t state) {
-  auto s = utils::splitmix64::state{{s64_to_u64(state)}};
+  //auto s = utils::splitmix64::state{{s64_to_u64(state)}};
+  auto s = utils::xoshiro256starstar::init(s64_to_u64(state));
   const auto res = utils::dice_accumulator(count, upper_bound, s);
   return std::make_tuple(double(res), u64_to_s64(s.s[0]));
 }
 
-// версия игры
-// штуки для разрешения экрана, dpi и проч
+// полезно будет иметь функцию для получения стака луа, при этом нужно что то безопасное
+// вообще сорс потребуется в будущем подменить
+// желательно понять где функция находится в каком файле
+// но у меня скорее всего будет загрузка не по файлу а по тексту скрипта
+static sol::table script_stack(sol::this_state s) {
+  const auto folder = utils::project_folder();
+
+  lua_Debug info;
+  int level = 0;
+  sol::table t = sol::state_view(s).create_table();
+  while (lua_getstack(s.L, level, &info)) {
+    lua_getinfo(s.L, "nSl", &info);
+    sol::table tbl = t[DEVILS_ENGINE_TO_LUA_INDEX(level)].get_or_create<sol::table>();
+    tbl["level"] = level;
+    auto source_str = std::string(info.source, info.srclen);
+    const size_t start = source_str.find(folder);
+    if (start != std::string::npos) {
+      if (start == 0) {
+        source_str = source_str.substr(folder.size());
+      } else {
+        source_str = source_str.substr(0, start) + source_str.substr(start + folder.size());
+      }
+    }
+    tbl["source"] = source_str;
+    tbl["currentline"] = info.currentline;
+    const char *name = info.name ? info.name : "<unknown>";
+    tbl["name"] = std::string(name);
+    tbl["what"] = std::string(info.what);
+
+    ++level;
+  }
+
+  return t;
+}
+
+// еще дополнительно желательно вылетать если у нас случайно произошел бесконечный цикл
+// как сделать?
 
 void basic_functions(sol::table t) {
   sol::table base = t.get_or("base", sol::nil);
   if (!base.valid()) base = t.create_named("base");
   base.set_function("pack_u32f32", &pack_u32f32);
-  base.set_function("pack_u32u32", &pack_u32u32);
+  base.set_function("pack_u32u32", &pack_u32u32); 
   base.set_function("pack_f32f32", &pack_f32f32);
   base.set_function("unpack_u32f32", &unpack_u32f32);
   base.set_function("unpack_u32u32", &unpack_u32u32);
@@ -315,6 +362,7 @@ void basic_functions(sol::table t) {
   base.set_function("prng64", &prng64);
   base.set_function("prng64_2", &prng64_2);
   base.set_function("prng64_normalize", &prng64_normalize);
+  base.set_function("interval", &interval);
   base.set_function("dice", &dice);
   base.set_function("prng32", &shared::prng);
   base.set_function("prng32_2", &shared::prng2);
@@ -326,6 +374,7 @@ void basic_functions(sol::table t) {
   base.set_function("num_random_queue", &num_random_queue);
   base.set_function("random_queue", &random_queue);
   base.set_function("perf", &perf);
+  base.set_function("script_stack", &script_stack);
   base.set("platform", platform());
   base.set("project", project());
 

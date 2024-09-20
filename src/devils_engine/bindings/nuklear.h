@@ -5,9 +5,12 @@
 #include <cstdint>
 #include "lua_header.h"
 
+struct nk_context;
+
 namespace devils_engine {
 namespace bindings {
 void nk_functions(sol::table t);
+void setup_nk_context(nk_context* ptr);
 }
 }
 

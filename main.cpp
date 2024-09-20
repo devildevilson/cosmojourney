@@ -51,6 +51,7 @@
 #include "painter/render_pass_stages.h"
 #include "bindings/lua_header.h"
 #include "visage/font.h"
+#include "bindings/env.h"
 
 using namespace devils_engine;
 
@@ -184,6 +185,45 @@ struct test2_t {
   vec4 abc;
   vec4* arr;
 };
+
+static auto tp = std::chrono::steady_clock::now();
+
+// короч 1млрд тоже довольно быстро экзекутит
+// надо видимо ставить каких нибудь 10млрд или 100млрд?
+// увы но в луа можно указать только int max число (2,147,483,647)
+// 2млрд это где то 26 секунд если просто на пустом цикле бегать
+// если не на пустом то наверное будет дольше
+// нет оказалось быстрее... с очень маленькой вероятностью число придется увеличить
+// чтобы он ждал именно 10 секунд
+// опять нет, если мы делаем какой то принт, то функция будет выполняться черти сколько времени
+// короч нет нужно иначе, наверное просто рил по времени сделать
+// ... по времени тяжеловато, если идет запуск сишной функции 
+// то луа конечно же ничего не считает, сделать что то типа 100 инструкций?
+// фигово... вылет по миллиону инструкций? и дополнительные вылеты по другим значениям где то в коде
+// или вылет просто по времени где мы берем каждую 10к инструкцию?
+// хук поди долго вычислятться тогда будет
+// короч пока что самым нормальным вариантов выглядит вылетать по времени 
+// и взять типа хук на 100к инструкций поди, у меня явно функция не должна выполняться 10 секунд
+// при этом в луа скорее всего будет большую часть выполняться мои сишные функции
+// и там желательно тоже сделать какие то проверки на валидность инпута
+// ну короче вот какие то такие настроечки видимо
+// нужно сбрасывать значение instructions_counter после успешного завершения функции
+// а время наоборот до старта функции инициализировать
+const int hook_after_instructions_count = 100000;
+const size_t max_lua_instructions_count = size_t(hook_after_instructions_count) * 1; // придется видимо сделать как то вот так
+static size_t instructions_counter = 0; // накручиваем счетчик и вылетаем после количества
+static void simple_hook(lua_State *L, lua_Debug *ar) {
+  instructions_counter += hook_after_instructions_count;
+  auto cur_tp = std::chrono::steady_clock::now();
+  const auto mcs = utils::count_mcs(tp, cur_tp);
+  if (mcs < 10 * 1000 * 1000) return;
+  const double s = double(std::abs(mcs)) / 1000000.0;
+
+  lua_getinfo(L, "nSl", ar);
+  std::string_view source(ar->source, ar->srclen);
+  std::string_view name(ar->name ? ar->name : "<unknown>");
+  utils::error("Called Lua hook after {} instructions. Exit lua script after {} mcs ({} seconds). Context: {}:{}:{}", instructions_counter, mcs, s, source, name, ar->currentline);
+}
 
 int main(int argc, char const *argv[]) {
   // пока что sleep_until выглядит самым приятным вариантом среди всех
@@ -372,7 +412,7 @@ int main(int argc, char const *argv[]) {
 
   sol::state lua;
   lua.open_libraries(
-    sol::lib::debug,
+    //sol::lib::debug,
     sol::lib::base, 
     sol::lib::bit32, 
     sol::lib::coroutine, 
@@ -380,8 +420,14 @@ int main(int argc, char const *argv[]) {
     sol::lib::package, 
     sol::lib::string, 
     sol::lib::table, 
-    sol::lib::utf8
+    sol::lib::utf8,
+    sol::lib::os
   );
+
+  lua_sethook(lua.lua_state(), &simple_hook, LUA_MASKCOUNT, hook_after_instructions_count);
+
+  auto env = bindings::create_env(lua);
+  bindings::basic_functions(env);
 
   const auto stack_print = [] (sol::this_state s) {
     lua_Debug info;
@@ -461,6 +507,12 @@ int main(int argc, char const *argv[]) {
   //lua.script("abcabc()");
   //lua.script("local x = 0; print(x); inc(x); print(x);"); // это так в луа не работает
   //lua.script("local x = {0}; print(x[1]); fx(x); print(x[1]);"); // да действительно это сработало
+  {
+    //utils::time_log l("lua script");
+    tp = std::chrono::steady_clock::now();
+    lua.script_file(utils::project_folder() + "script123.lua", env);
+    instructions_counter = 0;
+  }
 
   // координаты тут приходят с перевернутой Y координатой
   // но пока что как сопоставить с Наклир фонтом я так и не понял
