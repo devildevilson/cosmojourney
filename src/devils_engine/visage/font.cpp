@@ -55,23 +55,47 @@ double font_t::text_width(double height, const std::string_view &txt) const {
   return text_width;
 }
 
+struct freetype_raii {
+  msdfgen::FreetypeHandle* ft;
+
+  freetype_raii() : ft(msdfgen::initializeFreetype()) {
+    if (ft == nullptr) utils::error("Could not init freetype");
+  }
+  ~freetype_raii() noexcept {
+    msdfgen::deinitializeFreetype(ft);
+  }
+};
+
+struct font_raii {
+  msdfgen::FontHandle* fh;
+
+  font_raii(msdfgen::FreetypeHandle* ft, const msdfgen::byte* data, const size_t length, const std::string_view &hint) : 
+    fh(msdfgen::loadFontData(ft, data, length))
+  {
+    if (fh == nullptr) utils::error("Could not load font '{}'", hint);
+  }
+
+  ~font_raii() {
+    msdfgen::destroyFont(fh);
+  }
+};
+
 std::unique_ptr<font_t> load_font(const std::string &path) {
-  const auto file = file_io::read<uint8_t>(path);
-
-  auto ft = msdfgen::initializeFreetype();
-  if (ft == nullptr) utils::error("Could not init freetype");
-
-  auto font = msdfgen::loadFontData(ft, file.data(), file.size());
-  if (font == nullptr) utils::error("Could not load font '{}'", path);
-
   std::vector<msdf_atlas::GlyphGeometry> glyphs;
   msdf_atlas::FontGeometry fontGeometry(&glyphs);
 
-  msdf_atlas::Charset set; // ???
+  // кажется указатель нигде не сохраняется на будущее и мы можем так сделать
+  {
+    const auto file = file_io::read<uint8_t>(path);
+    freetype_raii ftraii;
+    font_raii fraii(ftraii.ft, file.data(), file.size(), path);
 
-  // мы можем наверное составить чарсеты сразу из нескольких фонтов
-  // после этого нужно будет вернуть font_t для каждого фонта отдельно
-  fontGeometry.loadCharset(font, 1.0, msdf_atlas::Charset::ASCII);
+    msdf_atlas::Charset set; // ???
+
+    // мы можем наверное составить чарсеты сразу из нескольких фонтов
+    // после этого нужно будет вернуть font_t для каждого фонта отдельно
+    fontGeometry.loadCharset(fraii.fh, 1.0, msdf_atlas::Charset::ASCII);
+  }
 
   const double max_corner_angle = 3.0; // ???
   for (auto &glyph : glyphs) {
@@ -99,9 +123,6 @@ std::unique_ptr<font_t> load_font(const std::string &path) {
   generator.generate(glyphs.data(), glyphs.size());
   auto atlas_storage = generator.atlasStorage();
   // + glyphs
-
-  msdfgen::destroyFont(font);
-  msdfgen::deinitializeFreetype(ft);
 
   // atlas_storage мы должны загрузить в контейнер картинок
   // glyphs мы должны пихнуть в шрифт
