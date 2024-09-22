@@ -4,9 +4,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <chrono>
+#include "bindings/lua_header.h"
+
+struct nk_context;
+struct nk_buffer;
 
 namespace devils_engine {
 namespace visage {
+
+struct font_t;
 
 // где то тут наверное будет храниться отдельный луа стейт чисто под интерфейс
 // + энвайронмент 
@@ -22,11 +28,23 @@ class system {
 public:
   static constexpr int hook_after_instructions_count = 100000;
   static constexpr size_t seconds10 = 10ull * 1000ull * 1000ull;
-  using clock_t = std::chrono::high_resolution_clock;
+  using clock_t = std::chrono::steady_clock;
   static clock_t::time_point start_tp;
   static size_t instruction_counter;
 
+  system(const font_t* default_font);
+  ~system() noexcept;
+  void load_entry_point(const std::string &path); // потом будет текст скрипта
   void update(const size_t time);
+
+private:
+  sol::state lua;
+  sol::environment env;
+  const font_t* default_font;
+  std::unique_ptr<nk_context> ctx;
+  std::unique_ptr<nk_buffer> cmds;
+
+  sol::function entry;
 };
 }
 }

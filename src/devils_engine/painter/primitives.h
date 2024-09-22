@@ -35,14 +35,18 @@ class sibling_stage : public utils::forw::list<sibling_stage, primitive_list_typ
 public:
   virtual ~sibling_stage() noexcept = default;
   inline sibling_stage* next() const { return utils::forw::list_next<primitive_list_type::siblings>(this); }
-  inline void set_next(sibling_stage* s) { utils::forw::list_set<primitive_list_type::siblings>(this, s); }
+  template <typename T>
+    requires(std::derived_from<T, sibling_stage>)
+  inline T* set_next(T* s) { utils::forw::list_set<primitive_list_type::siblings>(this, s); return s; }
 };
 
 class parent_stage : public virtual stage {
 public:
   inline parent_stage() noexcept : childs(nullptr) {}
   virtual ~parent_stage() noexcept = default;
-  inline void set_childs(sibling_stage* childs) { this->childs = childs; }
+  template <typename T>
+    requires(std::derived_from<T, sibling_stage>)
+  inline T* set_childs(T* child) { this->childs = child; return child; }
 protected:
   sibling_stage* childs;
 };
@@ -54,7 +58,9 @@ public:
   virtual void recreate(const uint32_t width, const uint32_t height) = 0;
 
   inline recreate_target* next(const recreate_target* ref) const { return utils::ring::list_next<primitive_list_type::siblings>(this, ref); }
-  inline void set_next(recreate_target* s) { utils::ring::list_radd<primitive_list_type::siblings>(this, s); }
+  template <typename T>
+    requires(std::derived_from<T, recreate_target>)
+  inline T* set_next(T* s) { utils::ring::list_radd<primitive_list_type::siblings>(this, s); return s; }
 };
 
 // порядок неважен
@@ -65,7 +71,9 @@ public:
   virtual uint32_t recompile_shaders() = 0;
 
   inline recompile_shaders_target* next() const { return utils::forw::list_next<primitive_list_type::siblings>(this); }
-  inline void set_next(recompile_shaders_target* s) { utils::forw::list_add<primitive_list_type::siblings>(this, s); }
+  template <typename T>
+    requires(std::derived_from<T, recreate_target>)
+  inline T* set_next(T* s) { utils::forw::list_add<primitive_list_type::siblings>(this, s); return s; }
 };
 
 struct semaphore_provider {

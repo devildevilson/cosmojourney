@@ -186,7 +186,7 @@ vk::ImageCreateInfo texture2D_staging(
     usage,
     vk::SharingMode::eExclusive,
     nullptr,
-    vk::ImageLayout::eUndefined
+    vk::ImageLayout::ePreinitialized
   );
 }
 

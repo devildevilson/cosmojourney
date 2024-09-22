@@ -155,6 +155,14 @@ const sampler_config_t* system::get_sampler_config(const std::string &name) cons
   return &itr->second;
 }
 
+const descriptor_set_layouts_config_t* system::get_set_layouts_configs() const {
+  return &set_layouts_configs;
+}
+
+const pipeline_layouts_t* system::get_pipeline_layouts_configs() const {
+  return &pipeline_layouts_configs;
+}
+
 const auto path_to_cached_folder = utils::project_folder() + "cache/";
 template <typename T>
 void dump_configs(const T &map, const std::string &postfix) {
@@ -186,6 +194,17 @@ void system::dump_configs_to_disk() const {
   dump_configs(render_pass_configs, render_pass_type);
   dump_configs(attachments_configs, attachments_type);
   dump_configs(sampler_configs, sampler_type);
+  {
+    const auto file_name = path_to_cached_folder + "descriptor_set_layouts.json";
+    const auto json = utils::to_json<glz::opts{.prettify=true,.indentation_width=2}>(set_layouts_configs);
+    file_io::write(json, file_name);
+  }
+
+  {
+    const auto file_name = path_to_cached_folder + "pipeline_layouts.json";
+    const auto json = utils::to_json<glz::opts{.prettify=true,.indentation_width=2}>(pipeline_layouts_configs);
+    file_io::write(json, file_name);
+  }
 }
 
 template <typename T, typename Fnames, typename Fconfigs>
@@ -242,6 +261,8 @@ void system::reload_configs() {
   load_default_configs(render_pass_configs, available_default_render_pass_configs, get_default_render_pass_config);
   load_default_configs(attachments_configs, available_default_attachments_configs, get_default_attachments_config);
   load_default_configs(sampler_configs, available_default_samplers_configs, get_default_sampler_config);
+  set_layouts_configs = *reinterpret_cast<const descriptor_set_layouts_config_t*>(get_default_descriptor_set_layout_configs());
+  pipeline_layouts_configs = *reinterpret_cast<const pipeline_layouts_t*>(get_default_pipeline_layout_configs());
 
   // теперь попытаемся загрузить кофиги с диска
   if (!file_io::exists(path_to_cached_folder)) return;
@@ -255,6 +276,30 @@ void system::reload_configs() {
     const auto content = file_io::read(path);
     auto file_name = std::string_view(path).substr(path.rfind('/')+1);
     file_name = file_name.substr(0, file_name.rfind('.'));
+
+    if (file_name == "descriptor_set_layouts") {
+      descriptor_set_layouts_config_t conf;
+      const auto err = utils::from_json(conf, content);
+      if (err) {
+        utils::warn("Could not parse config '{}' for type '{}'. Skipped", path, "descriptor_set_layouts_config_t");
+        continue;
+      }
+
+      set_layouts_configs = conf;
+      continue;
+    }
+
+    if (file_name == "pipeline_layouts") {
+      pipeline_layouts_t conf;
+      const auto err = utils::from_json(conf, content);
+      if (err) {
+        utils::warn("Could not parse config '{}' for type '{}'. Skipped", path, "pipeline_layouts_t");
+        continue;
+      }
+
+      pipeline_layouts_configs = conf;
+      continue;
+    }
 
     check_and_load_config_from_json(graphics_pipeline_configs, file_name, graphics_pipeline_type, content);
     check_and_load_config_from_json(compute_pipeline_configs, file_name, compute_pipeline_type, content);

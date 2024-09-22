@@ -43,8 +43,8 @@ namespace devils_engine {
 
       const size_t final_size = utils::align_to(size, m_aligment);
       const size_t offset = m_allocated;
-      m_allocated += final_size;
       if (offset + final_size > m_size) return nullptr;
+      m_allocated += final_size;
       return &m_memory[offset];
     }
 

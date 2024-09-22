@@ -49,8 +49,14 @@
 #include "painter/layouting.h"
 #include "painter/common_stages.h"
 #include "painter/render_pass_stages.h"
+#include "painter/arbitrary_image_container.h"
+#include "painter/image_pool.h"
+#include "painter/hierarchical_image_container.h"
 #include "bindings/lua_header.h"
 #include "visage/font.h"
+#include "visage/system.h"
+#include "visage/draw_resource.h"
+#include "visage/draw_stage.h"
 #include "bindings/env.h"
 
 using namespace devils_engine;
@@ -410,23 +416,23 @@ int main(int argc, char const *argv[]) {
   // блен надо свопчеин раньше чем сюрфейс удалять... сюрфейс надо просто передать в класс свопчейна
   //painter::destroy_surface(gc->instance, surf);
 
-  sol::state lua;
-  lua.open_libraries(
-    //sol::lib::debug,
-    sol::lib::base, 
-    sol::lib::bit32, 
-    sol::lib::coroutine, 
-    sol::lib::math, 
-    sol::lib::package, 
-    sol::lib::string, 
-    sol::lib::table, 
-    sol::lib::utf8,
-    sol::lib::os
-  );
+  //sol::state lua;
+  //lua.open_libraries(
+  //  //sol::lib::debug,
+  //  sol::lib::base, 
+  //  sol::lib::bit32, 
+  //  sol::lib::coroutine, 
+  //  sol::lib::math, 
+  //  sol::lib::package, 
+  //  sol::lib::string, 
+  //  sol::lib::table, 
+  //  sol::lib::utf8,
+  //  sol::lib::os
+  //);
 
-  lua_sethook(lua.lua_state(), &simple_hook, LUA_MASKCOUNT, hook_after_instructions_count);
+  //lua_sethook(lua.lua_state(), &simple_hook, LUA_MASKCOUNT, hook_after_instructions_count);
 
-  auto env = bindings::create_env(lua);
+  /*auto env = bindings::create_env(lua);
   bindings::basic_functions(env);
 
   const auto stack_print = [] (sol::this_state s) {
@@ -470,7 +476,7 @@ int main(int argc, char const *argv[]) {
     len = strlen(ar.name);
     src = std::string(ar.source, ar.srclen);
     utils::println(2, len == 0 ? "(no name)" : ar.name, ar.currentline);
-  };
+  };*/
 
   //const auto lam = [] (sol::this_state s) {
   //  lua_Debug info;
@@ -491,7 +497,7 @@ int main(int argc, char const *argv[]) {
   //  //o.
   //};
 
-  const auto fx = [] (sol::table t) {
+  /*const auto fx = [] (sol::table t) {
     t[1] = t[1].get<double>() + 1;
   };
   
@@ -499,7 +505,7 @@ int main(int argc, char const *argv[]) {
   lua.set_function("lambda2", lam);
   lua.set_function("lam2353", lam);
   lua.set_function("stack_print", stack_print);
-  lua.set_function("fx", fx);
+  lua.set_function("fx", fx);*/
   //lua.set_function("inc", inc);
 
   //lua.script("function abc() \nstack_print(); \nend; \nfunction abcabc() \nabc(); \nstack_print(); \nend; \nabcabc()");
@@ -507,83 +513,142 @@ int main(int argc, char const *argv[]) {
   //lua.script("abcabc()");
   //lua.script("local x = 0; print(x); inc(x); print(x);"); // это так в луа не работает
   //lua.script("local x = {0}; print(x[1]); fx(x); print(x[1]);"); // да действительно это сработало
+  //{
+  //  //utils::time_log l("lua script");
+  //  tp = std::chrono::steady_clock::now();
+  //  lua.script_file(utils::project_folder() + "script123.lua", env);
+  //  instructions_counter = 0;
+  //}
+
+  input::init i(&err_handler);
+  // бля у челов с двумя мониками может быть моник подключен к отдельной видеокарте... может такое быть?
+  // как убедиться что мы используем именно ту видеокарту для моника? я надеюсь что с этим справится 
+  // мой класс по нахождению правильного устройства (там есть проверка на это)
+  auto w = input::create_window(1000, 1000, "interface");
+
+  demiurg::module_system msys(utils::project_folder() + "folder1/");
+  demiurg::resource_system dsys;
+  dsys.register_type<painter::shader_source_file>("shaders", "vert,frag");
+  dsys.register_type<painter::glsl_source_file>("include", "glsl");
+
+  msys.load_default_modules();
+  dsys.parse_resources(&msys);
+
   {
-    //utils::time_log l("lua script");
-    tp = std::chrono::steady_clock::now();
-    lua.script_file(utils::project_folder() + "script123.lua", env);
-    instructions_counter = 0;
+    std::vector<demiurg::resource_interface*> resources;
+    resources.reserve(1000);
+    dsys.find("shaders/", resources);
+    for (const auto ptr : resources) {
+      ptr->load({});
+    }
   }
 
-  // координаты тут приходят с перевернутой Y координатой
-  // но пока что как сопоставить с Наклир фонтом я так и не понял
+  painter::system psys;
+  psys.reload_configs();
+  psys.dump_configs_to_disk();
+  auto conf = psys.get_attachments_config("default");
+  auto rp_conf = psys.get_render_pass_config("default");
+  auto pl_conf = psys.get_graphics_pipeline_config("default"); // другой конфиг
 
-  // где g.x,g.y,g.w,g.h - позиция X, позиция перевернутый Y, размер W, размер H
-  // g.al,g.ab,g.ar,g.at - MIN X, MIN Y, MAX X, MAX Y (бокс)
-  // g.pl,g.pb,g.pr,g.pt - не понятно
-  // xadvance - непонятно правильный или нет, он в каких то долях приходит?
-  // для наклира я так понимаю нужен бокс + UV по боксу + размеры отдельно
-  // короче я понял что такое плэйн: это то как расположен глиф
-  // относительно "бокса в котором он рендерился" (то есть сейчас по умолчанию взят размер 24 setMinimumScale)
-  // 
+  auto gc     = psys.create_main_container();
+  auto imgs   = psys.create<painter::arbitrary_image_container>("arbitrary", gc->instance, gc->physical_device, gc->device, gc->buffer_allocator);
+  auto host_imgs = psys.create<painter::host_image_container>("arbitrary", gc->device, gc->buffer_allocator);
+  auto surf   = painter::create_surface(gc->instance, w);
 
-  // мне нужно заполнить вот это nk_user_font_glyph из данных ниже
-  // тут скорее всего uv понятно откуда брать (размер на атласе / размер фонта)
-  // offset - это отступ от левого верхнего угла до глифа (то есть значения plane с обратным Y)
-  // width, height - размер глифа (атлас макс - атлас мин, а ну или просто размер в инте)
-  // xadvance - это отступ до следущего глифа
-  //struct nk_user_font_glyph {
-  //  struct nk_vec2 uv[2];
-  //  /* texture coordinates */
-  //  struct nk_vec2 offset;
-  //  /* offset between top left and glyph */
-  //  float width, height;
-  //  /* size of the glyph  */
-  //  float xadvance;
-  //  /* offset to the next glyph */
-  //};
-  // похоже что НК считает все глифики слева сверху
-  // а тут они записаны снизу слева и надо бы перевычислить значения
+  // отсюда нужно забрать лэйаут и создать дескриптор сет для интерфейса
+  auto layout = psys.create<painter::layouting>(gc->device, painter::layouting::create_info{10, 4096, 1, 1, 10, 1}, psys.get_set_layouts_configs(), psys.get_pipeline_layouts_configs());
+  auto sch    = psys.create<painter::simple_swapchain>(gc->device, gc->physical_device, surf, 2);
+  auto scont  = psys.create<painter::surface_container>(gc->instance, surf);
+  auto ac     = psys.create<painter::attachments_container>(gc->device, gc->buffer_allocator, sch, std::move(conf));
+  auto rp     = psys.create<painter::main_render_pass>(gc->device, rp_conf, ac);
+  auto fc     = psys.create<painter::simple_framebuffer>(gc->device, rp, ac, sch);
+  auto interface_pipe = layout->find_pipeline_layout("interface");
+  auto pl     = psys.create<painter::simple_graphics_pipeline>(gc->device, interface_pipe, gc->cache, &dsys);
+  rp->create_render_pass();
+  pl->init(rp->render_pass, 0, pl_conf, rp_conf->subpasses[0].attachments.size(), rp_conf->subpasses[0].attachments.data());
 
-  //const auto f = utils::perf("load_font", visage::load_font, utils::project_folder() + "font.ttf");
-  //utils::println(f->width, f->height, f->scale, f->metrics.em_size, f->metrics.line_height);
-  //for (const auto &g : f->glyphs2) {
-  //  // примерно вот так
-  //  const int ny = f->height - (g.y + g.h);
-  //  const double nab = double(f->height) - g.at;
-  //  const double nat = double(ny + g.h) - 0.5;
-  //  const double npb = 1.0 - g.pt;
-  //  const double npt = 1.0 - g.pb;
+  psys.recreate(1000, 1000);
 
-  //  // расчет данных для НК глифа
-  //  double uvminx = g.al / double(f->width);
-  //  double uvminy =  nab / double(f->height);
-  //  double uvmaxx = g.ar / double(f->width);
-  //  double uvmaxy =  nat / double(f->height);
+  auto set = layout->create_descriptor_set("uniform_data", "main_set");
+  auto interface_set = layout->create_descriptor_set("interface_data", "main_interface_set");
+  auto interface_res = psys.create<visage::draw_resource>(gc->device, gc->buffer_allocator, interface_set, );
 
-  //  double offsetx = g.pl * f->scale;
-  //  double offsety =  npb * f->scale;
-
-  //  // сомневаюсь что я должен брать эти значения
-  //  // точнее я поди должен брать полный размер и вычитать субпиксель?
-  //  // .... возможно, видимо выясню только отрендерив картинку
-  //  //double width  = (g.pr - g.pl) * f->scale;
-  //  //double height = (npt - npb) * f->scale;
-  //  // или так?
-  //  double width  = g.w;
-  //  double height = g.h;
-
-  //  double xadvance = g.xadvance * f->scale;
-
-  //  utils::println("codepoint:", g.codepoint);
-  //  utils::println("xadvance:", g.xadvance, "advances:", f->scale*g.xadvance, "scale:", g.scale, "gscale:", g.gscale);
-  //  utils::println("rect  :",g.x,ny,g.w,g.h);
-  //  utils::println("atlas :",g.al,nab,g.ar,nat);
-  //  utils::println("plane :",g.pl,npb,g.pr,npt);
-  //  //utils::println("planex:",f->scale*g.pl,f->scale*g.pb,f->scale*g.pr,f->scale*g.pt);
-  //  utils::println("uv    :",uvminx,uvminy,uvmaxx,uvmaxy);
-  //  utils::println("offset:",offsetx,offsety);
-  //  utils::println("size  :",width,height);
+  // тут нужен рендер пасс + пиплине + буфер + индекс буфер + дескриптор + драв интерфейса
+  {
+    //auto cmd_draw = psys.create<painter::draw>(&vdp);
+    auto cmd_draw = psys.create<visage::interface_draw>(pl, interface_res);
+    auto cmd_pl   = psys.create<painter::pipeline_view>(pl);
+    //auto cmd_vtx  = psys.create<painter::bind_vertex_buffers>(0, std::vector{t_buf->buffer}, std::vector{size_t(0)});
+    auto cmd_rp   = psys.create<painter::render_pass_main>(gc->device, fc);
+    auto cmd_bds  = psys.create<painter::bind_descriptor_sets>(pl, 0, std::vector{set});
+    // вот тут можно копирование устроить
+    auto cmd_qs   = psys.create<painter::queue_main>(gc->device, gc->graphics_command_pool, gc->graphics_queue, std::initializer_list<VkSemaphore>{}, std::initializer_list<uint32_t>{});
+    auto cmd_p    = psys.create_frame_presenter<painter::queue_present>(gc->device, gc->presentation_queue, sch, sch, cmd_qs);
+    cmd_qs->set_next(cmd_bds)->set_next(cmd_rp)->set_childs(cmd_pl)->set_next(cmd_draw);
+  //  //cmd_bar1->set_next(cmd_rp); cmd_rp->set_next(cmd_bar2);
+    //cmd_qs->set_childs(cmd_rp);
+  }
+  //
+  //{
+  //  auto cmd_bar2 = psys.create<painter::change_frame_image_layout>(sch, uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal), uint32_t(vk::ImageLayout::ePresentSrcKHR));
+  //  auto cmd_bar1 = psys.create<painter::change_frame_image_layout>(sch, uint32_t(vk::ImageLayout::ePresentSrcKHR), uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal));
+  //  auto cmd_draw = psys.create<painter::draw>(&vdp);
+  //  auto cmd_pl   = psys.create<painter::pipeline_view>(pl);
+  //  auto cmd_vtx  = psys.create<painter::bind_vertex_buffers>(0, std::vector{t_buf->buffer}, std::vector{size_t(0)});
+  //  auto cmd_rp   = psys.create<painter::render_pass_main>(gc->device, fc);
+  //  auto cmd_qs   = psys.create<painter::queue_main>(gc->device, gc->graphics_command_pool, gc->graphics_queue, std::initializer_list<VkSemaphore>{}, std::initializer_list<uint32_t>{});
+  //  auto cmd_p    = psys.create_frame_presenter<painter::queue_present>(gc->device, gc->presentation_queue, sch, sch, cmd_qs);
+  //  cmd_pl->set_next(cmd_vtx); cmd_vtx->set_next(cmd_draw);
+  //  cmd_rp->set_childs(cmd_pl); 
+  //  //cmd_bar1->set_next(cmd_rp); cmd_rp->set_next(cmd_bar2);
+  //  cmd_qs->set_childs(cmd_rp);
   //}
+
+  // создать картиночку и загрузить ее на гпу
+  // а сможем ли мы упаковать несколько фонтов + несколько чарсетов в одну картинку?
+  // надо это дело ограничивать ЖЕСКО
+  // было бы неплохо иметь возможность полностью пересоздать все фонты
+  // например при изменении настроек локализации
+  auto [ f, host_image_id ] = visage::load_font(host_imgs, utils::project_folder() + "font.ttf");
+  const uint32_t font_img_id = imgs->create("font_img", host_imgs->extent(host_image_id), host_imgs->format(host_image_id), layout->immutable_nearest);
+
+  painter::do_command(gc->device, gc->transfer_command_pool, gc->graphics_queue, gc->transfer_fence, [&] (VkCommandBuffer buf) {
+    for (uint32_t i = 0; i < sch->max_images; ++i) {
+      auto img = sch->frame_storage(i);
+      vk::ImageSubresourceRange isr(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+      const auto &[bar, ss, ds] = painter::make_image_memory_barrier(img, vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR, isr);
+      vk::CommandBuffer(buf).pipelineBarrier(ss, ds, vk::DependencyFlagBits::eByRegion, nullptr, nullptr, bar);
+    }
+
+    const auto host_img = host_imgs->storage(host_image_id);
+
+    host_imgs->change_layout(buf, host_image_id, uint32_t(vk::ImageLayout::ePreinitialized), uint32_t(vk::ImageLayout::eTransferSrcOptimal));
+    imgs->change_layout(buf, font_img_id, uint32_t(vk::ImageLayout::eUndefined), uint32_t(vk::ImageLayout::eTransferDstOptimal));
+    imgs->copy_data(buf, host_img, font_img_id);
+    imgs->change_layout(buf, font_img_id, uint32_t(vk::ImageLayout::eTransferDstOptimal), uint32_t(vk::ImageLayout::eShaderReadOnlyOptimal));
+  });
+
+  host_imgs->destroy(host_image_id);
+  // обновить дескриптор imgs
+  imgs->update_descriptor_set(set, 1, 0);
+
+  visage::system vsys(f.get());
+  vsys.load_entry_point(utils::project_folder() + "entry.lua");
+
+  const size_t target_fps = double(utils::app_clock::resolution()) / 60.0;
+  size_t counter = 0;
+  auto main_tp = std::chrono::high_resolution_clock::now();
+  while (!input::should_close(w)) {
+    counter += 1;
+    auto next_tp = main_tp + std::chrono::microseconds(counter * target_fps);
+
+    vsys.update(target_fps);
+    interface_res->prepare(w);
+    psys.wait_frame(1000000);
+    psys.compute_frame();
+
+    std::this_thread::sleep_until(next_tp);
+  }
 
   return 0;
 }
@@ -706,3 +771,13 @@ struct gpu_tile {
 //  std::shared_lock<std::shared_mutex> lock(write);
 //  // do read
 //}
+
+// теперь алгоритм для запуска интерфейса какой?
+// 1) создать шейдеры и пайплайн
+// 2) создать стейдж
+// 3) создать фонт и положить куда то картинку
+// 4) обновить дескриптор
+// 5) в каждом кадре вызывать луа функцию update 
+// 6) в каждом кадре спихивать данные наклира в буфер
+// 7) не забывать делать инпут
+// 8) 

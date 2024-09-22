@@ -31,7 +31,6 @@ endif()
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
   add_definitions(-D_NDEBUG)
   add_definitions(-DNDEBUG)
-  
 endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
@@ -128,15 +127,14 @@ add_subdirectory(src/devils_engine/demiurg/)
 add_subdirectory(src/devils_engine/thread/)
 add_subdirectory(src/devils_engine/input/)
 add_subdirectory(src/devils_engine/painter/)
-#add_subdirectory(src/devils_engine/interface/)
+add_subdirectory(src/devils_engine/visage/)
 
 add_subdirectory(include/dynamic_bitset)
 
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/visage/header.h" "src/devils_engine/visage/header.cpp" "src/devils_engine/visage/system.h" "src/devils_engine/bindings/env.cpp" "src/devils_engine/bindings/nuklear.h" "src/devils_engine/bindings/nuklear.cpp" "src/devils_engine/visage/font.h" "src/devils_engine/visage/font.cpp")
-target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input devils_painter lua54 sul::dynamic_bitset msdf-atlas-gen msdfgen-core msdfgen-ext freetype libpng16)
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/simul/interface.h" "src/devils_engine/simul/interface.cpp")
+target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input devils_painter devils_visage lua54 sul::dynamic_bitset msdf-atlas-gen msdfgen-core msdfgen-ext freetype libpng16)
 set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-#set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 
 foreach (library_path IN LISTS DYN_LIBRARIES_LIST)
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 

@@ -26,6 +26,8 @@ const compute_pipeline_create_config* get_default_compute_pipeline_config(const 
 const render_pass_data_t* get_default_render_pass_config(const std::string &name);
 const std::vector<attachment_config_t> * get_default_attachments_config(const std::string &name);
 const sampler_config_t* get_default_sampler_config(const std::string &name);
+const void* get_default_descriptor_set_layout_configs();
+const void* get_default_pipeline_layout_configs();
 
 }
 }

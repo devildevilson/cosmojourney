@@ -65,6 +65,7 @@ void destroy(GLFWwindow* w);
 void hide(GLFWwindow* w);
 void show(GLFWwindow* w);
 bool should_close(GLFWwindow* w) noexcept;
+std::tuple<uint32_t, uint32_t> window_size(GLFWwindow* m) noexcept;
 std::tuple<float, float> window_content_scale(GLFWwindow* m) noexcept;
 std::string_view window_title(GLFWwindow* m) noexcept;
 GLFWmonitor* window_monitor(GLFWwindow* m) noexcept;

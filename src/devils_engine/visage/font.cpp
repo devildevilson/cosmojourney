@@ -7,6 +7,8 @@
 #include "header.h"
 #include "utf/utf.hpp"
 
+#include "painter/arbitrary_image_container.h"
+
 #define MSDFGEN_PUBLIC
 #include "msdfgen.h"
 #include "msdf-atlas-gen/msdf-atlas-gen.h"
@@ -14,8 +16,8 @@
 namespace devils_engine {
 namespace visage {
 const font_t::glyph_t *font_t::find_glyph(const uint32_t codepoint) const {
-  auto itr = std::upper_bound(glyphs2.begin(), glyphs2.end(), codepoint, [] (const uint32_t codepoint, const auto &g) { return g.codepoint = codepoint; });
-  if (itr == glyphs2.end()) return fallback;
+  auto itr = std::upper_bound(glyphs.begin(), glyphs.end(), codepoint, [] (const uint32_t codepoint, const auto &g) { return g.codepoint == codepoint; });
+  if (itr == glyphs.end()) return fallback;
   return &(*itr);
 }
 
@@ -80,7 +82,7 @@ struct font_raii {
   }
 };
 
-std::unique_ptr<font_t> load_font(const std::string &path) {
+std::tuple<std::unique_ptr<font_t>, uint32_t> load_font(painter::host_image_container* imgs, const std::string &path) {
   std::vector<msdf_atlas::GlyphGeometry> glyphs;
   msdf_atlas::FontGeometry fontGeometry(&glyphs);
 
@@ -110,22 +112,26 @@ std::unique_ptr<font_t> load_font(const std::string &path) {
   packer.pack(glyphs.data(), glyphs.size());
   int width = 0, height = 0;
   packer.getDimensions(width, height);
+
+  const size_t color_channels = 3;
+
   msdf_atlas::ImmediateAtlasGenerator<
     float, // pixel type of buffer for individual glyphs depends on generator function
-    3,     // number of atlas color channels
+    color_channels,     // number of atlas color channels
     msdf_atlas::msdfGenerator, // function to generate bitmaps for individual glyphs
-    msdf_atlas::BitmapAtlasStorage<msdf_atlas::byte, 3> // storage
+    msdf_atlas::BitmapAtlasStorage<msdf_atlas::byte, color_channels> // storage
   > generator(width, height);
 
   msdf_atlas::GeneratorAttributes attributes; // ???
   generator.setAttributes(attributes);
   generator.setThreadCount(4);
   generator.generate(glyphs.data(), glyphs.size());
-  auto atlas_storage = generator.atlasStorage();
-  // + glyphs
-
-  // atlas_storage мы должны загрузить в контейнер картинок
-  // glyphs мы должны пихнуть в шрифт
+  msdfgen::BitmapConstRef<msdf_atlas::byte, 3> atlas_storage = generator.atlasStorage();
+  
+  const uint32_t host_image_id = imgs->create("font_storage", {uint32_t(width), uint32_t(height)}, painter::rgb24_format, VK_NULL_HANDLE);
+  auto mem = imgs->mapped_memory(host_image_id);
+  const size_t size = size_t(width) * size_t(height) * color_channels * sizeof(msdf_atlas::byte);
+  memcpy(mem, atlas_storage.pixels, size);
 
   msdfgen::savePng(atlas_storage, "font.png");
 
@@ -139,10 +145,10 @@ std::unique_ptr<font_t> load_font(const std::string &path) {
   f->metrics.line_height = fontGeometry.getMetrics().lineHeight;
   f->metrics.underline_y = fontGeometry.getMetrics().underlineY;
   f->metrics.underline_thickness = fontGeometry.getMetrics().underlineThickness;
-  f->glyphs2.reserve(glyphs.size());
+  f->glyphs.reserve(glyphs.size());
   for (const auto &glyph : glyphs) {
-    f->glyphs2.emplace_back();
-    auto &g = f->glyphs2.back();
+    f->glyphs.emplace_back();
+    auto &g = f->glyphs.back();
     g.advance = glyph.getAdvance();
     glyph.getBoxRect(g.x,g.y,g.w,g.h);
     g.scale = glyph.getBoxScale();
@@ -153,12 +159,12 @@ std::unique_ptr<font_t> load_font(const std::string &path) {
     glyph.getQuadPlaneBounds(g.pl,g.pb,g.pr,g.pt); // все еще не доконца понятно что делать с этим
   }
 
-  std::sort(f->glyphs2.begin(), f->glyphs2.end(), [] (const auto &a, const auto &b) {
+  std::sort(f->glyphs.begin(), f->glyphs.end(), [] (const auto &a, const auto &b) {
     return a.codepoint < b.codepoint;
   });
 
   // переводим данные в удобный для нас вид
-  for (auto &g : f->glyphs2) {
+  for (auto &g : f->glyphs) {
     const int ny = f->height - (g.y + g.h);
     const double nab = double(f->height) - g.at;
     const double nat = double(ny + g.h) - 0.5;
@@ -172,7 +178,7 @@ std::unique_ptr<font_t> load_font(const std::string &path) {
     g.pt = npt;
   }
 
-  return f;
+  return std::make_tuple(f, host_image_id);
 }
 }
 }

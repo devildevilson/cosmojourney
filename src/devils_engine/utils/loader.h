@@ -37,6 +37,9 @@ public:
   }
 
   // NOT THREAD SYNC
+  // когда функция закончит вычисления для этого loader, 
+  // то он разрушится и естественно указателю тоже придет конец
+  // возвращать отсюда булевы флаги?
   void add_waiter(thread::semaphore_interface* inter);
 
   // _tp and _counter is changing

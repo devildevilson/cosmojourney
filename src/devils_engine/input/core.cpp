@@ -104,6 +104,12 @@ void destroy(GLFWwindow* w) { glfwDestroyWindow(w); }
 void hide(GLFWwindow* w) { glfwHideWindow(w); }
 void show(GLFWwindow* w) { glfwShowWindow(w); }
 bool should_close(GLFWwindow* w) noexcept { return glfwWindowShouldClose(w); }
+std::tuple<uint32_t, uint32_t> window_size(GLFWwindow* m) noexcept {
+  int w=0,h=0;
+  glfwGetWindowSize(m, &w, &h);
+  return std::make_tuple(w,h);
+}
+
 std::tuple<float, float> window_content_scale(GLFWwindow* m) noexcept {
   float w = 0.0f, h = 0.0f;
   glfwGetWindowContentScale(m, &w, &h);

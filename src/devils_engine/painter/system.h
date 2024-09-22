@@ -153,6 +153,8 @@ public:
   const render_pass_data_t* get_render_pass_config(const std::string &name) const;
   const std::vector<attachment_config_t> & get_attachments_config(const std::string &name) const;
   const sampler_config_t* get_sampler_config(const std::string &name) const;
+  const descriptor_set_layouts_config_t* get_set_layouts_configs() const;
+  const pipeline_layouts_t* get_pipeline_layouts_configs() const;
   void dump_configs_to_disk() const;
   void reload_configs();
 
@@ -192,6 +194,8 @@ private:
   phmap::node_hash_map<std::string, render_pass_data_t> render_pass_configs;
   phmap::node_hash_map<std::string, std::vector<attachment_config_t>> attachments_configs;
   phmap::node_hash_map<std::string, sampler_config_t> sampler_configs;
+  descriptor_set_layouts_config_t set_layouts_configs;
+  pipeline_layouts_t pipeline_layouts_configs;
 };
 }
 }

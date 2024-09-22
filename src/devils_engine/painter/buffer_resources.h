@@ -145,11 +145,15 @@ public:
   size_t orig_size() const;
   void* mapped_data();
   void flush_memory() const;
+  void resize(const size_t new_size);
 protected:
   VmaAllocator allocator;
   size_t _orig_size;
   VmaAllocation allocation;
   void* _mapped_data;
+
+  uint32_t usage; 
+  enum reside reside;
 };
 
 template <uint32_t usage, enum reside reside>
@@ -160,6 +164,8 @@ class templated_buffer : public common_buffer {
 // некоторое количество буферов создадим таким образом
 using storage_buffer = templated_buffer<standart_storage_usage, reside::gpu>;
 using uniform_buffer = templated_buffer<usage::uniform | usage::transfer_dst, reside::gpu>;
+using vertex_buffer = templated_buffer<usage::vertex | usage::transfer_dst, reside::gpu>;
+using index_buffer = templated_buffer<usage::index | usage::transfer_dst, reside::gpu>;
 using indirect_buffer = templated_buffer<usage::indirect | usage::storage, reside::gpu>;
 using host_buffer = templated_buffer<usage::undefined, reside::host>;
 

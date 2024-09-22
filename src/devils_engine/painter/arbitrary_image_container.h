@@ -30,19 +30,23 @@
 namespace devils_engine {
 namespace painter {
 
+extern const uint32_t rgb24_format;
+extern const uint32_t rgba32_format;
+
 constexpr size_t default_arbitrary_image_container_slots = 4096;
 
-class arbitrary_image_container final : public image_container {
+class arbitrary_image_container : public image_container {
 public:
   struct image_t {
     VmaAllocation allocation;
     VkImage handle;
     VkImageView view;
     VkSampler sampler;
+    void* memory;
     uint32_t width, height, format;
     std::string name;
 
-    inline image_t() noexcept : allocation(VK_NULL_HANDLE), handle(VK_NULL_HANDLE), view(VK_NULL_HANDLE), sampler(VK_NULL_HANDLE), width(0), height(0), format(0) {}
+    inline image_t() noexcept : allocation(VK_NULL_HANDLE), handle(VK_NULL_HANDLE), view(VK_NULL_HANDLE), sampler(VK_NULL_HANDLE), memory(nullptr), width(0), height(0), format(0) {}
   };
 
   // VmaAllocator can be null
@@ -74,7 +78,7 @@ public:
   void change_layout_all(VkCommandBuffer buffer, const uint32_t old_layout, const uint32_t new_layout) const override;
   void copy_data(VkCommandBuffer buffer, VkImage image, const uint32_t index) const override;
   void blit_data(VkCommandBuffer buffer, const std::tuple<VkImage,uint32_t,uint32_t> &src_image, const uint32_t index, const uint32_t filter = 0) const override;
-private:
+protected:
   VkDevice device;
   VmaAllocator allocator;
 
@@ -82,6 +86,13 @@ private:
   size_t _size;
   std::vector<image_t> images;
   image_t null_image;
+};
+
+class host_image_container final : public arbitrary_image_container {
+public:
+  host_image_container(std::string name, VkDevice device, VmaAllocator allocator);
+  uint32_t create(std::string name, const extent_t extent, const uint32_t format, VkSampler sampler) override;
+  void* mapped_memory(const uint32_t index) const;
 };
 
 }

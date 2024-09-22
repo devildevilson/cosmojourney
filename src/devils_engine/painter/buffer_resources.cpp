@@ -45,12 +45,12 @@ size_t align_to_device(const size_t size, VmaAllocator allocator, const uint32_t
 }
 
 common_buffer::common_buffer(VmaAllocator allocator, const size_t size, const uint32_t usage, enum reside reside) :
-  allocator(allocator), _orig_size(align_to_device(size, allocator, usage)), allocation(VK_NULL_HANDLE)
+  allocator(allocator), _orig_size(align_to_device(size, allocator, usage)), allocation(VK_NULL_HANDLE), usage(usage), reside(reside)
 {
   auto [b, a, m] = create_buffer(allocator, _orig_size, usage, reside);
-  buffer = b;
   allocation = a;
   _mapped_data = m;
+  buffer_provider::buffer = b; 
   buffer_provider::size = _orig_size;
 }
 
@@ -63,6 +63,16 @@ size_t common_buffer::orig_size() const { return _orig_size; }
 void* common_buffer::mapped_data() { return _mapped_data; }
 void common_buffer::flush_memory() const {
   vma::Allocator(allocator).flushAllocation(allocation, 0, _orig_size);
+}
+
+void common_buffer::resize(const size_t new_size) {
+  destroy_buffer(allocator, buffer, allocation);
+  _orig_size = align_to_device(new_size, allocator, usage);
+  auto [b, a, m] = create_buffer(allocator, _orig_size, usage, reside);
+  allocation = a;
+  _mapped_data = m;
+  buffer_provider::buffer = b; 
+  buffer_provider::size = _orig_size;
 }
 
 size_t reduce(const std::initializer_list<size_t> &sizes, const size_t aligment) {

@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <unordered_map>
 
 namespace devils_engine {
 namespace painter {
@@ -90,6 +91,10 @@ struct graphics_pipeline_create_config {
   struct depth_bounds_t { bool enable; float min_bounds, max_bounds; } depth_bounds;
 
   // остаток колор блендинга VkPipelineColorBlendAttachmentState мы укажем собственно в атачментах
+  // по итогу указали в сабпассе... почему там? скорее нужно все таки указать тут
+  // но при этом как то сопоставить сам атачмент с сабпассом и блендингом
+  // я бы сказал что нужно по имени будет найти аттачмент и его в сабпассе
+  // а остальным блендинги выключить
   struct color_blending_state_t { struct logic_op_t { bool enable; uint32_t operation; } logic_op; float blend_constants[4]; } color_blending_state;
 };
 
@@ -99,7 +104,7 @@ struct compute_pipeline_create_config {
     std::string path;
     std::string func_name;
 
-    std::map<std::string, std::string> defines;
+    std::unordered_map<std::string, std::string> defines;
   };
 
   std::string name;
@@ -168,6 +173,21 @@ struct sampler_config_t {
   uint32_t border_color;
   bool unnormalized_coordinates;
 };
+
+struct descriptor_set_layout_binding_t {
+  uint32_t type;
+  uint32_t shader_stages;
+  uint32_t count;
+};
+
+using descriptor_set_layouts_config_t = std::unordered_map<std::string, std::vector<descriptor_set_layout_binding_t>>;
+
+struct pipeline_layout_config_t {
+  std::vector<std::string> set_layouts;
+  uint32_t push_constant_size;
+};
+
+using pipeline_layouts_t = std::unordered_map<std::string, pipeline_layout_config_t>;
 
 }
 }

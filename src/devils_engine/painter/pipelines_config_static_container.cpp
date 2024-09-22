@@ -121,6 +121,66 @@ const phmap::flat_hash_map<std::string, sampler_config_t> default_samplers_confi
   )
 };
 
+const descriptor_set_layouts_config_t default_descriptor_set_layouts_config = {
+  std::make_pair(
+    "uniform_data",
+    std::vector{
+      descriptor_set_layout_binding_t{
+        uint32_t(vk::DescriptorType::eUniformBuffer),
+        uint32_t(vk::ShaderStageFlagBits::eAll),
+        1
+      },
+      descriptor_set_layout_binding_t{
+        uint32_t(vk::DescriptorType::eCombinedImageSampler),
+        uint32_t(vk::ShaderStageFlagBits::eAll),
+        0 // implementation defined
+      },
+    }
+  ),
+  std::make_pair(
+    "interface_data",
+    std::vector{
+      descriptor_set_layout_binding_t{
+        uint32_t(vk::DescriptorType::eUniformBuffer),
+        uint32_t(vk::ShaderStageFlagBits::eVertex),
+        1
+      },
+      descriptor_set_layout_binding_t{
+        uint32_t(vk::DescriptorType::eStorageBuffer),
+        uint32_t(vk::ShaderStageFlagBits::eVertex),
+        1
+      },
+    }
+  ),
+  std::make_pair(
+    "game_data",
+    std::vector{
+      descriptor_set_layout_binding_t{
+        uint32_t(vk::DescriptorType::eStorageBuffer),
+        uint32_t(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eCompute),
+        0 // как лучше сделать? по биндингу на каждый, или все буферы в одном?
+      }
+    }
+  )
+};
+
+const pipeline_layouts_t default_pipeline_layouts_config = {
+  std::make_pair(
+    "basic",
+    pipeline_layout_config_t{
+      std::vector<std::string>{ "uniform_data" },
+      0
+    }
+  ),
+  std::make_pair(
+    "interface",
+    pipeline_layout_config_t{
+      std::vector<std::string>{ "uniform_data", "interface_data" },
+      0
+    }
+  ),
+};
+
 template <typename T>
 std::vector<std::string> get_names(const T &map) {
   std::vector<std::string> names;
@@ -176,6 +236,14 @@ const std::vector<attachment_config_t> * get_default_attachments_config(const st
 
 const sampler_config_t* get_default_sampler_config(const std::string &name) {
   return find_data(default_samplers_configs, name);
+}
+
+const void* get_default_descriptor_set_layout_configs() {
+  return &default_descriptor_set_layouts_config;
+}
+
+const void* get_default_pipeline_layout_configs() {
+  return &default_pipeline_layouts_config;
 }
 
 }

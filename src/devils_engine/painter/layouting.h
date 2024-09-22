@@ -5,6 +5,8 @@
 #include <cstdint>
 #include "vulkan_minimal.h"
 #include "primitives.h"
+#include <parallel_hashmap/phmap.h>
+#include "pipeline_create_config.h"
 
 // так тут нужно сделать какую то удобную систему лейаутов
 // в том плане что мне наверное все парочку лейаутов потребуется за всю программу
@@ -31,10 +33,13 @@ struct layouting : public arbitrary_data {
   VkSampler immutable_linear;
   VkSampler immutable_nearest;
   VkDescriptorPool pool;
-  VkDescriptorSetLayout set_layout;
-  VkDescriptorSet set;
+  //VkDescriptorSetLayout set_layout;
+  //VkDescriptorSet set;
 
-  VkPipelineLayout pipeline_layout;
+  //VkPipelineLayout pipeline_layout;
+
+  phmap::flat_hash_map<std::string, VkDescriptorSetLayout> set_layouts;
+  phmap::flat_hash_map<std::string, VkPipelineLayout> pipe_layouts;
 
   // сюда нужно передать некоторое количество чисел
   // 1) количество ридонли сторадж буферов
@@ -43,8 +48,12 @@ struct layouting : public arbitrary_data {
   // 4) количество аттачментов
   // 5) количество изменяемых сторадж буферов
   // 6) количество сторадж картинок (атачменты и сторадж картинки - одно и тоже?)
-  layouting(VkDevice device, const create_info &info);
+  layouting(VkDevice device, const create_info &info, const descriptor_set_layouts_config_t* ds_configs, const pipeline_layouts_t* pl_configs);
   ~layouting() noexcept;
+
+  VkDescriptorSet create_descriptor_set(const std::string_view &layout_name, const std::string &set_name) const;
+  VkDescriptorSetLayout find_descriptor_set_layout(const std::string_view &layout_name) const;
+  VkPipelineLayout find_pipeline_layout(const std::string_view &layout_name) const;
 };
 
 }

@@ -7,6 +7,9 @@
 namespace devils_engine {
 namespace painter {
 
+const uint32_t rgb24_format = uint32_t(vk::Format::eR8G8B8Unorm);
+const uint32_t rgba32_format = uint32_t(vk::Format::eR8G8B8A8Unorm);
+
 arbitrary_image_container::arbitrary_image_container(std::string name, VkInstance instance, VkPhysicalDevice physics_device, VkDevice device, VmaAllocator allocator, const uint32_t initial_size) noexcept :
   image_container(std::move(name)), device(device), allocator(allocator), is_owning_allocator(allocator == VK_NULL_HANDLE), _size(0), images(initial_size)
 {
@@ -28,7 +31,8 @@ arbitrary_image_container::arbitrary_image_container(std::string name, VkInstanc
 
     this->allocator = vma::createAllocator(aci);
   }
-
+  
+  // НУЛЛ КАРТИНКУ НУЖНО ЗАРАНЕЕ В ЭТИ КОНТЕЙНЕРЫ ПЕРЕДАВАТЬ
   vma::AllocationCreateInfo aci(vma::AllocationCreateFlagBits::eDedicatedMemory, vma::MemoryUsage::eGpuOnly);
 
   const auto usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc;
@@ -48,8 +52,9 @@ arbitrary_image_container::arbitrary_image_container(std::string name, VkInstanc
 arbitrary_image_container::~arbitrary_image_container() noexcept {
   clear();
 
+  vk::Device(device).destroy(null_image.sampler);
   vk::Device(device).destroy(null_image.view);
-  vk::Device(device).destroy(null_image.handle);
+  vma::Allocator(allocator).destroyImage(null_image.handle, null_image.allocation);
 
   if (is_owning_allocator) {
     vma::Allocator(allocator).destroy();
@@ -126,7 +131,7 @@ void arbitrary_image_container::destroy(const uint32_t index) {
   if (!is_exists(index)) return;
 
   auto& img = images[index];
-  vk::Device(device).destroy(img.view);
+  if (img.view != VK_NULL_HANDLE) vk::Device(device).destroy(img.view);
   vma::Allocator(allocator).destroyImage(img.handle, img.allocation);
   img.view = VK_NULL_HANDLE;
   img.handle = VK_NULL_HANDLE;
@@ -156,7 +161,7 @@ image_container::extent_t arbitrary_image_container::extent(const uint32_t index
 }
 
 uint32_t arbitrary_image_container::format(const uint32_t index) const {
-  if (is_exists(index)) return 0;
+  if (!is_exists(index)) return 0;
   return images[index].format;
 }
 
@@ -246,6 +251,44 @@ void arbitrary_image_container::blit_data(VkCommandBuffer buffer, const std::tup
   vk::ImageSubresourceLayers isl2(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
   VkImageBlit blit{isl1, MAKE_BLIT_OFFSETS(src_width,src_height), isl2, MAKE_BLIT_OFFSETS(img.width,img.height)};
   b.blitImage(src, vk::ImageLayout::eTransferSrcOptimal, img.handle, vk::ImageLayout::eTransferDstOptimal, vk::ImageBlit(blit), vk::Filter(filter));
+}
+
+host_image_container::host_image_container(std::string name, VkDevice device, VmaAllocator allocator) :
+  arbitrary_image_container(std::move(name), VK_NULL_HANDLE, VK_NULL_HANDLE, device, allocator)
+{}
+
+uint32_t host_image_container::create(std::string name, const extent_t extent, const uint32_t format, VkSampler sampler) {
+  uint32_t i = 0;
+  for (; i < images.size() && is_exists(i); ++i) {}
+  
+  if (i >= images.size()) {
+    images.push_back({});
+    i = images.size()-1;
+  }
+
+  //const auto usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc;
+  const auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc;
+  const auto inf = texture2D_staging({extent.width, extent.height}, usage, vk::Format(format));
+  auto [img, al] = create_image(allocator, inf, vma::MemoryUsage::eCpuOnly, &images[i].memory, name);
+
+  set_name(device, vk::Image(img), name);
+
+  images[i].allocation = al;
+  images[i].handle = img;
+  images[i].view = VK_NULL_HANDLE;
+  images[i].width = extent.width;
+  images[i].height = extent.height;
+  images[i].format = format;
+  images[i].name = std::move(name);
+  images[i].sampler = sampler;
+  _size += 1;
+
+  return i;
+}
+
+void* host_image_container::mapped_memory(const uint32_t index) const {
+  if (!is_exists(index)) return nullptr;
+  return images[index].memory;
 }
 
 }

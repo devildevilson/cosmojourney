@@ -11,6 +11,10 @@ struct nk_user_font_glyph;
 typedef uint32_t nk_rune;
 
 namespace devils_engine {
+namespace painter {
+class host_image_container;
+}
+
 namespace visage {
 // из чего состоит шрифт? шрифт это атлас в котором все элементы имет миллиард данных по расположению
 // да и в общем то все, если я хочу сделать наконец то дистанс шрифты
@@ -53,8 +57,7 @@ struct font_t {
 
   double scale;
   struct metrics_t metrics;
-  struct glyph_t *glyphs; // отсортированный массив?
-  std::vector<glyph_t> glyphs2;
+  std::vector<glyph_t> glyphs;
   const struct glyph_t *fallback;
   uint32_t fallback_codepoint;
   int32_t width, height;
@@ -66,9 +69,8 @@ struct font_t {
   double text_width(double height, const std::string_view &txt) const;
 };
 
-// должна быть какая то конфигурация для шрифта, откуда брать данные?
-// тут может быть сразу пачка шрифтов
-std::unique_ptr<font_t> load_font(const std::string &path);
+// конфиг?
+std::tuple<std::unique_ptr<font_t>, uint32_t> load_font(painter::host_image_container* imgs, const std::string &path);
 }
 }
 
