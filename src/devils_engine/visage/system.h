@@ -42,7 +42,8 @@ private:
   sol::environment env;
   const font_t* default_font;
   std::unique_ptr<nk_context> ctx;
-  std::unique_ptr<nk_buffer> cmds;
+  //std::unique_ptr<nk_buffer> cmds;
+  nk_buffer* cmds;
 
   sol::function entry;
 };

@@ -72,6 +72,10 @@ public:
       F f;
       std::promise<typename std::invoke_result_t<F>> promise;
       func_job(F f) noexcept : f(std::move(f)) {}
+      func_job(func_job&& move) noexcept = default;
+      func_job & operator=(func_job&& move) noexcept = default;
+      func_job(const func_job &copy) noexcept = delete;
+      func_job & operator=(const func_job& copy) noexcept = delete;
       void execute() const override {
         if constexpr (std::is_void_v<std::invoke_result_t<F>>) {
           std::invoke(std::move(f));
@@ -84,7 +88,7 @@ public:
 
     func_job j(std::move(f));
     auto future = j.promise.get_future();
-    submit(std::move(j));
+    submit<func_job>(std::move(j));
     return future;
   }
 
@@ -95,6 +99,10 @@ public:
       std::tuple<Args> args;
       std::promise<typename std::invoke_result_t<F, Args&&...>> promise;
       func_job(F f, Args&&... args) noexcept : f(std::move(f)), args(std::forward<Args>(args)...) {}
+      func_job(func_job&& move) noexcept = default;
+      func_job & operator=(func_job&& move) noexcept = default;
+      func_job(const func_job &copy) noexcept = delete;
+      func_job & operator=(const func_job& copy) noexcept = delete;
       void execute() const override {
         if constexpr (std::is_void_v<typename std::invoke_result_t<F, Args&&...>>) {
           std::apply(std::move(f), std::move(args));
@@ -105,9 +113,9 @@ public:
       }
     };
 
-    func_job j(std::move(f));
+    func_job j(std::move(f), std::forward<Args>(args)...);
     auto future = j.promise.get_future();
-    submit(std::move(j));
+    submit<func_job>(std::move(j));
     return future;
   }
 

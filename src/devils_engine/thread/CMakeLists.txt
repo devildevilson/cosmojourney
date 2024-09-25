@@ -24,13 +24,15 @@ endif()
 
 set(SRC_LIST
   pool.cpp
- "stack_pool.cpp")
+  stack_pool.cpp
+)
 
 set(HDR_LIST
   pool.h
   atomic.h
   lock.h
- "stack_pool.h")
+  stack_pool.h
+)
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(${DEVILS_LIBRARY_NAME})

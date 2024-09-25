@@ -57,6 +57,7 @@
 #include "visage/system.h"
 #include "visage/draw_resource.h"
 #include "visage/draw_stage.h"
+#include "visage/header.h"
 #include "bindings/env.h"
 
 using namespace devils_engine;
@@ -611,6 +612,7 @@ int main(int argc, char const *argv[]) {
   // например при изменении настроек локализации
   auto [ f, host_image_id ] = visage::load_font(host_imgs, utils::project_folder() + "font.ttf");
   const uint32_t font_img_id = imgs->create("font_img", host_imgs->extent(host_image_id), host_imgs->format(host_image_id), layout->immutable_nearest);
+  f->nkfont->texture.id = font_img_id;
 
   painter::do_command(gc->device, gc->transfer_command_pool, gc->graphics_queue, gc->transfer_fence, [&] (VkCommandBuffer buf) {
     for (uint32_t i = 0; i < sch->max_images; ++i) {
@@ -630,8 +632,10 @@ int main(int argc, char const *argv[]) {
 
   host_imgs->destroy(host_image_id);
   // обновить дескриптор imgs
-  imgs->update_descriptor_set(set, 1, 0);
+  imgs->update_descriptor_set(set, 1, 0); // после бинда ресурс становится нам доступен
+  // возможно интерфейс с биндингом чутка по другому надо сделать
 
+  // рендеры у меня зависят от систем
   visage::system vsys(f.get());
   vsys.load_entry_point(utils::project_folder() + "entry.lua");
 

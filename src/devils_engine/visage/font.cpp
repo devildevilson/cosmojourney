@@ -57,6 +57,16 @@ double font_t::text_width(double height, const std::string_view &txt) const {
   return text_width;
 }
 
+static float local_text_width(nk_handle h, float height, const char* text, const int32_t len) {
+  auto f = reinterpret_cast<const font_t*>(h.ptr);
+  return f->text_width(height, std::string_view(text, len));
+}
+
+static void local_query_font_glyph(nk_handle h, float font_height, struct nk_user_font_glyph *glyph, nk_rune codepoint, nk_rune next_codepoint) {
+  auto f = reinterpret_cast<const font_t*>(h.ptr);
+  f->query_font_glyph(font_height, glyph, codepoint, next_codepoint);
+}
+
 struct freetype_raii {
   msdfgen::FreetypeHandle* ft;
 
@@ -177,6 +187,13 @@ std::tuple<std::unique_ptr<font_t>, uint32_t> load_font(painter::host_image_cont
     g.pb = npb;
     g.pt = npt;
   }
+
+  f->nkfont.reset(new nk_user_font);
+  f->nkfont->userdata.ptr = f.get();
+  f->nkfont->height = 1000.0f;
+  f->nkfont->width = &local_text_width;
+  f->nkfont->query = &local_query_font_glyph;
+  f->nkfont->texture.id = host_image_id; // будет другим
 
   return std::make_tuple(f, host_image_id);
 }

@@ -1,13 +1,25 @@
 #include "system.h"
 
+#include <cstring>
+
 #include "utils/core.h"
 #include "utils/time.h"
 #include "bindings/env.h"
 #include "bindings/nuklear.h"
 #include "header.h"
+#include "font.h"
 
 namespace devils_engine {
 namespace visage {
+static void* simple_alloc(nk_handle, void* old, const size_t size) {
+  if (old != nullptr) { return realloc(old, size); }
+  return malloc(size);
+}
+
+static void simple_free(nk_handle, void* old) {
+  free(old);
+}
+
 static void simple_hook(lua_State *L, lua_Debug *ar) {
   system::instruction_counter += system::hook_after_instructions_count;
   auto cur_tp = std::chrono::steady_clock::now();
@@ -41,10 +53,15 @@ system::system(const font_t* default_font) : default_font(default_font) {
   bindings::basic_functions(env);
   
   ctx.reset(new nk_context);
-  cmds.reset(new nk_buffer);
-  nk_init(ctx.get(), , );
+  //cmds.reset(new nk_buffer);
 
-  // + команды?
+  nk_allocator a;
+  memset(&a, 0, sizeof(nk_allocator));
+  a.alloc = &simple_alloc; 
+  a.free = &simple_free;
+  
+  nk_init(ctx.get(), &a, default_font->nkfont.get());
+  cmds = &ctx->memory;
 
   bindings::setup_nk_context(ctx.get());
   bindings::nk_functions(env);

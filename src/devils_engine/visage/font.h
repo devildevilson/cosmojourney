@@ -9,6 +9,7 @@
 
 struct nk_user_font_glyph;
 typedef uint32_t nk_rune;
+struct nk_user_font;
 
 namespace devils_engine {
 namespace painter {
@@ -63,6 +64,7 @@ struct font_t {
   int32_t width, height;
   void* texture;
   struct config *config; // конфиг тут хранить?
+  std::unique_ptr<nk_user_font> nkfont;
 
   const glyph_t *find_glyph(const uint32_t codepoint) const;
   void query_font_glyph(float font_height, struct nk_user_font_glyph *glyph, nk_rune codepoint, nk_rune next_codepoint) const;
