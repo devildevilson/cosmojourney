@@ -521,6 +521,27 @@ int main(int argc, char const *argv[]) {
   //  lua.script_file(utils::project_folder() + "script123.lua", env);
   //  instructions_counter = 0;
   //}
+  
+  std::vector<std::unique_ptr<visage::font_t>> fonts;
+  visage::font_atlas_packer::font_image_t img_data;
+  {
+    using range_t = visage::font_atlas_packer::charset_range_t;
+    visage::font_atlas_packer pck;
+    pck.setup_font(utils::project_folder() + "font.ttf");
+    visage::font_atlas_packer::config cfg{
+      utils::locale(),
+      { range_t{161, 256}, range_t{ 0x0400, 0x04ff } },
+      3.0, 32.0, 2.0, 1.0, 4, 4, true
+    };
+
+    auto [arr, img] = pck.load_fonts(cfg);
+    fonts = std::move(arr);
+    img_data = std::move(img);
+  }
+
+  visage::system vsys(fonts[0].get());
+  vsys.load_entry_point(utils::project_folder() + "entry.lua");
+
 
   input::init i(&err_handler);
   // бля у челов с двумя мониками может быть моник подключен к отдельной видеокарте... может такое быть?
@@ -576,25 +597,6 @@ int main(int argc, char const *argv[]) {
 
   psys.recreate(1000, 1000);
 
-  std::vector<std::unique_ptr<visage::font_t>> fonts;
-  visage::font_atlas_packer::font_image_t img_data;
-  {
-    visage::font_atlas_packer pck;
-    pck.setup_font(utils::project_folder() + "font.ttf");
-    visage::font_atlas_packer::config cfg{
-      utils::locale(),
-      {},
-      3.0, 32.0, 2.0, 1.0, 4, 4, true
-    };
-
-    auto [ arr, img ] = pck.load_fonts(cfg);
-    fonts = std::move(arr);
-    img_data = std::move(img);
-  }
-
-  visage::system vsys(fonts[0].get());
-  vsys.load_entry_point(utils::project_folder() + "entry.lua");
-
   auto set = layout->create_descriptor_set("uniform_data", "main_set");
   auto interface_set = layout->create_descriptor_set("interface_data", "main_interface_set");
   // тут нужно передать указатели интерфейса
@@ -640,6 +642,9 @@ int main(int argc, char const *argv[]) {
   const uint32_t host_image_id = host_imgs->create("font_img", { img_data.width, img_data.height }, uint32_t(vk::Format::eR8G8B8A8Unorm), layout->immutable_nearest);
   const uint32_t font_img_id = imgs->create("font_img", { img_data.width, img_data.height }, uint32_t(vk::Format::eR8G8B8A8Unorm), layout->immutable_nearest);
   //f->nkfont->texture.id = font_img_id;
+
+  auto mem = host_imgs->mapped_memory(host_image_id);
+  memcpy(mem, img_data.bytes.data(), img_data.bytes.size());
 
   painter::do_command(gc->device, gc->transfer_command_pool, gc->graphics_queue, gc->transfer_fence, [&] (VkCommandBuffer buf) {
     for (uint32_t i = 0; i < sch->max_images; ++i) {

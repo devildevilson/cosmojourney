@@ -17,13 +17,18 @@ namespace visage {
 // я так понимаю лучше перекопирование сделать в другом месте
 // а здесь вернуть память и количество каналов
 // нет, по итогу наверное один пакер на одну картинку иначе какой то бред получается
+
+// надо интерфейс переделать: я думаю что 
+// создать данные для шрифта мы по идее можем без упаковки всех глифов в картинку
+// но нет похоже что это не так, судя по msdf нам сначала нужно собрать все глифы
+// потом мы их пакуем
 class font_atlas_packer {
 public:
   using charset_range_t = std::pair<uint32_t, uint32_t>;
 
   struct config {
     utils::locale main_locale; // а как из локали чарсет получить? просто как будто самому задать
-    std::span<charset_range_t> charsets;
+    std::initializer_list<charset_range_t> charsets;
     double max_corner_angle;
     double minimum_scale;
     double pixel_range;
