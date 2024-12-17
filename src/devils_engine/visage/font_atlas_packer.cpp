@@ -36,13 +36,13 @@ struct font_raii {
   }
 };
 
-void font_atlas_packer::setup_font(const std::string& path) {
+void font_atlas_packer::setup_font(std::string path) {
   auto data = file_io::read<uint8_t>(path);
-  fonts_data.push_back(std::move(data));
+  fonts_data.push_back(std::make_pair(std::move(data), std::move(path)));
 }
 
-void font_atlas_packer::setup_font(std::vector<uint8_t> data) {
-  fonts_data.push_back(std::move(data));
+void font_atlas_packer::setup_font(std::vector<uint8_t> data, std::string hint) {
+  fonts_data.push_back(std::make_pair(std::move(data), std::move(hint)));
 }
 
 static float local_text_width(nk_handle h, float height, const char* text, const int32_t len) {
@@ -59,6 +59,7 @@ std::tuple<std::vector<std::unique_ptr<font_t>>, font_atlas_packer::font_image_t
   std::vector<msdf_atlas::GlyphGeometry> glyphs;
   //msdf_atlas::FontGeometry fontGeometry(&glyphs);
   std::vector<msdf_atlas::FontGeometry> geometries(fonts_data.size(), msdf_atlas::FontGeometry(&glyphs));
+  std::vector<size_t> load_sizes(fonts_data.size(), 0);
 
   // кажется указатель нигде не сохраняется на будущее и мы можем так сделать
   // вот тут как раз символы локализации загружаются в память
@@ -68,7 +69,7 @@ std::tuple<std::vector<std::unique_ptr<font_t>>, font_atlas_packer::font_image_t
     std::vector<font_raii> fraiis;
     for (size_t i = 0; i < fonts_data.size(); ++i) {
       const auto& data = fonts_data[i];
-      font_raii fraii(ftraii.ft, data.data(), data.size(), "1421"); // теряю название =(
+      font_raii fraii(ftraii.ft, data.first.data(), data.first.size(), data.second);
 
       msdf_atlas::Charset set;
       for (const auto &pair : cfg.charsets) {
@@ -82,8 +83,14 @@ std::tuple<std::vector<std::unique_ptr<font_t>>, font_atlas_packer::font_image_t
       
       //fontGeometry.loadCharset(fraii.fh, 1.0, msdf_atlas::Charset::ASCII);
       //fontGeometry.loadCharset(fraii.fh, 1.0, set);
-      geometries[i].loadCharset(fraii.fh, 1.0, msdf_atlas::Charset::ASCII);
-      geometries[i].loadCharset(fraii.fh, 1.0, set);
+      load_sizes[i] += geometries[i].loadCharset(fraii.fh, 1.0, msdf_atlas::Charset::ASCII);
+      load_sizes[i] += geometries[i].loadCharset(fraii.fh, 1.0, set);
+
+      // loadCharset возвращает количество загруженных символов
+      // вполне возможно что не во всех шрифтах есть все интересующие нас символы
+      // блин было бы неплохо это все дело как то заранее еще проверить
+      // но только что мы можем сделать? по идее надо бы хотя бы сообщить о том 
+      // что мы не можем загрузить все символы из заданного чарсета
     }
   }
 
@@ -154,6 +161,7 @@ std::tuple<std::vector<std::unique_ptr<font_t>>, font_atlas_packer::font_image_t
     memcpy(img.bytes.data(), atlas_storage.pixels, size);
   } else utils::error("Unsupported color channels count {}", cfg.color_channels);
   
+  size_t offset = 0;
   std::vector<std::unique_ptr<font_t>> fonts;
   for (size_t i = 0; i < fonts_data.size(); ++i) {
     auto f = std::make_unique<font_t>();
@@ -173,7 +181,8 @@ std::tuple<std::vector<std::unique_ptr<font_t>>, font_atlas_packer::font_image_t
     f->metrics.underline_y = geometries[i].getMetrics().underlineY;
     f->metrics.underline_thickness = geometries[i].getMetrics().underlineThickness;
     f->glyphs.reserve(glyphs.size());
-    for (const auto& glyph : glyphs) {
+    for (size_t j = offset; j < offset + load_sizes[i]; ++j) {
+      const auto& glyph = glyphs[j];
       f->glyphs.emplace_back();
       auto& g = f->glyphs.back();
       g.advance = glyph.getAdvance();
@@ -213,6 +222,7 @@ std::tuple<std::vector<std::unique_ptr<font_t>>, font_atlas_packer::font_image_t
     f->nkfont->userdata.ptr = f.get();
 
     fonts.push_back(std::move(f));
+    offset += load_sizes[i];
   }
   
   return std::make_tuple(std::move(fonts), std::move(img));

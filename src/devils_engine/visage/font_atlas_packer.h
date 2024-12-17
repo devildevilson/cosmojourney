@@ -41,12 +41,12 @@ public:
     uint32_t width, height, channels;
   };
 
-  void setup_font(const std::string &path);
-  void setup_font(std::vector<uint8_t> data);
+  void setup_font(std::string path);
+  void setup_font(std::vector<uint8_t> data, std::string hint);
 
   std::tuple<std::vector<std::unique_ptr<font_t>>, font_image_t> load_fonts(const config &cfg);
 private:
-  std::vector<std::vector<uint8_t>> fonts_data;
+  std::vector<std::pair<std::vector<uint8_t>, std::string>> fonts_data;
 };
 }
 }
