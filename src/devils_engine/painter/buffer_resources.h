@@ -158,6 +158,7 @@ protected:
 
 template <uint32_t usage, enum reside reside>
 class templated_buffer : public common_buffer {
+public:
   templated_buffer(VmaAllocator allocator, size_t size) : common_buffer(allocator, size, usage, reside) {}
 };
 
@@ -188,6 +189,7 @@ protected:
 
 template <uint32_t usage, enum reside reside>
 class templated_packed_buffer : public packed_buffer {
+public:
   templated_packed_buffer(VmaAllocator allocator, const std::initializer_list<size_t> &sizes) : packed_buffer(allocator, sizes, usage, reside) {}
 };
 
@@ -204,8 +206,7 @@ public:
 template <uint32_t usage, enum reside reside>
 class templated_similar_buffer : public similar_buffer {
 public:
-  templated_similar_buffer(VmaAllocator allocator, const size_t individual_size, const size_t count) :
-    similar_buffer(allocator, individual_size, count, usage, reside) {}
+  templated_similar_buffer(VmaAllocator allocator, const size_t individual_size, const size_t count) : similar_buffer(allocator, individual_size, count, usage, reside) {}
 };
 
 using storage_similar_buffer = templated_similar_buffer<standart_storage_usage, reside::gpu>;

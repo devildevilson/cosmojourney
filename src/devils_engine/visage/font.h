@@ -71,7 +71,8 @@ struct font_t {
   double text_width(double height, const std::string_view &txt) const;
 };
 
-// конфиг?
+// конфиг? наверное будет класс атлас пакер, который на выход даст:
+// набор шрифтов + набор ГПУ картинок под шрифты
 std::tuple<std::unique_ptr<font_t>, uint32_t> load_font(painter::host_image_container* imgs, const std::string &path);
 }
 }

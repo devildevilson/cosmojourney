@@ -58,6 +58,7 @@
 #include "visage/draw_resource.h"
 #include "visage/draw_stage.h"
 #include "visage/header.h"
+#include "visage/font_atlas_packer.h"
 #include "bindings/env.h"
 
 using namespace devils_engine;
@@ -527,6 +528,7 @@ int main(int argc, char const *argv[]) {
   // мой класс по нахождению правильного устройства (там есть проверка на это)
   auto w = input::create_window(1000, 1000, "interface");
 
+  // так сначала нам бы хотелось загрузить шейдеры, пока что для них ничего особо не нужно
   demiurg::module_system msys(utils::project_folder() + "folder1/");
   demiurg::resource_system dsys;
   dsys.register_type<painter::shader_source_file>("shaders", "vert,frag");
@@ -544,13 +546,17 @@ int main(int argc, char const *argv[]) {
     }
   }
 
+  // теперь мы создаем систему отрисовки, я попытался чуть уменьшить абстракции над голым вулканом
+  // вроде бы получилось чуть проще, управляюсь за 60 строчек для того чтобы создать все самое необходимое
   painter::system psys;
   psys.reload_configs();
   psys.dump_configs_to_disk();
-  auto conf = psys.get_attachments_config("default");
+  auto conf = psys.get_attachments_config("default"); // конфиги по умолчанию дампятся на диск при запуске, а потом можно быстренько ручками поменять без рекомпиляции
   auto rp_conf = psys.get_render_pass_config("default");
   auto pl_conf = psys.get_graphics_pipeline_config("default"); // другой конфиг
 
+  // вообще наверное имеет смысл аллокаторы где то в другом месте создавать
+  // или точнее определенно нужно разделить буферы и картинки
   auto gc     = psys.create_main_container();
   auto imgs   = psys.create<painter::arbitrary_image_container>("arbitrary", gc->instance, gc->physical_device, gc->device, gc->buffer_allocator);
   auto host_imgs = psys.create<painter::host_image_container>("arbitrary", gc->device, gc->buffer_allocator);
@@ -570,9 +576,29 @@ int main(int argc, char const *argv[]) {
 
   psys.recreate(1000, 1000);
 
+  std::vector<std::unique_ptr<visage::font_t>> fonts;
+  visage::font_atlas_packer::font_image_t img_data;
+  {
+    visage::font_atlas_packer pck;
+    pck.setup_font(utils::project_folder() + "font.ttf");
+    visage::font_atlas_packer::config cfg{
+      utils::locale(),
+      {},
+      3.0, 32.0, 2.0, 1.0, 4, 4, true
+    };
+
+    auto [ arr, img ] = pck.load_fonts(cfg);
+    fonts = std::move(arr);
+    img_data = std::move(img);
+  }
+
+  visage::system vsys(fonts[0].get());
+  vsys.load_entry_point(utils::project_folder() + "entry.lua");
+
   auto set = layout->create_descriptor_set("uniform_data", "main_set");
   auto interface_set = layout->create_descriptor_set("interface_data", "main_interface_set");
-  auto interface_res = psys.create<visage::draw_resource>(gc->device, gc->buffer_allocator, interface_set, );
+  // тут нужно передать указатели интерфейса
+  auto interface_res = psys.create<visage::draw_resource>(gc->device, gc->buffer_allocator, interface_set, vsys.ctx_native(), vsys.cmds_native());
 
   // тут нужен рендер пасс + пиплине + буфер + индекс буфер + дескриптор + драв интерфейса
   {
@@ -610,9 +636,10 @@ int main(int argc, char const *argv[]) {
   // надо это дело ограничивать ЖЕСКО
   // было бы неплохо иметь возможность полностью пересоздать все фонты
   // например при изменении настроек локализации
-  auto [ f, host_image_id ] = visage::load_font(host_imgs, utils::project_folder() + "font.ttf");
-  const uint32_t font_img_id = imgs->create("font_img", host_imgs->extent(host_image_id), host_imgs->format(host_image_id), layout->immutable_nearest);
-  f->nkfont->texture.id = font_img_id;
+  //auto [ f, host_image_id ] = visage::load_font(host_imgs, utils::project_folder() + "font.ttf");
+  const uint32_t host_image_id = host_imgs->create("font_img", { img_data.width, img_data.height }, uint32_t(vk::Format::eR8G8B8A8Unorm), layout->immutable_nearest);
+  const uint32_t font_img_id = imgs->create("font_img", { img_data.width, img_data.height }, uint32_t(vk::Format::eR8G8B8A8Unorm), layout->immutable_nearest);
+  //f->nkfont->texture.id = font_img_id;
 
   painter::do_command(gc->device, gc->transfer_command_pool, gc->graphics_queue, gc->transfer_fence, [&] (VkCommandBuffer buf) {
     for (uint32_t i = 0; i < sch->max_images; ++i) {
@@ -635,9 +662,10 @@ int main(int argc, char const *argv[]) {
   imgs->update_descriptor_set(set, 1, 0); // после бинда ресурс становится нам доступен
   // возможно интерфейс с биндингом чутка по другому надо сделать
 
-  // рендеры у меня зависят от систем
-  visage::system vsys(f.get());
-  vsys.load_entry_point(utils::project_folder() + "entry.lua");
+  // где создадим nk_user_font? по идее ничего страшного если я это расположу рядом с пакером
+  for (auto &f : fonts) {
+    f->nkfont->texture.id = font_img_id;
+  }
 
   const size_t target_fps = double(utils::app_clock::resolution()) / 60.0;
   size_t counter = 0;
@@ -785,3 +813,39 @@ struct gpu_tile {
 // 6) в каждом кадре спихивать данные наклира в буфер
 // 7) не забывать делать инпут
 // 8) 
+
+// короче что нужно сделать: начать наверное стоит все таки с более продуманной системы шрифтов
+// то есть делаем атлас пакер и отдельную функцию которая полностью создаст шрифт
+// она должна быть перезапускаема... шрифты наверное имеет смысл хранить в визаже
+// значит удалим все шрифты вместе со всеми ресурсами и создадим все заново по списку
+// список наверное будет в настройках, там выберем 4-5 стандартных шрифтов
+// бля было бы неплохо переводить слова из другого языка на фонетический язык
+// чтобы была альтернатива написанию (ну или транслитирировать)
+
+// так надо сделать папку core + написать первые луа скрипты
+
+// что мы видим в 2048? 
+// игровое поле 4х4, работают только 4 жеста верх вниз влево вправо
+// в клеточках рандомно по краям появляются 2ки (иногда 4ки)
+// жестом все клеточки перемещаются в сторону и если соприкасаются 2 одинаковых
+// то клеточки соединяются и числа складываются
+// выход из игры наступает тогда когда все всеточки заполнены так 
+// что перемещение в любую сторону невозможно как бы это аккуратно сделать?
+// игровое поле - это просто квадрат в центре 
+// для красивости используются закругленные квадратики в качестве тайлов
+// они перемещаются по полю постепенно, но очень быстро 
+// одним жестом можно сделать только одно движение
+// как только игра понимает что это именно жест
+// (то есть перемещение курсора больше чем заданный радиус)
+// то сразу проводим движение фигур по полю
+// у фигур проверяется сосед с той стороны куда он пытается идти
+// и если там пусто то происходит движение
+// возможно расчитывается это дело так: проверяем всех соседей со стороны у всех тайлов
+// проверяем свободное место куда попадет тайл
+// делаем состояние проигрывание анимации, меняем совпадающие тайлы
+// и уже после этого отдаем управление игроку обратно
+// для такого небольшого поля можно сделать таблицу соседей
+// конец игры проверяем перед началом хода игрока
+// мне это все нужно сделать с рендером на вулкане
+// нужно доделать инпут для жестов
+// 

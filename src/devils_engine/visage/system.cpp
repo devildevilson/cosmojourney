@@ -83,6 +83,9 @@ void system::update(const size_t time) {
   entry(time);
 }
 
+nk_context* system::ctx_native() const noexcept { return ctx.get(); }
+nk_buffer* system::cmds_native() const noexcept { return cmds; }
+
 size_t system::instruction_counter = 0;
 system::clock_t::time_point system::start_tp = clock_t::now();
 }

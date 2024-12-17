@@ -59,10 +59,6 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 endif()
 
 include_directories(
-  libs/vulkan/Include/
-  libs/lua54/include/
-  libs/glfw34/include/
-  libs/ktx/include/
   include/dr_libs/
   include/spdlog/include/
   include/vorbis/include/
@@ -83,6 +79,10 @@ include_directories(
   include/msdf-atlas-gen/
   include/msdfgen/
   include/
+  libs/vulkan/Include/
+  libs/lua54/include/
+  libs/glfw34/include/
+  libs/ktx/include/
   src/devils_engine/
   src/cosmojourney/
 )

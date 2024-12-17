@@ -37,7 +37,7 @@ public:
   inline sibling_stage* next() const { return utils::forw::list_next<primitive_list_type::siblings>(this); }
   template <typename T>
     requires(std::derived_from<T, sibling_stage>)
-  inline T* set_next(T* s) { utils::forw::list_set<primitive_list_type::siblings>(this, s); return s; }
+  inline T* set_next(T* s) { utils::forw::list_add<primitive_list_type::siblings>(this, static_cast<sibling_stage*>(s)); return s; }
 };
 
 class parent_stage : public virtual stage {
@@ -60,7 +60,7 @@ public:
   inline recreate_target* next(const recreate_target* ref) const { return utils::ring::list_next<primitive_list_type::siblings>(this, ref); }
   template <typename T>
     requires(std::derived_from<T, recreate_target>)
-  inline T* set_next(T* s) { utils::ring::list_radd<primitive_list_type::siblings>(this, s); return s; }
+  inline T* set_next(T* s) { utils::ring::list_radd<primitive_list_type::siblings>(this, static_cast<recreate_target*>(s)); return s; }
 };
 
 // порядок неважен
@@ -72,8 +72,8 @@ public:
 
   inline recompile_shaders_target* next() const { return utils::forw::list_next<primitive_list_type::siblings>(this); }
   template <typename T>
-    requires(std::derived_from<T, recreate_target>)
-  inline T* set_next(T* s) { utils::forw::list_add<primitive_list_type::siblings>(this, s); return s; }
+    requires(std::derived_from<T, recompile_shaders_target>)
+  inline T* set_next(T* s) { utils::forw::list_add<primitive_list_type::siblings>(this, static_cast<recompile_shaders_target*>(s)); return s; }
 };
 
 struct semaphore_provider {
@@ -184,7 +184,7 @@ struct buffer_provider {
 // контейнеры для 2D картинок (в прочем все картинки мы можем свести к 2D)
 // да и вообще к 1D если так подумать, но это филосовский вопрос
 // имя у контейнера? полезно
-class image_container {
+class image_container : public arbitrary_data {
 public:
   struct extent_t { uint32_t width, height; };
 
@@ -212,7 +212,7 @@ public:
   virtual void blit_data(VkCommandBuffer buffer, const std::tuple<VkImage,uint32_t,uint32_t> &src_image, const uint32_t index, const uint32_t filter = 0) const = 0;
 };
 
-class buffer_container {
+class buffer_container : public arbitrary_data {
 public:
   std::string container_name;
   inline buffer_container(std::string container_name) noexcept : container_name(std::move(container_name)) {}

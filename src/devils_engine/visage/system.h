@@ -37,6 +37,8 @@ public:
   void load_entry_point(const std::string &path); // потом будет текст скрипта
   void update(const size_t time);
 
+  nk_context* ctx_native() const noexcept;
+  nk_buffer* cmds_native() const noexcept;
 private:
   sol::state lua;
   sol::environment env;

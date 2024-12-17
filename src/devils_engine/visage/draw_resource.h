@@ -38,7 +38,7 @@ struct interface_provider {
 // где то тут мы должны запустить конверт
 // где копировать? после препайр нужно что то где то скопировать или просто прямо там скопировать?
 // желательно прикрутить копирование прямо в общий пайп
-class draw_resource : public interface_provider {
+class draw_resource : public interface_provider, public painter::arbitrary_data {
 public:
   draw_resource(VkDevice device, VmaAllocator allocator, VkDescriptorSet set, nk_context* ctx, nk_buffer* cmds);
   ~draw_resource() noexcept;

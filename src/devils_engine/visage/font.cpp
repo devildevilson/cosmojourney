@@ -92,11 +92,23 @@ struct font_raii {
   }
 };
 
+// вообще у нас будет несколько шрифтов + локализация, то есть желательно 
+// написать отдельный класс под загрузку шрифтов - этот класс
+// как раз должен будет выполнить вообще все шаги по созданию 
+// одной картинки для всех задействованых шрифтов
+// самих шрифтов поди будет штуки 4-5 в игре
+// причем наверное один из них будет чисто английский
+// предположим ситуацию где нам нужно создать 
+// англ + кириллица: аскии таблица состоит из 90 (?) символов
+// + к этому кириллическая талица 255 символов
+// 345 символов, примерно 19 символов в строке, 19 * 32 = 608 размер картинки
+// (в худшем случае), чуть больше 3к текстурка на 5 шрифтов
 std::tuple<std::unique_ptr<font_t>, uint32_t> load_font(painter::host_image_container* imgs, const std::string &path) {
   std::vector<msdf_atlas::GlyphGeometry> glyphs;
   msdf_atlas::FontGeometry fontGeometry(&glyphs);
 
   // кажется указатель нигде не сохраняется на будущее и мы можем так сделать
+  // вот тут как раз символы локализации загружаются в память
   {
     const auto file = file_io::read<uint8_t>(path);
     freetype_raii ftraii;
@@ -136,7 +148,7 @@ std::tuple<std::unique_ptr<font_t>, uint32_t> load_font(painter::host_image_cont
   generator.setAttributes(attributes);
   generator.setThreadCount(4);
   generator.generate(glyphs.data(), glyphs.size());
-  msdfgen::BitmapConstRef<msdf_atlas::byte, 3> atlas_storage = generator.atlasStorage();
+  msdfgen::BitmapConstRef<msdf_atlas::byte, color_channels> atlas_storage = generator.atlasStorage();
   
   const uint32_t host_image_id = imgs->create("font_storage", {uint32_t(width), uint32_t(height)}, painter::rgb24_format, VK_NULL_HANDLE);
   auto mem = imgs->mapped_memory(host_image_id);
@@ -195,7 +207,7 @@ std::tuple<std::unique_ptr<font_t>, uint32_t> load_font(painter::host_image_cont
   f->nkfont->query = &local_query_font_glyph;
   f->nkfont->texture.id = host_image_id; // будет другим
 
-  return std::make_tuple(f, host_image_id);
+  return std::make_tuple(std::move(f), host_image_id);
 }
 }
 }

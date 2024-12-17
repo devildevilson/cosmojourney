@@ -26,6 +26,9 @@ set(SRC_LIST
   font.cpp
   header.cpp
   system.cpp
+  font_atlas_packer.cpp
+  ../bindings/env.cpp
+  ../bindings/nuklear.cpp
 )
 
 set(HDR_LIST
@@ -34,6 +37,12 @@ set(HDR_LIST
   font.h
   header.h
   system.h
+  font_atlas_packer.h
+  ../bindings/env.h
+  ../bindings/nuklear.h
+  ../bindings/lua_header.h
+  ../bindings/shared.h
+  ../bindings/generic.h
 )
 
 add_library(${DEVILS_LIBRARY_NAME} ${SRC_LIST} ${HDR_LIST})

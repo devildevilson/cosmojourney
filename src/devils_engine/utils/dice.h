@@ -10,7 +10,7 @@
 namespace devils_engine {
   namespace utils {
     template <typename T>
-    size_t interval(const size_t upper_bound, T &rnd) {
+    size_t interval(const size_t upper_bound, T &rnd) noexcept {
       using ext_t = typename T::outer;
 
       size_t number = 0;
@@ -40,7 +40,7 @@ namespace devils_engine {
       return accum;
     }
 
-    constexpr bool parse_dice(const std::string_view &str, size_t &count, size_t &upper_bound) {
+    constexpr bool parse_dice(const std::string_view &str, size_t &count, size_t &upper_bound) noexcept {
       // к нам приходит строка вида: 20d20, d30, 100
       std::array<std::string_view, 2> data;
       const size_t c = string::split(str, "d", data.data(), data.size());

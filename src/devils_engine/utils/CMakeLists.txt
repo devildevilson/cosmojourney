@@ -41,7 +41,7 @@ set(SRC_LIST
   #${CMAKE_SOURCE_DIR}/include/fmt/src/format.cc
   #${CMAKE_SOURCE_DIR}/include/fmt/src/os.cc
   compression.cpp
- "loader.cpp")
+ "loader.cpp" "locale.cpp")
 
 set(HDR_LIST
   block_allocator.h
@@ -64,7 +64,7 @@ set(HDR_LIST
   ../utf/utf.hpp
   density_api.h
   compression.h
- "load_stage.h" "loader.h" "prng_string.h")
+ "load_stage.h" "loader.h" "prng_string.h" "locale.h")
 
 include_directories(
   include/spdlog/include/
