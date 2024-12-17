@@ -153,10 +153,10 @@ hierarchical_image_container::hierarchical_image_container(std::string name, VkD
   memory_size = final_memory_size;
 
   auto inf_null = texture2D({4, 4}, usage);
-  inf_null.initialLayout = vk::ImageLayout::eGeneral;
+  inf_null.initialLayout = vk::ImageLayout::ePreinitialized;
   null_image.handle = d.createImage(inf1);
   set_name(device, vk::Image(null_image.handle), container_name + "_hierarchical_null_image");
-  vk::ImageViewCreateInfo ivci({}, null_image.handle, vk::ImageViewType::e2D, vk::Format::eR8G8B8A8Unorm);
+  const auto ivci = make_view_info(null_image.handle);
   null_image.view = d.createImageView(ivci);
   set_name(device, vk::ImageView(null_image.view), container_name + "_hierarchical_null_image_view");
   const auto req_null = d.getImageMemoryRequirements(block_img);

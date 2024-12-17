@@ -7,6 +7,9 @@
 namespace devils_engine {
 namespace painter {
 
+static const vk::ComponentMapping default_comp_map{ vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity };
+static const vk::ImageSubresourceRange default_image_range{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+
 const uint32_t rgb24_format = uint32_t(vk::Format::eR8G8B8Unorm);
 const uint32_t rgba32_format = uint32_t(vk::Format::eR8G8B8A8Unorm);
 
@@ -37,12 +40,12 @@ arbitrary_image_container::arbitrary_image_container(std::string name, VkInstanc
 
   const auto usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc;
   auto inf = texture2D({4, 4}, usage, vk::Format::eR8G8B8A8Unorm);
-  inf.initialLayout = vk::ImageLayout::eGeneral;
+  inf.initialLayout = vk::ImageLayout::ePreinitialized;
   auto [img, al] = vma::Allocator(allocator).createImage(inf, aci);
   null_image.handle = img;
   set_name(device, vk::Image(null_image.handle), container_name + "_arbitrary_null_image");
   null_image.allocation = al;
-  vk::ImageViewCreateInfo ivci({}, null_image.handle, vk::ImageViewType::e2D, vk::Format::eR8G8B8A8Unorm);
+  const auto ivci = make_view_info(null_image.handle);
   null_image.view = vk::Device(device).createImageView(ivci);
   set_name(device, vk::ImageView(null_image.view), container_name + "_arbitrary_null_image_view");
   sampler_maker sm(device);

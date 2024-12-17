@@ -62,7 +62,7 @@ image_pool::image_pool(std::string name, VkDevice device, VmaAllocator allocator
   _null_allocation = alloc2;
   set_name(d, vk::Image(_null_storage), container_name + "_image_pull_null_image");
 
-  const vk::ImageViewCreateInfo ivci2({}, _null_storage, vk::ImageViewType::e2DArray, vk::Format::eR8G8B8A8Unorm);
+  const auto ivci2 = make_view_info(_null_storage);
   _null_image.view = d.createImageView(ivci2);
   set_name(d, vk::ImageView(_null_image.view), container_name + "_image_pull_null_image_view");
   _null_image.sampler = sampler_maker(device).create(container_name + "_image_pool_null_sampler");
