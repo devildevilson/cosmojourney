@@ -127,12 +127,12 @@ protected:
 
 // еще сделать маски для трансфера?
 enum usage { undefined = 0, uniform = 0b1, storage = 0b10, indirect = 0b100, vertex = 0b1000, index = 0b10000, transfer_src = 0b100000, transfer_dst = 0b1000000 };
-enum class reside { host, gpu };
+enum class reside { host = 0, gpu };
 constexpr size_t standart_buffer_data_aligment = 16;
 constexpr uint32_t standart_storage_usage = usage::storage | usage::transfer_src | usage::transfer_dst;
 
 // пересоздание с потерей данных
-std::tuple<VkBuffer, VmaAllocation, void*> create_buffer(VmaAllocator allocator, const size_t size, const uint32_t usage, enum reside reside);
+std::tuple<VkBuffer, VmaAllocation, void*> create_buffer(VmaAllocator allocator, const size_t size, const uint32_t usg, enum reside rsd);
 void destroy_buffer(VmaAllocator allocator, VkBuffer buffer, VmaAllocation allocation);
 void copy(VkCommandBuffer cbuf, VkBuffer src, VkBuffer dst, size_t srcoffset, size_t dstoffset, size_t size);
 
@@ -140,7 +140,7 @@ size_t align_to_device(const size_t size, VmaAllocator allocator, const uint32_t
 
 class common_buffer : public arbitrary_data, public buffer_provider {
 public:
-  common_buffer(VmaAllocator allocator, const size_t size, const uint32_t usage, enum reside reside);
+  common_buffer(VmaAllocator allocator, const size_t size, const uint32_t usg, enum reside rsd);
   ~common_buffer() noexcept;
   size_t orig_size() const;
   void* mapped_data();
@@ -156,10 +156,10 @@ protected:
   enum reside reside;
 };
 
-template <uint32_t usage, enum reside reside>
+template <uint32_t usg, enum reside rsd>
 class templated_buffer : public common_buffer {
 public:
-  templated_buffer(VmaAllocator allocator, size_t size) : common_buffer(allocator, size, usage, reside) {}
+  templated_buffer(VmaAllocator allocator, size_t size) : common_buffer(allocator, size, usg, rsd) {}
 };
 
 // некоторое количество буферов создадим таким образом
@@ -168,7 +168,7 @@ using uniform_buffer = templated_buffer<usage::uniform | usage::transfer_dst, re
 using vertex_buffer = templated_buffer<usage::vertex | usage::transfer_dst, reside::gpu>;
 using index_buffer = templated_buffer<usage::index | usage::transfer_dst, reside::gpu>;
 using indirect_buffer = templated_buffer<usage::indirect | usage::storage, reside::gpu>;
-using host_buffer = templated_buffer<usage::undefined, reside::host>;
+using host_buffer = templated_buffer<usage::transfer_src, reside::host>;
 
 size_t reduce(const std::initializer_list<size_t> &sizes, const size_t aligment);
 

@@ -37,7 +37,7 @@ struct attachment {
   VkImage image;
   uint32_t format;
 
-  attachment() : alloc(VK_NULL_HANDLE), view(VK_NULL_HANDLE), image(VK_NULL_HANDLE), format(0) {}
+  inline attachment() noexcept : alloc(VK_NULL_HANDLE), view(VK_NULL_HANDLE), image(VK_NULL_HANDLE), format(0) {}
 };
 
 // у всех изображений для фреймбуфера КРАЙНЕ ЖЕЛАТЕЛЬНО один и тот же размер (по крайней мере он должен быть больше чем размер области рендеринга)

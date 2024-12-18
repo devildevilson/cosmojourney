@@ -1,6 +1,8 @@
 #include "swapchain_resources.h"
 
 #include "vulkan_header.h"
+#include "container.h"
+#include "auxiliary.h"
 #include <cmath>
 
 namespace devils_engine {
@@ -15,7 +17,10 @@ simple_swapchain::simple_swapchain(VkDevice device, VkPhysicalDevice physical_de
   device(device), physical_device(physical_device), surface(surface), format(0)
 {
   max_images = buffering_target;
-  //recreate(0,0);
+  vk::PhysicalDevice pd(physical_device);
+  const auto surface_formats = pd.getSurfaceFormatsKHR(surface);
+  const auto surface_format = choose_swapchain_surface_format(surface_formats);
+  format = uint32_t(surface_format.format);
 }
 
 simple_swapchain::~simple_swapchain() noexcept {
@@ -96,6 +101,22 @@ void simple_swapchain::destroy_swapchain() {
 
 VkSwapchainKHR simple_swapchain::get_swapchain() const {
   return swapchain_provider::swapchain;
+}
+
+simple_swapchain_image_layout_changer::simple_swapchain_image_layout_changer(const container* gc, const frame_acquisitor* fa) noexcept :
+  gc(gc), fa(fa)
+{}
+
+void simple_swapchain_image_layout_changer::recreate(const uint32_t, const uint32_t) {
+  painter::do_command(gc->device, gc->transfer_command_pool, gc->graphics_queue, gc->transfer_fence, [&](VkCommandBuffer t) {
+    for (size_t i = 0; i < fa->max_images; ++i) {
+      const auto img = fa->frame_storage(i);
+      auto task = vk::CommandBuffer(t);
+      const vk::ImageSubresourceRange isr(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+      const auto [b_info, srcStage, dstStage] = make_image_memory_barrier(img, vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR, isr);
+      task.pipelineBarrier(srcStage, dstStage, vk::DependencyFlagBits::eByRegion, nullptr, nullptr, b_info);
+    }
+  });
 }
 }
 }

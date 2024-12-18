@@ -21,9 +21,15 @@ attachments_container::attachments_container(VkDevice device, VmaAllocator alloc
   device(device), allocator(allocator), frame_acquisitor(frame_acquisitor), attachments_config(std::move(attachments_config))
 {
   attachments.resize(frame_acquisitor->max_images);
-  for (auto & arr : attachments) {
-    arr.resize(this->attachments_config.size());
+  for (size_t i = 0; i < attachments.size(); ++i) {
+    attachments[i].resize(this->attachments_config.size());
   }
+
+  // ЕСЛИ ЕСТЬ ПРЯМАЯ СВЯЗЬ С frame_acquisitor
+  // по идее у нас тут будет ситуация когда attachments_container НЕ связан с frame_acquisitor
+  // например отдельный gbuffer, как тогда? наверное все что изменится это 
+  // виртуальная функция recreate, где мы не будем никаких случайных манипуляций проводить
+  this->attachments_config[0].format = frame_acquisitor->frame_format(0);
 
   attachments_provider::attachments_count = this->attachments_config.size();
   attachments_provider::attachments = this->attachments_config.data();
@@ -159,7 +165,9 @@ void attachments_container::recreate_images(const uint32_t width, const uint32_t
 
       if (i == 0) {
         att.image = frame_acquisitor->frame_storage(index);
-        //vk_format = vk::Format(frame_acquisitor->frame_format(index));
+        vk_format = vk::Format(frame_acquisitor->frame_format(index));
+        att.format = uint32_t(vk_format);
+        attachments_config[i].format = uint32_t(vk_format);
       }
 
       if (att.image == VK_NULL_HANDLE) {

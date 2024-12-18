@@ -200,6 +200,10 @@ void queue_present::process() {
     //const auto res = d.waitForFences(vk::Fence(fence), VK_TRUE, timeout);
     //if (res != vk::Result::eSuccess) utils::error("Wait for frame fence took too long. Error: {}", vk::to_string(res));
     //d.resetFences(vk::Fence(fence));
+
+    const size_t timeout = 1000ull * 1000ull * 1000ull; // 1 секунда
+    wait(timeout);
+    reset();
   }
 
   // 2) это пробежать бегин 

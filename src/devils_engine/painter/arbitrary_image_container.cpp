@@ -101,7 +101,7 @@ uint32_t arbitrary_image_container::create(std::string name, const image_contain
   const auto usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc;
   const auto inf = texture2D({extent.width, extent.height}, usage, vk::Format(format));
   auto [img, al] = create_image(allocator, inf, vma::MemoryUsage::eGpuOnly, nullptr, name);
-  vk::ImageViewCreateInfo ivci({}, img, vk::ImageViewType::e2D, vk::Format(format));
+  const auto ivci = make_view_info(img, vk::Format(format));
   const auto view = vk::Device(device).createImageView(ivci);
 
   set_name(device, vk::Image(img), name);
