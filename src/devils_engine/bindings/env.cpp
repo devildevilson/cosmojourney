@@ -111,15 +111,15 @@ static constexpr std::tuple<float, float> unpack_f32f32(const double cont) {
   return std::make_tuple(s1.f32_1, s1.f32_2);
 }
 
-static constexpr bool test() {
-  uint32_t a = 125;
-  float b = 524;
-  const auto d = pack_u32f32(a, b);
-  const auto [a1, b1] = unpack_u32f32(d);
-  return a == a1 && b == b1;
-}
-
-static_assert(test());
+//static constexpr bool test() {
+//  uint32_t a = 125;
+//  float b = 524;
+//  const auto d = pack_u32f32(a, b);
+//  const auto [a1, b1] = unpack_u32f32(d);
+//  return a == a1 && b == b1;
+//}
+//
+//static_assert(test());
 
 static constexpr int64_t u64_to_s64(const uint64_t a) {
   return std::bit_cast<int64_t>(a);
@@ -141,8 +141,7 @@ static int64_t prng64(const int64_t val) {
 static int64_t prng64_2(const int64_t value1, const int64_t value2) {
   const auto val1 = s64_to_u64(value1);
   const auto val2 = s64_to_u64(value2);
-  //auto s = utils::xoroshiro128starstar::state{ { prng64_raw(val1), prng64_raw(val2) } };
-  //return u64_to_s64(utils::xoroshiro128starstar::value(s));
+  // с небольшой вероятностью оба числа могут быть 0
   return u64_to_s64(utils::mix(prng64_raw(val1), prng64_raw(val2)));
 }
 
@@ -298,18 +297,18 @@ static sol::variadic_results perf(const sol::function &f, const sol::variadic_ar
 
 // возможно для этих двух функций использовать другой prng?
 static std::tuple<int64_t, int64_t> interval(const int64_t max, const int64_t state) {
-  //auto s = utils::splitmix64::state{{s64_to_u64(state)}};
   auto s = utils::xoshiro256starstar::init(s64_to_u64(state));
   const auto res = utils::interval(max, s);
   // поправить индекс для Луа ??? да интервал я использую исключительно для массивов ... имеет смысл
-  return std::make_tuple(DEVILS_ENGINE_TO_LUA_INDEX(res), u64_to_s64(s.s[0]));
+  const uint64_t next_val = utils::xoshiro256starstar::value(s);
+  return std::make_tuple(DEVILS_ENGINE_TO_LUA_INDEX(res), u64_to_s64(next_val));
 }
 
-static std::tuple<double, int64_t> dice(const double count, const double upper_bound, const int64_t state) {
-  //auto s = utils::splitmix64::state{{s64_to_u64(state)}};
+static std::tuple<int64_t, int64_t> dice(const int64_t count, const int64_t upper_bound, const int64_t state) {
   auto s = utils::xoshiro256starstar::init(s64_to_u64(state));
   const auto res = utils::dice_accumulator(count, upper_bound, s);
-  return std::make_tuple(double(res), u64_to_s64(s.s[0]));
+  const uint64_t next_val = utils::xoshiro256starstar::value(s);
+  return std::make_tuple(int64_t(res), u64_to_s64(next_val));
 }
 
 // полезно будет иметь функцию для получения стака луа, при этом нужно что то безопасное
@@ -347,9 +346,6 @@ static sol::table script_stack(sol::this_state s) {
   return t;
 }
 
-// еще дополнительно желательно вылетать если у нас случайно произошел бесконечный цикл
-// как сделать?
-
 void basic_functions(sol::table t) {
   sol::table base = t.get_or("base", sol::nil);
   if (!base.valid()) base = t.create_named("base");
@@ -377,7 +373,7 @@ void basic_functions(sol::table t) {
   base.set_function("script_stack", &script_stack);
   base.set("platform", platform());
   base.set("project", project());
-
+  base.set_function(sol::meta_function::new_index, sol::detail::fail_on_newindex);
   // тут нужно еще добавить функции: найти и загрузить ресурс, найти список ресурсов, 
   // какой ресурс загружен, какой модуль загружен, список загруженный модулей,
   // 

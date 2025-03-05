@@ -1092,7 +1092,7 @@ struct nk {
     return nk_chart_push_slot(ctx_ptr, value, slot);
   }
 
-  static void chart_end(const uint32_t type, const int32_t count, const float min, const float max) {
+  static void chart_end() {
     nk_chart_end(ctx_ptr);
   }
 
@@ -1829,7 +1829,7 @@ void nk_functions(sol::table t) {
   {
     auto b1 = nk.create_named("menubar");
     b1.set_function("begin", &nk::menubar_begin);
-    b1.set_function("end", &nk::menubar_end);
+    b1.set_function("endf", &nk::menubar_end);
     b1.set_function(sol::meta_function::new_index, sol::detail::fail_on_newindex);
 
     auto b = nk.create_named("menu");

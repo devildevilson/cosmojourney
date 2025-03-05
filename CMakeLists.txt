@@ -132,7 +132,7 @@ add_subdirectory(src/devils_engine/visage/)
 add_subdirectory(include/dynamic_bitset)
 
 # надо бы переназвать exe файл, и сверху еще папку проекта сделать
-add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/simul/interface.h" "src/devils_engine/simul/interface.cpp")
+add_executable(${PROJECT_NAME} main.cpp "src/cosmojourney/dsm.h" "src/cosmojourney/dsm.cpp" "src/cosmojourney/sound_resource.h" "src/cosmojourney/sound_resource.cpp" "src/devils_engine/simul/interface.h" "src/devils_engine/simul/interface.cpp" "src/devils_engine/simul/world.h")
 target_link_libraries(${PROJECT_NAME} devils_utils devils_sound devils_demiurg devils_thread devils_input devils_painter devils_visage lua54 sul::dynamic_bitset msdf-atlas-gen msdfgen-core msdfgen-ext freetype libpng16)
 set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 

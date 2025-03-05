@@ -7,7 +7,7 @@ namespace devils_engine {
 namespace simul {
 const size_t default_30fps = double(utils::app_clock::resolution()) / 30.0;
 
-advancer::advancer() noexcept : _frame_time(default_30fps), new_frame_time(default_30fps), _counter(0) {}
+advancer::advancer() noexcept : _frame_time(default_30fps), new_frame_time(default_30fps), _counter(0), _stop(false) {}
 void advancer::run(const size_t wait_mcs) {
   // чуть обождем, мы можем запустить звуки чуть позже чем основную симуляцию
   // тогда ограничение в виде sleep_until сработает чуть лучше
@@ -70,5 +70,7 @@ void advancer::stop() {
   std::unique_lock l(mutex);
   _stop = true;
 }
+
+bool advancer::stop_predicate() const { return false; }
 }
 }

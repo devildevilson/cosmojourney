@@ -62,7 +62,8 @@ public:
   void stop();
 
   inline std::mutex & acquire_sync_object() const { return mutex; }
-protected:
+  bool stop_predicate() const override;
+ protected:
   mutable std::mutex mutex;
   size_t _frame_time;
   size_t new_frame_time;
