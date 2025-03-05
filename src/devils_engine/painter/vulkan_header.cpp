@@ -388,10 +388,10 @@ void change_image_layout(
   do_command(device, transfer_pool, transfer_queue, fence, [&] (VkCommandBuffer t) {
     auto task = vk::CommandBuffer(t);
     const auto [b_info, srcStage, dstStage] = make_image_memory_barrier(image, old_layout, new_layout, range);
-    const vk::CommandBufferBeginInfo binfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-    task.begin(binfo);
+    //const vk::CommandBufferBeginInfo binfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    //task.begin(binfo);
     task.pipelineBarrier(srcStage, dstStage, vk::DependencyFlagBits::eByRegion, nullptr, nullptr, b_info);
-    task.end();
+    //task.end();
   });
 }
 

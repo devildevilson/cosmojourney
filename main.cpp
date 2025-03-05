@@ -530,7 +530,7 @@ int main(int argc, char const *argv[]) {
     pck.setup_font(utils::project_folder() + "font.ttf");
     visage::font_atlas_packer::config cfg{
       utils::locale(),
-      { range_t{161, 256}, range_t{ 0x0400, 0x04ff } },
+      { range_t{161, 256}, range_t{ 0x0400, 0x04ff } }, // 446 символов картинка получается 504х504
       3.0, 32.0, 2.0, 1.0, 4, 4, true
     };
 
@@ -592,6 +592,7 @@ int main(int argc, char const *argv[]) {
   auto fc     = psys.create<painter::simple_framebuffer>(gc->device, rp, ac, sch);
   auto interface_pipe = layout->find_pipeline_layout("interface");
   auto pl     = psys.create<painter::simple_graphics_pipeline>(gc->device, interface_pipe, gc->cache, &dsys);
+  auto lch    = psys.create<painter::simple_swapchain_image_layout_changer>(gc, sch);
   rp->create_render_pass();
   pl->init(rp->render_pass, 0, pl_conf, rp_conf->subpasses[0].attachments.size(), rp_conf->subpasses[0].attachments.data());
 
@@ -647,12 +648,12 @@ int main(int argc, char const *argv[]) {
   memcpy(mem, img_data.bytes.data(), img_data.bytes.size());
 
   painter::do_command(gc->device, gc->transfer_command_pool, gc->graphics_queue, gc->transfer_fence, [&] (VkCommandBuffer buf) {
-    for (uint32_t i = 0; i < sch->max_images; ++i) {
+    /*for (uint32_t i = 0; i < sch->max_images; ++i) {
       auto img = sch->frame_storage(i);
       vk::ImageSubresourceRange isr(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
       const auto &[bar, ss, ds] = painter::make_image_memory_barrier(img, vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR, isr);
       vk::CommandBuffer(buf).pipelineBarrier(ss, ds, vk::DependencyFlagBits::eByRegion, nullptr, nullptr, bar);
-    }
+    }*/
 
     const auto host_img = host_imgs->storage(host_image_id);
 
@@ -679,6 +680,7 @@ int main(int argc, char const *argv[]) {
     counter += 1;
     auto next_tp = main_tp + std::chrono::microseconds(counter * target_fps);
 
+    input::poll_events();
     vsys.update(target_fps);
     interface_res->prepare(w);
     psys.wait_frame(1000000);

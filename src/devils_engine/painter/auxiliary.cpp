@@ -134,10 +134,10 @@ bool do_command(VkDevice device, VkCommandPool pool, VkQueue queue, VkFence fenc
 void copy_buffer(VkDevice device, VkCommandPool pool, VkQueue queue, VkFence fence, VkBuffer src, VkBuffer dst, size_t srcoffset, size_t dstoffset, size_t size) {
   do_command(device, pool, queue, fence, [&] (VkCommandBuffer buffer) {
     auto b = vk::CommandBuffer(buffer);
-    const vk::CommandBufferBeginInfo binfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-    b.begin(binfo);
+    //const vk::CommandBufferBeginInfo binfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    //b.begin(binfo);
     b.copyBuffer(src, dst, vk::BufferCopy(srcoffset, dstoffset, size));
-    b.end();
+    //b.end();
   });
 }
 

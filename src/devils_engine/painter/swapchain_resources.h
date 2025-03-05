@@ -3,10 +3,13 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 #include "primitives.h"
 
 namespace devils_engine {
 namespace painter {
+
+struct container;
 
 class surface_container : public arbitrary_data {
 public:
@@ -36,6 +39,15 @@ protected:
   VkSurfaceKHR surface;
   uint32_t format;
   std::vector<VkImage> images;
+};
+
+class simple_swapchain_image_layout_changer : public recreate_target {
+public:
+  simple_swapchain_image_layout_changer(const container* gc, const frame_acquisitor* fa) noexcept;
+  void recreate(const uint32_t width, const uint32_t height) override;
+private:
+  const container* gc;
+  const frame_acquisitor* fa;
 };
 
 }
